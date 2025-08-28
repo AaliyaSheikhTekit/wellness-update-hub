@@ -52,6 +52,17 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Wellness color system
+				wellness: {
+					sage: 'hsl(var(--wellness-sage))',
+					'sage-light': 'hsl(var(--wellness-sage-light))',
+					'sage-dark': 'hsl(var(--wellness-sage-dark))',
+					beige: 'hsl(var(--wellness-beige))',
+					'beige-light': 'hsl(var(--wellness-beige-light))',
+					'beige-dark': 'hsl(var(--wellness-beige-dark))',
+					brown: 'hsl(var(--wellness-brown))',
+					'brown-light': 'hsl(var(--wellness-brown-light))',
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +78,15 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			fontFamily: {
+				display: 'var(--font-display)',
+				body: 'var(--font-body)',
+			},
+			boxShadow: {
+				elegant: 'var(--shadow-elegant)',
+				soft: 'var(--shadow-soft)',
+				glow: 'var(--shadow-glow)',
 			},
 			keyframes: {
 				'accordion-down': {
