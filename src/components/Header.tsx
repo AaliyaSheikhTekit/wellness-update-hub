@@ -23,7 +23,10 @@ const Header = () => {
           <a href="#contact" className="text-foreground hover:text-wellness-sage wellness-transition">Contact</a>
         </nav>
 
-        <div className="hidden md:flex">
+        <div className="hidden md:flex items-center space-x-4">
+          <Button variant="wellnessOutline" size="lg" asChild>
+            <a href="/login">Login</a>
+          </Button>
           <Button variant="wellness" size="lg">
             Book Consultation
           </Button>
@@ -44,9 +47,14 @@ const Header = () => {
             <a href="#services" className="text-foreground hover:text-wellness-sage wellness-transition">Services</a>
             <a href="#about" className="text-foreground hover:text-wellness-sage wellness-transition">About</a>
             <a href="#contact" className="text-foreground hover:text-wellness-sage wellness-transition">Contact</a>
-            <Button variant="wellness" size="lg" className="mt-4">
-              Book Consultation
-            </Button>
+            <div className="flex flex-col space-y-3 mt-4">
+              <Button variant="wellnessOutline" size="lg" asChild>
+                <a href="/login">Login</a>
+              </Button>
+              <Button variant="wellness" size="lg">
+                Book Consultation
+              </Button>
+            </div>
           </nav>
         </div>
       )}
