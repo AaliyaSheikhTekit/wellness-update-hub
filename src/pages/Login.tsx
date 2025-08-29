@@ -1,21 +1,30 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Lock, Mail, Eye, EyeOff, Leaf } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ArrowLeft, User, Lock, Mail, Eye, EyeOff, Leaf, Stethoscope, UserCheck } from "lucide-react";
 
 const Login = () => {
+  const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [userRole, setUserRole] = useState("doctor");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     phone: ""
   });
+
+  // Mock credentials for demo
+  const mockCredentials = {
+    doctor: { email: "doctor@iksha.com", password: "doctor123" },
+    receptionist: { email: "receptionist@iksha.com", password: "recep123" }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -26,8 +35,24 @@ const Login = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - redirect to dashboard
-    window.location.href = "/dashboard";
+    
+    // Mock authentication
+    if (isSignUp) {
+      // Store user role and redirect to dashboard
+      localStorage.setItem("userRole", userRole);
+      localStorage.setItem("userName", formData.name);
+      navigate("/dashboard");
+    } else {
+      // Check credentials
+      const credentials = mockCredentials[userRole as keyof typeof mockCredentials];
+      if (formData.email === credentials.email && formData.password === credentials.password) {
+        localStorage.setItem("userRole", userRole);
+        localStorage.setItem("userName", userRole === "doctor" ? "Dr. Smith" : "Sarah Johnson");
+        navigate("/dashboard");
+      } else {
+        alert("Invalid credentials. Use:\nDoctor: doctor@iksha.com / doctor123\nReceptionist: receptionist@iksha.com / recep123");
+      }
+    }
   };
 
   return (
@@ -100,6 +125,59 @@ const Login = () => {
                   />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Login as</Label>
+                <RadioGroup 
+                  value={userRole} 
+                  onValueChange={setUserRole}
+                  className="flex space-x-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="doctor" id="doctor" />
+                    <Label htmlFor="doctor" className="flex items-center space-x-2 cursor-pointer">
+                      <Stethoscope className="h-4 w-4 text-wellness-sage" />
+                      <span>Doctor</span>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="receptionist" id="receptionist" />
+                    <Label htmlFor="receptionist" className="flex items-center space-x-2 cursor-pointer">
+                      <UserCheck className="h-4 w-4 text-wellness-sage" />
+                      <span>Receptionist</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Demo credentials: doctor@iksha.com/doctor123 | receptionist@iksha.com/recep123
+                </div>
+              </div>
+
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label>Register as</Label>
+                  <RadioGroup 
+                    value={userRole} 
+                    onValueChange={setUserRole}
+                    className="flex space-x-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="doctor" id="signup-doctor" />
+                      <Label htmlFor="signup-doctor" className="flex items-center space-x-2 cursor-pointer">
+                        <Stethoscope className="h-4 w-4 text-wellness-sage" />
+                        <span>Doctor</span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="receptionist" id="signup-receptionist" />
+                      <Label htmlFor="signup-receptionist" className="flex items-center space-x-2 cursor-pointer">
+                        <UserCheck className="h-4 w-4 text-wellness-sage" />
+                        <span>Receptionist</span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
 
               {isSignUp && (
                 <div className="space-y-2">
