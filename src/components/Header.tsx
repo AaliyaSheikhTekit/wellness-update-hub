@@ -24,10 +24,10 @@ const Header = () => {
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="wellnessOutline" size="lg" asChild>
+          <Button variant="wellnessOutline" size="lg" asChild className="btn-primary">
             <a href="/login">Login</a>
           </Button>
-          <Button variant="wellness" size="lg">
+          <Button variant="wellness" size="lg" >
             Book Consultation
           </Button>
         </div>

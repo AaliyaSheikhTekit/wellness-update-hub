@@ -21,10 +21,16 @@ const Login = () => {
   });
 
   // Mock credentials for demo
-  const mockCredentials = {
-    doctor: { email: "doctor@iksha.com", password: "doctor123" },
-    receptionist: { email: "receptionist@iksha.com", password: "recep123" }
-  };
+const mockCredentials = {
+  receptionist: {
+    email: "receptionist@iksha.com",
+    password: "recep123",
+  },
+  doctor: {
+    email: "doctor@iksha.com",
+    password: "doctor123",  // fixed
+  },
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -33,27 +39,40 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Mock authentication
-    if (isSignUp) {
-      // Store user role and redirect to dashboard
-      localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userName", formData.name);
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  let detectedRole: "doctor" | "receptionist" | null = null;
+  if (formData.email.includes("doctor")) detectedRole = "doctor";
+  if (formData.email.includes("receptionist")) detectedRole = "receptionist";
+
+  if (isSignUp) {
+    localStorage.setItem("userRole", detectedRole || userRole);
+    localStorage.setItem("userName", formData.name || "");
+    localStorage.setItem("userEmail", formData.email || "");
+    navigate("/dashboard");
+  } else {
+    const credentials = mockCredentials[detectedRole as keyof typeof mockCredentials];
+    if (
+      credentials &&
+      formData.email === credentials.email &&
+      formData.password === credentials.password
+    ) {
+      localStorage.setItem("userRole", detectedRole || userRole);
+      localStorage.setItem(
+        "userName",
+        detectedRole === "doctor" ? "Dr. Smith" : "Sarah Johnson"
+      );
+      localStorage.setItem("userEmail", formData.email);
+
       navigate("/dashboard");
     } else {
-      // Check credentials
-      const credentials = mockCredentials[userRole as keyof typeof mockCredentials];
-      if (formData.email === credentials.email && formData.password === credentials.password) {
-        localStorage.setItem("userRole", userRole);
-        localStorage.setItem("userName", userRole === "doctor" ? "Dr. Smith" : "Sarah Johnson");
-        navigate("/dashboard");
-      } else {
-        alert("Invalid credentials. Use:\nDoctor: doctor@iksha.com / doctor123\nReceptionist: receptionist@iksha.com / recep123");
-      }
+      alert("Invalid credentials.");
     }
-  };
+  }
+};
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-wellness-beige-light via-wellness-sage-light/20 to-background flex items-center justify-center p-4">
