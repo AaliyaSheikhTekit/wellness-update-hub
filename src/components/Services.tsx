@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Clock, DollarSign, ArrowRight } from "lucide-react";
 import treatmentImage from "@/assets/naturopathy-treatment.jpg";
 
@@ -54,40 +55,56 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 mb-16">
-          {services.map((service, index) => (
-            <Card key={index} className="p-8 wellness-card-gradient wellness-shadow-soft hover:wellness-shadow wellness-transition border-0">
-              <div className="flex items-start justify-between mb-6">
-                <div className="text-4xl mb-4">{service.icon}</div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center justify-end mb-1">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {service.duration}
-                  </div>
-                  <div>{service.sessionTime}</div>
-                </div>
-              </div>
-              
-              <h3 className="font-display text-2xl font-semibold text-foreground mb-4">
-                {service.title}
-              </h3>
-              
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                {service.description}
-              </p>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-wellness-sage font-semibold">
-                  <DollarSign className="w-5 h-5 mr-1" />
-                  <span className="text-2xl font-bold">{service.price}</span>
-                </div>
-                <Button variant="wellnessOutline" className="wellness-spring">
-                  View Details & Book
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+        <div className="mb-16 px-4 sm:px-8 lg:px-16">
+          <Carousel className="w-full max-w-6xl mx-auto">
+            <CarouselContent className="-ml-4">
+              {services.map((service, index) => (
+                <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/2">
+                  <Card className="p-8 h-full wellness-card-gradient wellness-shadow-soft hover:wellness-shadow wellness-transition border-0">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="text-4xl mb-4">{service.icon}</div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div className="flex items-center justify-end mb-1">
+                          <Clock className="w-4 h-4 mr-1" />
+                          {service.duration}
+                        </div>
+                        <div>{service.sessionTime}</div>
+                      </div>
+                    </div>
+                    
+                    <h3 className="font-display text-2xl font-semibold text-foreground mb-4">
+                      {service.title}
+                    </h3>
+                    
+                    <p className="text-muted-foreground leading-relaxed mb-6">
+                      {service.description}
+                    </p>
+                    
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center text-wellness-sage font-semibold">
+                        <DollarSign className="w-5 h-5 mr-1" />
+                        <span className="text-2xl font-bold">{service.price}</span>
+                      </div>
+                      <Button 
+                        variant="wellnessOutline" 
+                        className="wellness-spring"
+                        onClick={() => {
+                          // Scroll to contact section for booking
+                          const contactSection = document.getElementById('contact');
+                          contactSection?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        View Details & Book
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -131,7 +148,16 @@ const Services = () => {
                 </div>
               </div>
             </div>
-            <Button variant="wellness" size="lg" className="mt-8">
+            <Button 
+              variant="wellness" 
+              size="lg" 
+              className="mt-8"
+              onClick={() => {
+                // Scroll to contact section for consultation
+                const contactSection = document.getElementById('contact');
+                contactSection?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               Schedule Your Consultation
             </Button>
           </div>
