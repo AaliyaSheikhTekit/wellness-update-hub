@@ -8,7 +8,10 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import PatientDetail from "./pages/PatientDetail";
 import NotFound from "./pages/NotFound";
+import { Amplify } from "aws-amplify";
+import awsconfig from "./aws-exports";
 
+Amplify.configure(awsconfig);
 const queryClient = new QueryClient();
 
 const App = () => (

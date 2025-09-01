@@ -3,76 +3,132 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, User, Lock, Mail, Eye, EyeOff, Leaf, Stethoscope, UserCheck } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Leaf, Key } from "lucide-react";
+import {
+  signIn,
+  confirmSignIn,
+  resetPassword,
+  confirmResetPassword,
+  getCurrentUser,
+  fetchAuthSession,
+} from "aws-amplify/auth";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [userRole, setUserRole] = useState("doctor");
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
-    phone: ""
+    newPassword: "",
+    resetCode: "",
+    resetNewPassword: "",
   });
-
-  // Mock credentials for demo
-const mockCredentials = {
-  receptionist: {
-    email: "receptionist@iksha.com",
-    password: "recep123",
-  },
-  doctor: {
-    email: "doctor@iksha.com",
-    password: "doctor123",  // fixed
-  },
-};
+  const [nextStep, setNextStep] = useState<any>(null);
+  const [forgotStep, setForgotStep] = useState<"request" | "confirm" | null>(
+    null
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
+  // --- Sign In ---
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { isSignedIn, nextStep } = await signIn({
+        username: formData.email,
+        password: formData.password,
+      });
 
-  let detectedRole: "doctor" | "receptionist" | null = null;
-  if (formData.email.includes("doctor")) detectedRole = "doctor";
-  if (formData.email.includes("receptionist")) detectedRole = "receptionist";
+      if (isSignedIn) {
+        const user = await getCurrentUser();
+        const session = await fetchAuthSession();
 
-  if (isSignUp) {
-    localStorage.setItem("userRole", detectedRole || userRole);
-    localStorage.setItem("userName", formData.name || "");
-    localStorage.setItem("userEmail", formData.email || "");
-    navigate("/dashboard");
-  } else {
-    const credentials = mockCredentials[detectedRole as keyof typeof mockCredentials];
-    if (
-      credentials &&
-      formData.email === credentials.email &&
-      formData.password === credentials.password
-    ) {
-      localStorage.setItem("userRole", detectedRole || userRole);
-      localStorage.setItem(
-        "userName",
-        detectedRole === "doctor" ? "Dr. Smith" : "Sarah Johnson"
-      );
+        // console.log("SignIn Success:", user);
+        // console.log("Session:", session);
+
+        // Extract attributes from ID token payload
+        const payload = session.tokens?.idToken?.payload || {};
+
+        // console.log("SignIn Success:", payload);
+        const preferredUsername =
+          payload["preferred_username"] || payload.username || "User";
+        const email = payload["email"] || formData.email;
+        // console.log("payload.username Success:", payload.username);
+        // Save in localStorage
+        localStorage.setItem("userName", String(preferredUsername));
+        localStorage.setItem("userEmail", String(email));
+
+        navigate("/dashboard");
+      } else {
+        console.log("Next step required:", nextStep);
+        setNextStep(nextStep);
+      }
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      alert(error.message || "Authentication failed.");
+    }
+  };
+
+  // --- Confirm New Password Required ---
+  const handleConfirmNewPassword = async () => {
+    try {
+      await confirmSignIn({
+        challengeResponse: formData.newPassword,
+      });
+
+      const user = await getCurrentUser();
+      console.log("Password changed & logged in:", user);
+
+      localStorage.setItem("userName", user.username || "User");
       localStorage.setItem("userEmail", formData.email);
 
       navigate("/dashboard");
-    } else {
-      alert("Invalid credentials.");
+    } catch (error: any) {
+      console.error("Confirm Password Error:", error);
+      alert(error.message || "Failed to set new password.");
     }
-  }
-};
+  };
 
+  // --- Forgot Password Request ---
+  const handleForgotPassword = async () => {
+    try {
+      await resetPassword({ username: formData.email });
+      alert("Password reset code sent to your email.");
+      setForgotStep("confirm");
+    } catch (error: any) {
+      console.error("Forgot Password Error:", error);
+      alert(error.message || "Failed to start reset password.");
+    }
+  };
 
+  // --- Confirm Forgot Password ---
+  const handleConfirmForgotPassword = async () => {
+    try {
+      await confirmResetPassword({
+        username: formData.email,
+        confirmationCode: formData.resetCode,
+        newPassword: formData.resetNewPassword,
+      });
+
+      alert("Password has been reset successfully. Please sign in.");
+      setForgotStep(null);
+    } catch (error: any) {
+      console.error("Confirm Reset Error:", error);
+      alert(error.message || "Failed to confirm reset password.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-wellness-beige-light via-wellness-sage-light/20 to-background flex items-center justify-center p-4">
@@ -92,200 +148,176 @@ const handleSubmit = (e: React.FormEvent) => {
               <div className="w-10 h-10 rounded-full bg-wellness-sage flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-display text-2xl font-semibold text-foreground">Iksha</span>
+              <span className="font-display text-2xl font-semibold text-foreground">
+                Iksha
+              </span>
             </div>
             <div>
               <CardTitle className="font-display text-3xl font-bold text-foreground">
-                {isSignUp ? "Join Iksha" : "Welcome Back"}
+                Welcome Back
               </CardTitle>
               <CardDescription className="text-lg">
-                {isSignUp
-                  ? "Begin your natural wellness journey with us"
-                  : "Access your practice management dashboard"
-                }
+                Access your practice management dashboard
               </CardDescription>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+            {/* Sign In Form */}
+            {!nextStep && !forgotStep && (
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="email">Email</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={formData.name}
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
                       onChange={handleInputChange}
                       className="pl-10"
                       required
                     />
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="pl-10 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground wellness-transition"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="wellness"
+                  size="lg"
+                  className="w-full"
+                >
+                  Sign In
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setForgotStep("request")}
+                  className="text-sm text-wellness-sage underline mt-2"
+                >
+                  Forgot Password?
+                </button>
+              </form>
+            )}
+
+            {/* New Password Required */}
+            {nextStep?.signInStep ===
+              "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED" && (
+              <div className="space-y-4">
+                <Label htmlFor="newPassword">Set New Password</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    placeholder="Enter new password"
+                    value={formData.newPassword}
                     onChange={handleInputChange}
                     className="pl-10"
                     required
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Login as</Label>
-                <RadioGroup 
-                  value={userRole} 
-                  onValueChange={setUserRole}
-                  className="flex space-x-6"
+                <Button
+                  onClick={handleConfirmNewPassword}
+                  variant="wellness"
+                  size="lg"
+                  className="w-full"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="doctor" id="doctor" />
-                    <Label htmlFor="doctor" className="flex items-center space-x-2 cursor-pointer">
-                      <Stethoscope className="h-4 w-4 text-wellness-sage" />
-                      <span>Doctor</span>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="receptionist" id="receptionist" />
-                    <Label htmlFor="receptionist" className="flex items-center space-x-2 cursor-pointer">
-                      <UserCheck className="h-4 w-4 text-wellness-sage" />
-                      <span>Receptionist</span>
-                    </Label>
-                  </div>
-                </RadioGroup>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Demo credentials: doctor@iksha.com/doctor123 | receptionist@iksha.com/recep123
-                </div>
+                  Confirm New Password
+                </Button>
               </div>
+            )}
 
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label>Register as</Label>
-                  <RadioGroup 
-                    value={userRole} 
-                    onValueChange={setUserRole}
-                    className="flex space-x-6"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="doctor" id="signup-doctor" />
-                      <Label htmlFor="signup-doctor" className="flex items-center space-x-2 cursor-pointer">
-                        <Stethoscope className="h-4 w-4 text-wellness-sage" />
-                        <span>Doctor</span>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="receptionist" id="signup-receptionist" />
-                      <Label htmlFor="signup-receptionist" className="flex items-center space-x-2 cursor-pointer">
-                        <UserCheck className="h-4 w-4 text-wellness-sage" />
-                        <span>Receptionist</span>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="pl-10 pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground wellness-transition"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+            {/* Forgot Password Request */}
+            {forgotStep === "request" && (
+              <div className="space-y-4">
+                <Label htmlFor="email">Enter your email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+                <Button
+                  onClick={handleForgotPassword}
+                  variant="wellness"
+                  size="lg"
+                  className="w-full"
+                >
+                  Send Reset Code
+                </Button>
               </div>
+            )}
 
-              {!isSignUp && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      className="rounded border-border text-wellness-sage focus:ring-wellness-sage"
-                    />
-                    <Label htmlFor="remember" className="text-sm">Remember me</Label>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-sm text-wellness-sage hover:text-wellness-sage-dark wellness-transition"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
+            {/* Forgot Password Confirm */}
+            {forgotStep === "confirm" && (
+              <div className="space-y-4">
+                <Label htmlFor="resetCode">Verification Code</Label>
+                <Input
+                  id="resetCode"
+                  name="resetCode"
+                  type="text"
+                  placeholder="Enter code from email"
+                  value={formData.resetCode}
+                  onChange={handleInputChange}
+                  required
+                />
 
-              <Button type="submit" variant="wellness" size="lg" className="w-full">
-                {isSignUp ? "Create Account" : "Sign In"}
-              </Button>
-            </form>
+                <Label htmlFor="resetNewPassword">New Password</Label>
+                <Input
+                  id="resetNewPassword"
+                  name="resetNewPassword"
+                  type="password"
+                  placeholder="Enter new password"
+                  value={formData.resetNewPassword}
+                  onChange={handleInputChange}
+                  required
+                />
 
-            <div className="space-y-4">
-              <div className="relative">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  OR
-                </span>
+                <Button
+                  onClick={handleConfirmForgotPassword}
+                  variant="wellness"
+                  size="lg"
+                  className="w-full"
+                >
+                  Confirm Reset
+                </Button>
               </div>
-
-              <Button variant="wellnessOutline" size="lg" className="w-full">
-                Continue with Google
-              </Button>
-            </div>
-
-            <div className="text-center">
-              <span className="text-sm text-muted-foreground">
-                {isSignUp ? "Already have an account?" : "Don't have an account?"}
-              </span>{" "}
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-wellness-sage hover:text-wellness-sage-dark font-medium wellness-transition"
-              >
-                {isSignUp ? "Sign in" : "Sign up"}
-              </button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -294,3 +326,8 @@ const handleSubmit = (e: React.FormEvent) => {
 };
 
 export default Login;
+//receptionist@eanaturopathyindia.com
+//Iksha@Recp90
+//Iksha@doctor90
+//doctor@eanaturopathyindia.com
+

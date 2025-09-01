@@ -26,16 +26,39 @@ interface Patient {
   consentGiven: boolean;
   status: "Active" | "Pending";
   dateAdded: string;
+
+  // Receptionist input
+  vitals: {
+    bloodPressure: string;
+    pulse: string;
+    weight: string;
+    height: string;
+    bmi: string;
+    muac: string; // Mid-upper arm circumference
+    waist: string;
+    hip: string;
+    whr: string;
+    skinfoldTriceps: string;
+    skinfoldBiceps: string;
+    skinfoldSubscapular: string;
+    skinfoldSuprailiac: string;
+    bodyFat: string;
+    fastingBloodSugar: string;
+    randomBloodSugar: string;
+    fever: string;
+  };
 }
+
 
 interface PatientFormProps {
   onPatientAdded?: (patient: Patient) => void;
 }
 
 const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
-  const { toast } = useToast();
+ const { toast } = useToast();
   const [isConsentOpen, setIsConsentOpen] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     age: "",
@@ -47,7 +70,26 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
     allergies: "",
     medications: "",
     emergencyContact: "",
-    emergencyPhone: ""
+    emergencyPhone: "",
+
+    // vitals
+    bloodPressure: "",
+    pulse: "",
+    weight: "",
+    height: "",
+    bmi: "",
+    muac: "",
+    waist: "",
+    hip: "",
+    whr: "",
+    skinfoldTriceps: "",
+    skinfoldBiceps: "",
+    skinfoldSubscapular: "",
+    skinfoldSuprailiac: "",
+    bodyFat: "",
+    fastingBloodSugar: "",
+    randomBloodSugar: "",
+    fever: ""
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -70,24 +112,41 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
     const newPatient: Patient = {
       id: Date.now().toString(),
       ...formData,
+      vitals: {
+        bloodPressure: formData.bloodPressure,
+        pulse: formData.pulse,
+        weight: formData.weight,
+        height: formData.height,
+        bmi: formData.bmi,
+        muac: formData.muac,
+        waist: formData.waist,
+        hip: formData.hip,
+        whr: formData.whr,
+        skinfoldTriceps: formData.skinfoldTriceps,
+        skinfoldBiceps: formData.skinfoldBiceps,
+        skinfoldSubscapular: formData.skinfoldSubscapular,
+        skinfoldSuprailiac: formData.skinfoldSuprailiac,
+        bodyFat: formData.bodyFat,
+        fastingBloodSugar: formData.fastingBloodSugar,
+        randomBloodSugar: formData.randomBloodSugar,
+        fever: formData.fever
+      },
       consentGiven: true,
       status: "Active",
       dateAdded: new Date().toISOString().split('T')[0]
     };
 
-    // Save to localStorage (mock database)
+    // Save to localStorage (mock db)
     const existingPatients = JSON.parse(localStorage.getItem("patients") || "[]");
-    const updatedPatients = [...existingPatients, newPatient];
-    localStorage.setItem("patients", JSON.stringify(updatedPatients));
+    localStorage.setItem("patients", JSON.stringify([...existingPatients, newPatient]));
 
     onPatientAdded?.(newPatient);
-    
     toast({
       title: "Patient Added Successfully",
       description: `${newPatient.name} has been registered successfully.`,
     });
 
-    // Reset form
+    // Reset
     setFormData({
       name: "",
       age: "",
@@ -99,7 +158,24 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
       allergies: "",
       medications: "",
       emergencyContact: "",
-      emergencyPhone: ""
+      emergencyPhone: "",
+      bloodPressure: "",
+      pulse: "",
+      weight: "",
+      height: "",
+      bmi: "",
+      muac: "",
+      waist: "",
+      hip: "",
+      whr: "",
+      skinfoldTriceps: "",
+      skinfoldBiceps: "",
+      skinfoldSubscapular: "",
+      skinfoldSuprailiac: "",
+      bodyFat: "",
+      fastingBloodSugar: "",
+      randomBloodSugar: "",
+      fever: ""
     });
     setConsentGiven(false);
     setIsConsentOpen(false);
@@ -265,7 +341,28 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
                 </div>
               </div>
             </div>
-
+ <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-foreground">Vitals & Anthropometric Measurements (Receptionist)</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input name="bloodPressure" placeholder="Blood Pressure (mmHg)" value={formData.bloodPressure} onChange={handleInputChange}/>
+                <Input name="pulse" placeholder="Pulse (bpm)" value={formData.pulse} onChange={handleInputChange}/>
+                <Input name="weight" placeholder="Weight (Kg)" value={formData.weight} onChange={handleInputChange}/>
+                <Input name="height" placeholder="Height (cm)" value={formData.height} onChange={handleInputChange}/>
+                <Input name="bmi" placeholder="BMI (kg/m²)" value={formData.bmi} onChange={handleInputChange}/>
+                <Input name="muac" placeholder="Mid-Upper Arm Circumference (cm)" value={formData.muac} onChange={handleInputChange}/>
+                <Input name="waist" placeholder="Waist Circumference (cm)" value={formData.waist} onChange={handleInputChange}/>
+                <Input name="hip" placeholder="Hip Circumference (cm)" value={formData.hip} onChange={handleInputChange}/>
+                <Input name="whr" placeholder="Waist-Hip Ratio" value={formData.whr} onChange={handleInputChange}/>
+                <Input name="skinfoldTriceps" placeholder="Skinfold Triceps (mm)" value={formData.skinfoldTriceps} onChange={handleInputChange}/>
+                <Input name="skinfoldBiceps" placeholder="Skinfold Biceps (mm)" value={formData.skinfoldBiceps} onChange={handleInputChange}/>
+                <Input name="skinfoldSubscapular" placeholder="Skinfold Subscapular (mm)" value={formData.skinfoldSubscapular} onChange={handleInputChange}/>
+                <Input name="skinfoldSuprailiac" placeholder="Skinfold Suprailiac (mm)" value={formData.skinfoldSuprailiac} onChange={handleInputChange}/>
+                <Input name="bodyFat" placeholder="Body Fat %" value={formData.bodyFat} onChange={handleInputChange}/>
+                <Input name="fastingBloodSugar" placeholder="Fasting Blood Sugar (mg/dl)" value={formData.fastingBloodSugar} onChange={handleInputChange}/>
+                <Input name="randomBloodSugar" placeholder="Random Blood Sugar (mg/dl)" value={formData.randomBloodSugar} onChange={handleInputChange}/>
+                <Input name="fever" placeholder="Fever (°F)" value={formData.fever} onChange={handleInputChange}/>
+              </div>
+            </div>
             {/* Emergency Contact */}
             <div className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground flex items-center space-x-2">

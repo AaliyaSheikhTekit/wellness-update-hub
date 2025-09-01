@@ -269,12 +269,12 @@ const PatientDetail = () => {
 
         {/* Patient Details Tabs */}
         <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 wellness-card-gradient">
-            <TabsTrigger value="history">Medical History</TabsTrigger>
-            <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          </TabsList>
-
+        <TabsList className="grid w-full grid-cols-4 wellness-card-gradient">
+  <TabsTrigger value="history">Medical History</TabsTrigger>
+  <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+  <TabsTrigger value="appointments">Appointments</TabsTrigger>
+  <TabsTrigger value="vitals">Vitals</TabsTrigger>
+</TabsList>
           <TabsContent value="history">
             <Card className="wellness-card-gradient border-0 wellness-shadow">
               <CardHeader>
@@ -387,6 +387,72 @@ const PatientDetail = () => {
               </CardContent>
             </Card>
           </TabsContent>
+       <TabsContent value="vitals">
+  <Card className="wellness-card-gradient border-0 wellness-shadow">
+    <CardHeader>
+      <CardTitle className="font-display text-2xl">Vitals & Anthropometric Measurements</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-muted/30 text-left">
+              <th className="p-2">Parameter</th>
+              <th className="p-2">Pre</th>
+              <th className="p-2">Post</th>
+              <th className="p-2">Unit</th>
+              <th className="p-2">Normal Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { name: "Blood Pressure", unit: "mmHg", range: "90–120 / 60–80" },
+              { name: "Pulse", unit: "beats/min", range: "60–100" },
+              { name: "Weight", unit: "kg", range: "BMI dependent" },
+              { name: "Height", unit: "cm", range: "-" },
+              { name: "BMI", unit: "kg/m²", range: "18.5 – 24.9" },
+              { name: "Mid-Upper Arm Circumference", unit: "cm", range: "22 – 32" },
+              { name: "Waist Circumference", unit: "cm", range: "Men < 94, Women < 80" },
+              { name: "Hip Circumference", unit: "cm", range: "-" },
+              { name: "Waist-Hip Ratio", unit: "-", range: "Men < 0.90, Women < 0.85" },
+              { name: "Skinfold (Triceps)", unit: "mm", range: "M: 6–13, F: 12–23" },
+              { name: "Skinfold (Biceps)", unit: "mm", range: "M: 4–12, F: 9–18" },
+              { name: "Skinfold (Subscapular)", unit: "mm", range: "M: 10–18, F: 12–25" },
+              { name: "Skinfold (Suprailiac)", unit: "mm", range: "M: 8–15, F: 11–22" },
+              { name: "Body Fat %", unit: "%", range: "M: 10–20%, F: 18–28%" },
+              { name: "Fasting Blood Sugar", unit: "mg/dL", range: "70–99 (fasting), <140 (2hr post)" },
+              { name: "Random Blood Sugar", unit: "mg/dL", range: "<125" },
+              { name: "Fever", unit: "°F", range: "98.6°F (37°C)" }
+            ].map((vital, index) => (
+              <tr key={index} className="border-t border-border/30">
+                <td className="p-2 font-medium">{vital.name}</td>
+                <td className="p-2">
+                  <Input placeholder="Pre" className="w-24" />
+                </td>
+                <td className="p-2">
+                  <Input placeholder="Post" className="w-24" />
+                </td>
+                <td className="p-2">{vital.unit}</td>
+                <td className="p-2 text-muted-foreground">{vital.range}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <Button
+          variant="wellness"
+          onClick={() =>
+            toast({ title: "Vitals Saved", description: "Recorded successfully" })
+          }
+        >
+          Save Vitals
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
+
         </Tabs>
       </div>
     </div>

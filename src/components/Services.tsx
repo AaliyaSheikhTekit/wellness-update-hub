@@ -81,10 +81,10 @@ const Services = () => {
                     </p>
                     
                     <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center text-wellness-sage font-semibold">
+                      {/* <div className="flex items-center text-wellness-sage font-semibold">
                         <DollarSign className="w-5 h-5 mr-1" />
                         <span className="text-2xl font-bold">{service.price}</span>
-                      </div>
+                      </div> */}
                       <Button 
                         variant="wellnessOutline" 
                         className="wellness-spring"

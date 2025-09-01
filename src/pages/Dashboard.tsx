@@ -23,7 +23,7 @@ import {
   Stethoscope,
   UserCheck
 } from "lucide-react";
-
+import { signOut } from "aws-amplify/auth";
 // Mock patient data
 const mockPatients = [
   {
@@ -80,7 +80,17 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   // Get user role from localStorage
-  const userRole = localStorage.getItem("userRole") || "doctor";
+// Get email from localStorage
+const userEmail = localStorage.getItem("userEmail") || "";
+
+// Derive role based on email
+let userRole = "doctor"; // default
+
+if (userEmail.includes("receptionist")) {
+  userRole = "receptionist";
+} else if (userEmail.includes("doctor")) {
+  userRole = "doctor";
+}
   const userName = localStorage.getItem("userName") || "User";
 
   // Load patients from localStorage
@@ -120,11 +130,19 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
+const handleLogout = async () => {
+  try {
+    await signOut();
+    // Clear any app-level storage
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+
     navigate("/login");
-  };
+  } catch (error) {
+    console.error("Error during sign out:", error);
+  }
+};
 
   return (
     <div className="min-h-screen bg-background">
