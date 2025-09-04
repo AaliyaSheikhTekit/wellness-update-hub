@@ -324,8 +324,9 @@ useEffect(() => {
                 <Button
                   onClick={handleConfirmForgotPassword}
                   variant="wellness"
+
                   size="lg"
-                  className="w-full"
+                  className="w-full bg-foreground"
                 >
                   Confirm Reset
                 </Button>

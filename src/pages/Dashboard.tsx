@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+
 import PatientForm from "@/components/PatientForm";
 import {
-  Users,
   FileText,
   Pill,
   Calendar,
@@ -21,9 +21,11 @@ import {
   Leaf,
   Plus,
   Stethoscope,
-  UserCheck
+  UserCheck,
 } from "lucide-react";
+import { Users } from "lucide-react";
 import { signOut } from "aws-amplify/auth";
+import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
 
 // Mock patient data
 const mockPatients = [
@@ -36,7 +38,7 @@ const mockPatients = [
     condition: "Chronic Fatigue",
     lastVisit: "2024-01-15",
     status: "Active",
-    nextAppointment: "2024-02-01"
+    nextAppointment: "2024-02-01",
   },
   {
     id: "2",
@@ -47,7 +49,7 @@ const mockPatients = [
     condition: "Digestive Issues",
     lastVisit: "2024-01-20",
     status: "Active",
-    nextAppointment: "2024-01-30"
+    nextAppointment: "2024-01-30",
   },
   {
     id: "3",
@@ -58,7 +60,7 @@ const mockPatients = [
     condition: "Stress Management",
     lastVisit: "2024-01-18",
     status: "Completed",
-    nextAppointment: null
+    nextAppointment: null,
   },
   {
     id: "4",
@@ -69,8 +71,8 @@ const mockPatients = [
     condition: "Pain Management",
     lastVisit: "2024-01-22",
     status: "Active",
-    nextAppointment: "2024-02-05"
-  }
+    nextAppointment: "2024-02-05",
+  },
 ];
 
 const Dashboard = () => {
@@ -81,17 +83,17 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   // Get user role from localStorage
-// Get email from localStorage
-const userEmail = localStorage.getItem("userEmail") || "";
+  // Get email from localStorage
+  const userEmail = localStorage.getItem("userEmail") || "";
 
-// Derive role based on email
-let userRole = "doctor"; // default
+  // Derive role based on email
+  let userRole = "doctor"; // default
 
-if (userEmail.includes("receptionist")) {
-  userRole = "receptionist";
-} else if (userEmail.includes("doctor")) {
-  userRole = "doctor";
-}
+  if (userEmail.includes("receptionist")) {
+    userRole = "receptionist";
+  } else if (userEmail.includes("doctor")) {
+    userRole = "doctor";
+  }
   const userName = localStorage.getItem("userName") || "User";
 
   // Load patients from localStorage
@@ -101,23 +103,40 @@ if (userEmail.includes("receptionist")) {
   }, []);
 
   const handlePatientAdded = (newPatient: any) => {
-    setPatients(prev => [...prev, newPatient]);
+    setPatients((prev) => [...prev, newPatient]);
   };
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (patient.condition && patient.condition.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (patient.currentCondition && patient.currentCondition.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredPatients = patients.filter(
+    (patient) =>
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (patient.condition &&
+        patient.condition.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (patient.currentCondition &&
+        patient.currentCondition
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()))
   );
 
   const sidebarItems = [
-    { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
-    ...(userRole === "receptionist" ? [
-      { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" }
-    ] : []),
+    {
+      name: "Overview",
+      icon: Users,
+      path: "/dashboard",
+      active: activeTab === "overview",
+    },
+    ...(userRole === "receptionist"
+      ? [
+          {
+            name: "Add Patient",
+            icon: Plus,
+            path: "/dashboard",
+            active: activeTab === "add-patient",
+          },
+        ]
+      : []),
     { name: "Appointments", icon: Calendar, path: "/appointments" },
     { name: "Prescriptions", icon: Pill, path: "/prescriptions" },
-    { name: "Invoices", icon: FileText, path: "/invoices" }
+    { name: "Invoices", icon: FileText, path: "/invoices" },
   ];
 
   const getStatusColor = (status: string) => {
@@ -131,25 +150,23 @@ if (userEmail.includes("receptionist")) {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      // Call Amplify signOut (clears Cognito session: idToken, accessToken, refreshToken)
+      await signOut();
 
+      // Clear ALL localStorage (not just role/email/name)
+      localStorage.clear();
 
-const handleLogout = async () => {
-  try {
-    // Call Amplify signOut (clears Cognito session: idToken, accessToken, refreshToken)
-    await signOut();
+      // If you also use sessionStorage
+      sessionStorage.clear();
 
-    // Clear ALL localStorage (not just role/email/name)
-    localStorage.clear();
-
-    // If you also use sessionStorage
-    sessionStorage.clear();
-
-    // Redirect to login
-    navigate("/login");
-  } catch (error) {
-    console.error("Error during sign out:", error);
-  }
-};
+      // Redirect to login
+      navigate("/login");
+    } catch (error) {
+      console.error("Error during sign out:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -162,19 +179,21 @@ const handleLogout = async () => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 wellness-card-gradient border-r border-border/50 transform wellness-transition duration-300 z-30 ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } lg:translate-x-0`}>
+      <div
+        className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 transform wellness-transition duration-300 z-30 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
         {/* Header */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 rounded-full bg-wellness-sage flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <span className="font-display text-xl font-semibold text-foreground">Iksha</span>
-                <p className="text-xs text-muted-foreground">Practice Dashboard</p>
+              <div className="flex items-center space-x-2">
+                <img
+                  src={IkshaLogo}
+                  alt="Iksha Naturopathy Logo"
+                  className="h-16 w-auto object-contain" // larger height
+                />
               </div>
             </div>
             <Button
@@ -224,7 +243,7 @@ const handleLogout = async () => {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Header */}
-        <header className="wellness-card-gradient border-b border-border/50 p-4">
+        <header className="bg-white border-b border-border/50 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button
@@ -237,7 +256,9 @@ const handleLogout = async () => {
               </Button>
               <div>
                 <h1 className="font-display text-3xl font-bold text-foreground">
-                  {userRole === "doctor" ? "Doctor Dashboard" : "Receptionist Dashboard"}
+                  {userRole === "doctor"
+                    ? "Doctor Dashboard"
+                    : "Receptionist Dashboard"}
                 </h1>
                 <div className="flex items-center space-x-2 mt-1">
                   {userRole === "doctor" ? (
@@ -245,7 +266,9 @@ const handleLogout = async () => {
                   ) : (
                     <UserCheck className="h-4 w-4 text-wellness-sage" />
                   )}
-                  <span className="text-sm text-muted-foreground">Welcome back, {userName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Welcome back, {userName}
+                  </span>
                 </div>
               </div>
             </div>
@@ -257,7 +280,7 @@ const handleLogout = async () => {
         </header>
 
         {/* Content */}
-        <main className="p-6">
+        <main className="p-6 bg-white">
           {activeTab === "overview" ? (
             <>
               {/* Search and Stats */}
@@ -273,66 +296,180 @@ const handleLogout = async () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Card className="wellness-card-gradient border-0 wellness-shadow-soft">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-5 w-5 text-wellness-sage" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Total Patients</p>
-                          <p className="text-2xl font-bold text-foreground">{patients.length}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="shadow-xl relative overflow-hidden wellness-card-gradient border-0 wellness-shadow-soft hover:wellness-shadow rounded-2xl"
+                  >
+                    {/* Gradient Glow Overlay */}
 
-                  <Card className="wellness-card-gradient border-0 wellness-shadow-soft">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-5 w-5 text-wellness-sage" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Active Cases</p>
-                          <p className="text-2xl font-bold text-foreground">{patients.filter(p => p.status === "Active").length}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <CardContent className="p-6 relative z-10">
+                      <div className="flex items-center space-x-4">
+                        {/* Animated Icon */}
+                        <motion.div
+                          whileHover={{ rotate: [0, 10, -10, 0] }}
+                          transition={{ duration: 0.6 }}
+                          className="p-3 rounded-xl bg-primary/10 text-primary"
+                        >
+                          <Users className="h-6 w-6" />
+                        </motion.div>
 
-                  <Card className="wellness-card-gradient border-0 wellness-shadow-soft">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <Pill className="h-5 w-5 text-wellness-sage" />
+                        {/* Text Content */}
                         <div>
-                          <p className="text-sm text-muted-foreground">Prescriptions</p>
-                          <p className="text-2xl font-bold text-foreground">12</p>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Total Patients
+                          </p>
+                          <motion.p
+                            key={patients.length} // animates when value changes
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="text-3xl font-bold text-foreground"
+                          >
+                            {patients.length}
+                          </motion.p>
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
+                  </motion.div>
 
-                  <Card className="wellness-card-gradient border-0 wellness-shadow-soft">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-5 w-5 text-wellness-sage" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Pending Invoices</p>
-                          <p className="text-2xl font-bold text-foreground">3</p>
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="shadow-xl relative overflow-hidden wellness-card-gradient border-0 wellness-shadow-soft hover:wellness-shadow rounded-2xl"
+                  >
+                    <Card>
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-wellness-beige-light/40 to-transparent pointer-events-none" />
+                      <CardContent className="p-6 relative z-10">
+                        <div className="flex items-center space-x-4">
+                          <motion.div
+                            whileHover={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 0.6 }}
+                            className="p-3 rounded-xl bg-primary/10 text-primary"
+                          >
+                            <Calendar className="h-6 w-6" />
+                          </motion.div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">
+                              Active Cases
+                            </p>
+                            <motion.p
+                              key={
+                                patients.filter((p) => p.status === "Active")
+                                  .length
+                              }
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.4 }}
+                              className="text-3xl font-bold text-foreground"
+                            >
+                              {
+                                patients.filter((p) => p.status === "Active")
+                                  .length
+                              }
+                            </motion.p>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Prescriptions */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="shadow-xl relative overflow-hidden wellness-card-gradient border-0 wellness-shadow-soft hover:wellness-shadow rounded-2xl"
+                  >
+                    <Card>
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-wellness-beige-light/40 to-transparent pointer-events-none" />
+                      <CardContent className="p-6 relative z-10">
+                        <div className="flex items-center space-x-4">
+                          <motion.div
+                            whileHover={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 0.6 }}
+                            className="p-3 rounded-xl bg-primary/10 text-primary"
+                          >
+                            <Pill className="h-6 w-6" />
+                          </motion.div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">
+                              Prescriptions
+                            </p>
+                            <motion.p
+                              key={12}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.4 }}
+                              className="text-3xl font-bold text-foreground"
+                            >
+                              12
+                            </motion.p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Pending Invoices */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    className=" shadow-xl relative overflow-hidden wellness-card-gradient border-0 wellness-shadow-soft hover:wellness-shadow rounded-2xl"
+                  >
+                    <Card>
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-wellness-beige-light/40 to-transparent pointer-events-none" />
+                      <CardContent className="p-6 relative z-10">
+                        <div className="flex items-center space-x-4">
+                          <motion.div
+                            whileHover={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 0.6 }}
+                            className="p-3 rounded-xl bg-primary/10 text-primary"
+                          >
+                            <FileText className="h-6 w-6" />
+                          </motion.div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">
+                              Pending Invoices
+                            </p>
+                            <motion.p
+                              key={3}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.4 }}
+                              className="text-3xl font-bold text-foreground"
+                            >
+                              3
+                            </motion.p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </div>
               </div>
 
               {/* Patient List */}
-              <Card className="wellness-card-gradient border-0 wellness-shadow">
+              <Card className="bg-white border-0 wellness-shadow-xl hover:wellness-shadow rounded-2xl">
                 <CardHeader>
                   <CardTitle className="font-display text-2xl text-foreground flex items-center justify-between">
                     <span>Patient List</span>
                     {userRole === "receptionist" && (
-                      <Button 
-                        variant="wellness" 
+                      <Button
+                        variant="wellness"
                         onClick={() => setActiveTab("add-patient")}
-                        className="ml-auto"
+                        className="ml-auto bg-foreground hover:bg-foreground/90"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add New Patient
@@ -347,45 +484,62 @@ const handleLogout = async () => {
                         <div
                           key={patient.id}
                           onClick={() => navigate(`/patient/${patient.id}`)}
-                          className="p-4 border border-border/30 rounded-lg hover:bg-wellness-sage-light/10 cursor-pointer wellness-transition"
+                          className="p-4 border border-border/100 rounded-lg hover:bg-wellness-sage-light/10 cursor-pointer wellness-transition shadow-xl"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                               <Avatar>
                                 <AvatarFallback className="bg-wellness-sage-light/20 text-wellness-sage">
-                                  {patient.name.split(" ").map((n: string) => n[0]).join("")}
+                                  {patient.name
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")}
                                 </AvatarFallback>
                               </Avatar>
 
                               <div>
-                                <h3 className="font-semibold text-foreground">{patient.name}</h3>
-                                <p className="text-sm text-muted-foreground">Age: {patient.age}</p>
+                                <h3 className="font-semibold text-foreground">
+                                  {patient.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Age: {patient.age}
+                                </p>
                                 <div className="flex items-center space-x-4 mt-1">
                                   <div className="flex items-center space-x-1">
                                     <Phone className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">{patient.phone}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {patient.phone}
+                                    </span>
                                   </div>
                                   <div className="flex items-center space-x-1">
                                     <Mail className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">{patient.email}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {patient.email}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
                             <div className="text-right space-y-2">
-                              <Badge className={`${getStatusColor(patient.status)}`}>
+                              <Badge
+                                className={`${getStatusColor(patient.status)}`}
+                              >
                                 {patient.status}
                               </Badge>
                               <div>
                                 <p className="text-sm font-medium text-foreground">
-                                  {patient.condition || patient.currentCondition}
+                                  {patient.condition ||
+                                    patient.currentCondition}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  Last visit: {patient.lastVisit || patient.dateAdded}
+                                  Last visit:{" "}
+                                  {patient.lastVisit || patient.dateAdded}
                                 </p>
                                 {patient.nextAppointment && (
-                                  <p className="text-xs text-wellness-sage">Next: {patient.nextAppointment}</p>
+                                  <p className="text-xs text-wellness-sage">
+                                    Next: {patient.nextAppointment}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -394,7 +548,9 @@ const handleLogout = async () => {
                       ))
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
-                        No patients found. {userRole === "receptionist" && "Click 'Add New Patient' to get started."}
+                        No patients found.{" "}
+                        {userRole === "receptionist" &&
+                          "Click 'Add New Patient' to get started."}
                       </div>
                     )}
                   </div>

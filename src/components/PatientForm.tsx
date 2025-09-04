@@ -400,7 +400,7 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
               <Button type="button" variant="outline">
                 Cancel
               </Button>
-              <Button type="submit" variant="wellness" size="lg">
+              <Button type="submit" variant="wellness" size="lg" className="bg-foreground hover:bg-foreground/85">
                 Register Patient
               </Button>
             </div>
@@ -457,6 +457,7 @@ const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
             </Button>
             <Button 
               variant="wellness" 
+              className="bg-foreground"
               onClick={handleConsentSubmit}
               disabled={!consentGiven}
             >
