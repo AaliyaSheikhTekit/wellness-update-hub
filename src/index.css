@@ -5,12 +5,14 @@
 /* Elegant Wellness Design System for Iksha Naturopathy
 All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
 */
-
+html, body {
+  overflow-x: hidden;
+}
 @layer base {
   :root {
     /* Premium Wellness Color Palette */
     --background: 42 25% 96%;
-    --foreground: 25 15% 25%;
+    --foreground: 0 20% 45%; /* #855d5d */
 
     --card: 40 20% 98%;
     --card-foreground: 25 15% 25%;
@@ -18,8 +20,8 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     --popover: 40 20% 98%;
     --popover-foreground: 25 15% 25%;
 
-    /* Sage Green Primary */
-    --primary: 142 25% 45%;
+    /* Primary Brand Color */
+    --primary: 0 20% 45%; /* #855d5d */
     --primary-foreground: 40 25% 96%;
 
     /* Warm Beige Secondary */
@@ -44,9 +46,9 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     --radius: 0.75rem;
 
     /* Premium Wellness Specific Colors */
-    --wellness-sage:  25 15% 25%;
-    --wellness-sage-light: 142 20% 75%;
-    --wellness-sage-dark: 142 30% 35%;
+    --wellness-sage: 0 20% 45%; /* replaced with primary */
+    --wellness-sage-light: 0 15% 65%;
+    --wellness-sage-dark: 0 30% 30%;
     
     --wellness-beige: 35 25% 88%;
     --wellness-beige-light: 40 20% 92%;
@@ -55,15 +57,27 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     --wellness-brown: 25 20% 45%;
     --wellness-brown-light: 25 15% 65%;
     
-    /* Elegant Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(var(--wellness-sage-light)), hsl(var(--wellness-beige)));
-    --gradient-card: linear-gradient(180deg, hsl(var(--wellness-beige-light)), hsl(var(--card)));
-    --gradient-overlay: linear-gradient(135deg, hsl(var(--wellness-sage) / 0.1), hsl(var(--wellness-beige) / 0.1));
+    /* Elegant Gradients (brand aligned) */
+    --gradient-hero: linear-gradient(
+      135deg, 
+      hsl(var(--primary) / 0.9), 
+      hsl(var(--wellness-beige))
+    );
+    --gradient-card: linear-gradient(
+      180deg, 
+      hsl(var(--wellness-beige-light)), 
+      hsl(var(--card))
+    );
+    --gradient-overlay: linear-gradient(
+      135deg, 
+      hsl(var(--primary) / 0.1), 
+      hsl(var(--wellness-beige) / 0.1)
+    );
     
     /* Shadows */
-    --shadow-elegant: 0 10px 40px -10px hsl(var(--wellness-sage) / 0.15);
-    --shadow-soft: 0 4px 20px -5px hsl(var(--wellness-brown) / 0.1);
-    --shadow-glow: 0 0 30px hsl(var(--wellness-sage-light) / 0.2);
+    --shadow-elegant: 0 10px 40px -10px hsl(var(--primary) / 0.15);
+    --shadow-soft: 0 4px 20px -5px hsl(var(--primary) / 0.1);
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.2);
     
     /* Typography */
     --font-display: 'Playfair Display', serif;
@@ -73,25 +87,19 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    /* Dark mode with warm wellness tones */
+    /* Dark mode with wellness tones */
     --background: 25 15% 8%;
     --foreground: 40 25% 96%;
 
@@ -101,8 +109,8 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     --popover: 25 15% 12%;
     --popover-foreground: 40 25% 96%;
 
-    --primary: 142 30% 65%;
-    --primary-foreground: 25 15% 8%;
+    --primary: 0 20% 45%; /* same brand color for dark mode */
+    --primary-foreground: 40 25% 96%;
 
     --secondary: 25 10% 20%;
     --secondary-foreground: 40 25% 96%;
@@ -118,12 +126,12 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
 
     --border: 25 10% 25%;
     --input: 25 10% 25%;
-    --ring: 142 30% 65%;
+    --ring: 0 20% 45%;
     
     /* Dark mode wellness colors */
-    --wellness-sage: 142 30% 65%;
-    --wellness-sage-light: 142 25% 75%;
-    --wellness-sage-dark: 142 35% 45%;
+    --wellness-sage: 0 20% 45%;
+    --wellness-sage-light: 0 25% 65%;
+    --wellness-sage-dark: 0 30% 35%;
     
     --wellness-beige: 35 15% 25%;
     --wellness-beige-light: 40 15% 30%;
@@ -131,6 +139,8 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
     
     --wellness-brown: 25 25% 75%;
     --wellness-brown-light: 25 20% 85%;
+
+    /* Sidebar */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

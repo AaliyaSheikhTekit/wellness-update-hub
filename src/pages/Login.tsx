@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
   confirmResetPassword,
   getCurrentUser,
   fetchAuthSession,
+  signOut
 } from "aws-amplify/auth";
 
 const Login = () => {
@@ -43,44 +44,56 @@ const Login = () => {
   };
 
   // --- Sign In ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { isSignedIn, nextStep } = await signIn({
-        username: formData.email,
-        password: formData.password,
-      });
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const { isSignedIn, nextStep } = await signIn({
+          username: formData.email,
+          password: formData.password,
+        });
 
-      if (isSignedIn) {
-        const user = await getCurrentUser();
-        const session = await fetchAuthSession();
+        if (isSignedIn) {
+          const user = await getCurrentUser();
+          const session = await fetchAuthSession();
 
-        // console.log("SignIn Success:", user);
-        // console.log("Session:", session);
+          // console.log("SignIn Success:", user);
+          // console.log("Session:", session);
 
-        // Extract attributes from ID token payload
-        const payload = session.tokens?.idToken?.payload || {};
+          // Extract attributes from ID token payload
+          const payload = session.tokens?.idToken?.payload || {};
 
-        // console.log("SignIn Success:", payload);
-        const preferredUsername =
-          payload["preferred_username"] || payload.username || "User";
-        const email = payload["email"] || formData.email;
-        // console.log("payload.username Success:", payload.username);
-        // Save in localStorage
-        localStorage.setItem("userName", String(preferredUsername));
-        localStorage.setItem("userEmail", String(email));
+          // console.log("SignIn Success:", payload);
+          const preferredUsername =
+            payload["preferred_username"] || payload.username || "User";
+          const email = payload["email"] || formData.email;
+          // console.log("payload.username Success:", payload.username);
+          // Save in localStorage
+          localStorage.setItem("userName", String(preferredUsername));
+          localStorage.setItem("userEmail", String(email));
 
-        navigate("/dashboard");
-      } else {
-        console.log("Next step required:", nextStep);
-        setNextStep(nextStep);
+          navigate("/dashboard");
+        } else {
+          console.log("Next step required:", nextStep);
+          setNextStep(nextStep);
+        }
+      } catch (error: any) {
+        console.error("Auth Error:", error);
+        alert(error.message || "Authentication failed.");
       }
-    } catch (error: any) {
-      console.error("Auth Error:", error);
-      alert(error.message || "Authentication failed.");
-    }
-  };
+    };
+useEffect(() => {
+    const clearSession = async () => {
+      try {
+        await signOut(); // clears Cognito session (cookies + tokens)
+        localStorage.clear(); // optional: wipe your saved user data
+        sessionStorage.clear();
+      } catch (error) {
+        console.error("Error clearing session:", error);
+      }
+    };
 
+    clearSession();
+  }, []);
   // --- Confirm New Password Required ---
   const handleConfirmNewPassword = async () => {
     try {

@@ -1,52 +1,101 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-
+import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 wellness-transition">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-2 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-wellness-sage flex items-center justify-center">
-            <div className="w-4 h-4 rounded-full bg-wellness-beige-light"></div>
-          </div>
-          <span className="font-display text-2xl font-semibold text-wellness-sage">Iksha</span>
-          <span className="text-wellness-brown-light font-light hidden sm:inline">Naturopathy</span>
+         <img
+  src={IkshaLogo}
+  alt="Iksha Naturopathy Logo"
+  className="h-16 w-auto object-contain" // larger height
+/>
         </div>
 
         <nav className="hidden md:flex items-center space-x-8">
-          <a href="#home" className="text-foreground hover:text-wellness-sage wellness-transition">Home</a>
-          <a href="#services" className="text-foreground hover:text-wellness-sage wellness-transition">Services</a>
-          <a href="#about" className="text-foreground hover:text-wellness-sage wellness-transition">About</a>
-          <a href="#contact" className="text-foreground hover:text-wellness-sage wellness-transition">Contact</a>
+          <a
+            href="#home"
+            className="text-foreground hover:text-wellness-sage wellness-transition"
+          >
+            Home
+          </a>
+          <a
+            href="#services"
+            className="text-foreground hover:text-wellness-sage wellness-transition"
+          >
+            Services
+          </a>
+          <a
+            href="#about"
+            className="text-foreground hover:text-wellness-sage wellness-transition"
+          >
+            About
+          </a>
+          <a
+            href="#contact"
+            className="text-foreground hover:text-wellness-sage wellness-transition"
+          >
+            Contact
+          </a>
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="wellnessOutline" size="lg" asChild className="btn-primary">
+          <Button
+            variant="wellnessOutline"
+            size="lg"
+            asChild
+            className="btn-primary"
+          >
             <a href="/login">Login</a>
           </Button>
-          <Button variant="wellness" size="lg" >
+          <Button variant="wellness" size="lg">
             Book Consultation
           </Button>
         </div>
 
-        <button 
+        <button
           className="md:hidden"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
       </div>
 
       {isMenuOpen && (
         <div className="md:hidden bg-background/95 backdrop-blur-lg border-t border-border/50">
           <nav className="container mx-auto px-4 py-6 flex flex-col space-y-4">
-            <a href="#home" className="text-foreground hover:text-wellness-sage wellness-transition">Home</a>
-            <a href="#services" className="text-foreground hover:text-wellness-sage wellness-transition">Services</a>
-            <a href="#about" className="text-foreground hover:text-wellness-sage wellness-transition">About</a>
-            <a href="#contact" className="text-foreground hover:text-wellness-sage wellness-transition">Contact</a>
+            <a
+              href="#home"
+              className="text-foreground hover:text-wellness-sage wellness-transition"
+            >
+              Home
+            </a>
+            <a
+              href="#services"
+              className="text-foreground hover:text-wellness-sage wellness-transition"
+            >
+              Services
+            </a>
+            <a
+              href="#about"
+              className="text-foreground hover:text-wellness-sage wellness-transition"
+            >
+              About
+            </a>
+            <a
+              href="#contact"
+              className="text-foreground hover:text-wellness-sage wellness-transition"
+            >
+              Contact
+            </a>
             <div className="flex flex-col space-y-3 mt-4">
               <Button variant="wellnessOutline" size="lg" asChild>
                 <a href="/login">Login</a>

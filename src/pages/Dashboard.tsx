@@ -24,6 +24,7 @@ import {
   UserCheck
 } from "lucide-react";
 import { signOut } from "aws-amplify/auth";
+
 // Mock patient data
 const mockPatients = [
   {
@@ -130,14 +131,20 @@ if (userEmail.includes("receptionist")) {
     }
   };
 
+
+
 const handleLogout = async () => {
   try {
+    // Call Amplify signOut (clears Cognito session: idToken, accessToken, refreshToken)
     await signOut();
-    // Clear any app-level storage
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
 
+    // Clear ALL localStorage (not just role/email/name)
+    localStorage.clear();
+
+    // If you also use sessionStorage
+    sessionStorage.clear();
+
+    // Redirect to login
     navigate("/login");
   } catch (error) {
     console.error("Error during sign out:", error);

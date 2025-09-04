@@ -36,7 +36,7 @@ const About = () => {
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
           <div className="space-y-8">
-            <div>
+            <div className="items-center">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-wellness-sage-light/20 border border-wellness-sage/30 mb-6">
                 <Leaf className="w-4 h-4 text-wellness-sage mr-2" />
                 <span className="text-sm font-medium text-wellness-sage">About Iksha</span>
