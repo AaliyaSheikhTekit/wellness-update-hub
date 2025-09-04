@@ -38,16 +38,16 @@ const Hero = () => {
           >
             <div className="space-y-6">
               <motion.div
-                className="inline-flex items-center px-4 py-2 rounded-full bg-wellness-sage-light/20 border border-wellness-sage/30"
+                className="inline-flex items-center px-4 py-2 rounded-full bg-white border border-wellness-beige/30"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
-                <Leaf className="w-4 h-4 text-wellness-sage mr-2" />
-                <span className="text-sm font-medium text-wellness-sage">
+                <Leaf className="w-4 h-4 text-foreground mr-2" />
+                <span className="text-sm font-medium text-foreground">
                   Natural Healing Excellence
                 </span>
-              </motion.div>
+              </motion.div> 
 
               <motion.h1
                 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight"
@@ -56,7 +56,7 @@ const Hero = () => {
                 transition={{ delay: 0.5 }}
               >
                 Natural Healing for
-                <span className="text-wellness-sage block">
+                <span className="text-foreground block">
                   Complete Wellness
                 </span>
               </motion.h1>
@@ -83,7 +83,7 @@ const Hero = () => {
               <Button
                 variant="wellness"
                 size="lg"
-                className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition"
+                className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition bg-foreground text-white"
               >
                 Book Consultation
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -110,7 +110,7 @@ const Hero = () => {
                 { value: 98, label: "Success Rate", suffix: "%" },
               ].map((stat, i) => (
                 <div key={i} className="text-center">
-                  <div className="text-3xl font-bold text-wellness-sage">
+                  <div className="text-3xl font-bold text-foreground">
                     <CountUp
                       start={0}
                       end={stat.value}
@@ -154,9 +154,9 @@ const Hero = () => {
                 <motion.div
                   key={i}
                   whileHover={{ scale: 1.05, rotate: 1 }}
-                  className="flex items-center space-x-4 p-4 rounded-xl bg-wellness-sage-light/10 cursor-pointer transition"
+                  className="flex items-center space-x-4 p-4 rounded-xl bg-white cursor-pointer transition"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-wellness-sage flex items-center justify-center shadow-md">
+                  <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center shadow-md">
                     {feature.icon}
                   </div>
                   <div>

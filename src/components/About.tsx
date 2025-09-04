@@ -58,7 +58,7 @@ const About = () => {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="wellness" size="lg">
+              <Button variant="wellness" size="lg" className="bg-foreground">
                 Meet Our Practitioners
               </Button>
               <Button variant="wellnessOutline" size="lg">
@@ -84,14 +84,15 @@ const About = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {achievements.map((achievement, index) => (
-            <Card key={index} className="p-6 text-center wellness-card-gradient wellness-shadow-soft hover:wellness-shadow wellness-transition border-0">
+            <Card key={index}   className="p-6 text-center text-foreground wellness-shadow-soft hover:wellness-shadow wellness-transition border-0 wellness-gradient"
+>
               <div className="flex justify-center mb-4">
                 {achievement.icon}
               </div>
               <div className="font-display text-3xl font-bold text-wellness-sage mb-2">
                 {achievement.number}
               </div>
-              <div className="font-semibold text-foreground mb-2">
+              <div className="font-semibold text-white mb-2">
                 {achievement.label}
               </div>
               <div className="text-sm text-muted-foreground">
@@ -110,7 +111,7 @@ const About = () => {
               Take the first step towards natural wellness. Our experienced practitioners are here to guide you on your path to optimal health and vitality.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="wellness" size="lg" className="text-lg px-8 py-6">
+              <Button variant="wellness" size="lg" className="text-lg px-8 py-6 bg-foreground">
                 Book Your Consultation
               </Button>
               <Button variant="wellnessOutline" size="lg" className="text-lg px-8 py-6">

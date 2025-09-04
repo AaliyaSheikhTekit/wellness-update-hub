@@ -7,12 +7,14 @@ All colors, gradients, fonts, etc defined here. All colors MUST be HSL.
 */
 html, body {
   overflow-x: hidden;
+  
 }
+
 @layer base {
   :root {
     /* Premium Wellness Color Palette */
     --background: 42 25% 96%;
-    --foreground: 0 20% 45%; /* #855d5d */
+    --foreground: 0 16% 30%; /* softer text fallback */
 
     --card: 40 20% 98%;
     --card-foreground: 25 15% 25%;
@@ -20,11 +22,15 @@ html, body {
     --popover: 40 20% 98%;
     --popover-foreground: 25 15% 25%;
 
-    /* Primary Brand Color */
-    --primary: 0 20% 45%; /* #855d5d */
+    /* ✅ Primary Brand Color (Iksha) */
+    --primary: 0 16% 50%; /* #956b6b */
     --primary-foreground: 40 25% 96%;
 
-    /* Warm Beige Secondary */
+    /* Shades for consistency */
+    --primary-light: 0 15% 70%;
+    --primary-dark: 0 20% 35%;
+
+    /* Secondary Palette */
     --secondary: 35 25% 88%;
     --secondary-foreground: 25 15% 25%;
 
@@ -41,48 +47,47 @@ html, body {
 
     --border: 35 15% 85%;
     --input: 35 15% 85%;
-    --ring: 142 25% 45%;
+    --ring: 0 16% 50%;
 
     --radius: 0.75rem;
 
-    /* Premium Wellness Specific Colors */
-    --wellness-sage: 0 20% 45%; /* replaced with primary */
-    --wellness-sage-light: 0 15% 65%;
-    --wellness-sage-dark: 0 30% 30%;
-    
+    /* Brand Neutrals */
     --wellness-beige: 35 25% 88%;
     --wellness-beige-light: 40 20% 92%;
     --wellness-beige-dark: 30 25% 80%;
-    
+
     --wellness-brown: 25 20% 45%;
     --wellness-brown-light: 25 15% 65%;
-    
-    /* Elegant Gradients (brand aligned) */
-    --gradient-hero: linear-gradient(
-      135deg, 
-      hsl(var(--primary) / 0.9), 
-      hsl(var(--wellness-beige))
-    );
-    --gradient-card: linear-gradient(
-      180deg, 
-      hsl(var(--wellness-beige-light)), 
-      hsl(var(--card))
-    );
+
+    /* Elegant Gradients */
+--gradient-hero: linear-gradient(
+  135deg,
+  hsl(var(--primary) / 0.9),
+  hsl(var(--wellness-beige))
+);
+
+--gradient-card: linear-gradient(
+  180deg,
+  hsl(var(--wellness-beige-light)),   /* soft beige top */
+  hsl(var(--wellness-brown) / 0.3),   /* subtle brown warmth */
+  hsl(var(--card))                    /* smooth blend to base */
+);
+
     --gradient-overlay: linear-gradient(
-      135deg, 
-      hsl(var(--primary) / 0.1), 
+      135deg,
+      hsl(var(--primary) / 0.1),
       hsl(var(--wellness-beige) / 0.1)
     );
-    
+
     /* Shadows */
     --shadow-elegant: 0 10px 40px -10px hsl(var(--primary) / 0.15);
     --shadow-soft: 0 4px 20px -5px hsl(var(--primary) / 0.1);
     --shadow-glow: 0 0 30px hsl(var(--primary) / 0.2);
-    
+
     /* Typography */
     --font-display: 'Playfair Display', serif;
     --font-body: 'Inter', sans-serif;
-    
+
     /* Animations */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -90,7 +95,7 @@ html, body {
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
@@ -99,7 +104,7 @@ html, body {
   }
 
   .dark {
-    /* Dark mode with wellness tones */
+    /* Dark Mode */
     --background: 25 15% 8%;
     --foreground: 40 25% 96%;
 
@@ -109,7 +114,8 @@ html, body {
     --popover: 25 15% 12%;
     --popover-foreground: 40 25% 96%;
 
-    --primary: 0 20% 45%; /* same brand color for dark mode */
+    /* ✅ Primary remains consistent */
+    --primary: 0 16% 50%; /* #956b6b */
     --primary-foreground: 40 25% 96%;
 
     --secondary: 25 10% 20%;
@@ -126,24 +132,20 @@ html, body {
 
     --border: 25 10% 25%;
     --input: 25 10% 25%;
-    --ring: 0 20% 45%;
-    
-    /* Dark mode wellness colors */
-    --wellness-sage: 0 20% 45%;
-    --wellness-sage-light: 0 25% 65%;
-    --wellness-sage-dark: 0 30% 35%;
-    
+    --ring: 0 16% 50%;
+
+    /* Neutrals */
     --wellness-beige: 35 15% 25%;
     --wellness-beige-light: 40 15% 30%;
     --wellness-beige-dark: 30 20% 20%;
-    
+
     --wellness-brown: 25 25% 75%;
     --wellness-brown-light: 25 20% 85%;
 
     /* Sidebar */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
@@ -161,7 +163,7 @@ html, body {
     @apply bg-background text-foreground font-body;
     line-height: 1.6;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     line-height: 1.3;
@@ -173,31 +175,31 @@ html, body {
   .wellness-gradient {
     background: var(--gradient-hero);
   }
-  
+
   .wellness-card-gradient {
     background: var(--gradient-card);
   }
-  
+
   .wellness-overlay {
     background: var(--gradient-overlay);
   }
-  
+
   .wellness-shadow {
     box-shadow: var(--shadow-elegant);
   }
-  
+
   .wellness-shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-  
+
   .wellness-glow {
     box-shadow: var(--shadow-glow);
   }
-  
+
   .wellness-transition {
     transition: var(--transition-smooth);
   }
-  
+
   .wellness-spring {
     transition: var(--transition-spring);
   }

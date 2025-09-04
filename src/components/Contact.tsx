@@ -206,7 +206,7 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button type="submit" variant="wellness" size="lg" className="w-full">
+                <Button type="submit" variant="wellness" size="lg" className="w-full bg-foreground">
                   <Send className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>

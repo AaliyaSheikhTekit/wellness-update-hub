@@ -6,7 +6,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 wellness-transition">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background backdrop-blur-lg border-b border-border/50 wellness-transition">
       <div className="container mx-auto px-2 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-2">
          <img
@@ -52,9 +52,7 @@ const Header = () => {
           >
             <a href="/login">Login</a>
           </Button>
-          <Button variant="wellness" size="lg">
-            Book Consultation
-          </Button>
+      
         </div>
 
         <button
@@ -100,9 +98,7 @@ const Header = () => {
               <Button variant="wellnessOutline" size="lg" asChild>
                 <a href="/login">Login</a>
               </Button>
-              <Button variant="wellness" size="lg">
-                Book Consultation
-              </Button>
+            
             </div>
           </nav>
         </div>

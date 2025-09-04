@@ -89,72 +89,74 @@ const Services = () => {
           </p>
         </motion.div>
 
-        {/* Carousel */}
-        <div className="mb-16 px-4 sm:px-8 lg:px-16">
-          <Carousel className="w-full max-w-6xl mx-auto">
-            <CarouselContent className="-ml-4">
-              {services.map((service, index) => (
-                <CarouselItem
-                  key={index}
-                  className="pl-4 md:basis-1/2 lg:basis-1/2"
+       {/* Carousel */}
+<div className="mb-16 px-4 sm:px-8 lg:px-16">
+  <Carousel className="w-full max-w-6xl mx-auto">
+    <CarouselContent className="-ml-4">
+      {services.map((service, index) => (
+        <CarouselItem
+          key={index}
+          className="pl-4 md:basis-1/2 lg:basis-1/2 flex" // ✅ make each item flex
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.6 }}
+            viewport={{ once: true }}
+            className="flex w-full" // ✅ ensure wrapper fills height
+          >
+            <Card className="p-8 flex flex-col h-full wellness-card-gradient wellness-shadow-soft hover:wellness-shadow hover:scale-[1.03] transition-transform duration-300 border-0">
+              <div className="flex items-start justify-between mb-6">
+                <motion.div
+                  whileHover={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 0.6 }}
+                  className="text-4xl mb-4"
                 >
-                  <motion.div
-                    initial={{ opacity: 0, y: 40 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.6 }}
-                    viewport={{ once: true }}
-                  >
-                    <Card className="p-8 h-full wellness-card-gradient wellness-shadow-soft hover:wellness-shadow hover:scale-[1.03] transition-transform duration-300 border-0">
-                      <div className="flex items-start justify-between mb-6">
-                        <motion.div
-                          whileHover={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 0.6 }}
-                          className="text-4xl mb-4"
-                        >
-                          {service.icon}
-                        </motion.div>
-                        <div className="text-right text-sm text-muted-foreground">
-                          <div className="flex items-center justify-end mb-1">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {service.duration}
-                          </div>
-                          <div>{service.sessionTime}</div>
-                        </div>
-                      </div>
+                  {service.icon}
+                </motion.div>
+                <div className="text-right text-sm text-muted-foreground">
+                  <div className="flex items-center justify-end mb-1">
+                    <Clock className="w-4 h-4 mr-1" />
+                    {service.duration}
+                  </div>
+                  <div>{service.sessionTime}</div>
+                </div>
+              </div>
 
-                      <h3 className="font-display text-2xl font-semibold text-foreground mb-4">
-                        {service.title}
-                      </h3>
+              <h3 className="font-display text-2xl font-semibold text-foreground mb-4">
+                {service.title}
+              </h3>
 
-                      <p className="text-muted-foreground leading-relaxed mb-6">
-                        {service.description}
-                      </p>
+              <p className="text-muted-foreground leading-relaxed mb-6 flex-grow">
+                {service.description}
+              </p>
 
-                      <div className="flex items-center justify-between mt-auto">
-                        <Button
-                          variant="wellnessOutline"
-                          className="wellness-spring hover:shadow-md hover:bg-wellness-sage hover:text-primary-foreground transition"
-                          onClick={() => {
-                            const contactSection =
-                              document.getElementById("contact");
-                            contactSection?.scrollIntoView({
-                              behavior: "smooth",
-                            });
-                          }}
-                        >
-                          View Details & Book
-                          <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                  </motion.div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
-          </Carousel>
-        </div>
+              <div className="flex items-center justify-between mt-auto">
+                <Button
+                  variant="wellnessOutline"
+                  className="wellness-spring hover:shadow-md hover:bg-primary hover:text-primary-foreground transition"
+                  onClick={() => {
+                    const contactSection =
+                      document.getElementById("contact");
+                    contactSection?.scrollIntoView({
+                      behavior: "smooth",
+                    });
+                  }}
+                >
+                  View Details & Book
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        </CarouselItem>
+      ))}
+    </CarouselContent>
+    <CarouselPrevious className="hidden md:flex" />
+    <CarouselNext className="hidden md:flex" />
+  </Carousel>
+</div>
+
 
         {/* Why Choose Section */}
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -216,7 +218,7 @@ const Services = () => {
             <Button
               variant="wellness"
               size="lg"
-              className="mt-8 shadow-md hover:shadow-lg transition"
+              className="mt-8 shadow-md hover:shadow-lg transition bg-foreground"
               onClick={() => {
                 const contactSection = document.getElementById("contact");
                 contactSection?.scrollIntoView({ behavior: "smooth" });
