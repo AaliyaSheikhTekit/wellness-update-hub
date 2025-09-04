@@ -4,15 +4,19 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Clock, ArrowRight } from "lucide-react";
 import treatmentImage from "@/assets/naturopathy-treatment.jpg";
 import { motion } from "framer-motion";
+import detoxImage from "@/assets/servicesImg/detox.jpeg";
+import painImage from "@/assets/servicesImg/pain.png";
 const Services = () => {
-  const services = [{ title: "Detox Therapy", description: "Cleanse your body naturally with our comprehensive detoxification programs using herbal remedies and lifestyle modifications.", duration: "4-6 weeks", sessionTime: "45-60 minutes per session", price: "₹12,000", icon: "🌿" }, { title: "Pain Management", description: "Natural pain relief through therapeutic treatments, herbal medicines, and holistic approaches without dependency on synthetic drugs.", duration: "2-8 weeks", sessionTime: "30-45 minutes per session", price: "₹8,000", icon: "🌱" }, { title: "Stress Management", description: "Restore mental balance and emotional wellness through natural stress relief techniques and mindfulness practices.", duration: "6-12 weeks", sessionTime: "60-75 minutes per session", price: "₹10,000", icon: "🧘" }, { title: "Iksha Complete Care", description: "Comprehensive wellness program combining all our services for complete mind-body-spirit transformation and optimal health.", duration: "12-16 weeks", sessionTime: "90-120 minutes per session", price: "₹25,000", icon: "✨" },
+  const services = [{ title: "Detox Therapy", description: "Cleanse your body naturally with our comprehensive detoxification programs using herbal remedies and lifestyle modifications.", duration: "4-6 weeks", sessionTime: "45-60 minutes per session", price: "₹12,000", icon: "🌿" }, { title: "Pain Management", description: "Natural pain relief through therapeutic treatments, herbal medicines, and holistic approaches without dependency on synthetic drugs.", duration: "2-8 weeks", sessionTime: "30-45 minutes per session", price: "₹8,000", icon: "🌱" }, { title: "Stress Management", description: "Restore mental balance and emotional wellness through natural stress relief techniques and mindfulness practices.", duration: "6-12 weeks", sessionTime: "60-75 minutes per session", price: "₹10,000", icon: "🧘" }, { title: "Iksha Complete Care", description: "Comprehensive wellness program combining all our services for complete mind-body-spirit transformation and optimal health.", duration: "12-16 weeks", sessionTime: "90-120 minutes per session", price: "₹25,000", icon: "✨",     image: detoxImage  },
     {
       title: "Śhodhana Detox Package",
       description: "A deep body detoxification program using traditional naturopathic methods to cleanse and rejuvenate.",
       duration: "4-6 weeks",
       sessionTime: "45-60 minutes per session",
       price: "₹15,000",
-      icon: "🌀"
+      icon: "🌀",
+      image: detoxImage,
+       
     },
     {
       title: "Śham Destress Package",
@@ -20,7 +24,8 @@ const Services = () => {
       duration: "6-8 weeks",
       sessionTime: "60-75 minutes per session",
       price: "₹12,000",
-      icon: "🧘"
+      icon: "🧘",
+      
     },
     {
       title: "Ropaṇ Sports Recovery Package",
@@ -105,49 +110,61 @@ const Services = () => {
             viewport={{ once: true }}
             className="flex w-full" // ✅ ensure wrapper fills height
           >
-            <Card className="p-8 flex flex-col h-full wellness-card-gradient wellness-shadow-soft hover:wellness-shadow hover:scale-[1.03] transition-transform duration-300 border-0">
-              <div className="flex items-start justify-between mb-6">
-                <motion.div
-                  whileHover={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 0.6 }}
-                  className="text-4xl mb-4"
-                >
-                  {service.icon}
-                </motion.div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center justify-end mb-1">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {service.duration}
-                  </div>
-                  <div>{service.sessionTime}</div>
-                </div>
-              </div>
+         <Card
+  key={index}
+  className="relative h-80 rounded-2xl overflow-hidden border-0 wellness-shadow-soft hover:scale-[1.03] transition-transform duration-300 flex flex-col justify-end"
+>
+    {/* Background Image */}
+  <div
+    className="absolute inset-0 bg-cover bg-center"
+    style={{ backgroundImage: service.image ? `url(${service.image})` : `url(${detoxImage})` }}
+  ></div>
 
-              <h3 className="font-display text-2xl font-semibold text-foreground mb-4">
-                {service.title}
-              </h3>
+  {/* Overlay Gradient for Readability */}
+  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 
-              <p className="text-muted-foreground leading-relaxed mb-6 flex-grow">
-                {service.description}
-              </p>
+  {/* Glassmorphic Info Bar (shorter height) */}
+  <div className="relative z-10 p-4 bg-white/20 backdrop-blur-md border-t border-white/30">
+    <div className="flex items-start justify-between mb-3">
+      <motion.div
+        whileHover={{ rotate: [0, 10, -10, 0] }}
+        transition={{ duration: 0.6 }}
+        className="text-2xl"
+      >
+        {service.icon}
+      </motion.div>
+      <div className="text-right text-xs text-white/90 leading-tight">
+        <div className="flex items-center justify-end">
+          <Clock className="w-3 h-3 mr-1" />
+          {service.duration}
+        </div>
+        <div>{service.sessionTime}</div>
+      </div>
+    </div>
 
-              <div className="flex items-center justify-between mt-auto">
-                <Button
-                  variant="wellnessOutline"
-                  className="wellness-spring hover:shadow-md hover:bg-primary hover:text-primary-foreground transition"
-                  onClick={() => {
-                    const contactSection =
-                      document.getElementById("contact");
-                    contactSection?.scrollIntoView({
-                      behavior: "smooth",
-                    });
-                  }}
-                >
-                  View Details & Book
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
+    <h3 className="font-display text-lg font-semibold text-white mb-1">
+      {service.title}
+    </h3>
+
+    <p className="text-white/80 text-xs leading-snug mb-3 line-clamp-2">
+      {service.description}
+    </p>
+
+    <Button
+      variant="wellnessOutline"
+      className="wellness-spring bg-white/20 text-white border-white hover:bg-primary hover:text-primary-foreground transition h-8 px-3 text-xs"
+      onClick={() => {
+        const contactSection = document.getElementById("contact");
+        contactSection?.scrollIntoView({ behavior: "smooth" });
+      }}
+    >
+      View & Book
+      <ArrowRight className="ml-1 w-3 h-3" />
+    </Button>
+  </div>
+</Card>
+
+
           </motion.div>
         </CarouselItem>
       ))}

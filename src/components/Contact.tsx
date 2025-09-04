@@ -124,7 +124,7 @@ const Contact = () => {
                   Need immediate assistance? Call us directly for urgent consultations
                   or emergency naturopathic guidance.
                 </p>
-                <Button variant="wellness" size="lg" className="w-full">
+                <Button variant="wellness" size="lg" className="w-full bg-foreground">
                   <Phone className="h-4 w-4 mr-2" />
                   Call Now: +91 98765 43210
                 </Button>
