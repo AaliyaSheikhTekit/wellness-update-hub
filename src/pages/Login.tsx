@@ -20,6 +20,7 @@ import {
   fetchAuthSession,
   signOut
 } from "aws-amplify/auth";
+import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
 
 const Login = () => {
   const navigate = useNavigate();
@@ -155,15 +156,14 @@ useEffect(() => {
       </Link>
 
       <div className="w-full max-w-md">
-        <Card className="wellness-card-gradient border-0 wellness-shadow">
+        <Card className="bg-white border-0 wellness-shadow">
           <CardHeader className="text-center space-y-4">
             <div className="flex items-center justify-center space-x-2">
-              <div className="w-10 h-10 rounded-full bg-wellness-sage flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-display text-2xl font-semibold text-foreground">
-                Iksha
-              </span>
+                <img
+  src={IkshaLogo}
+  alt="Iksha Naturopathy Logo"
+  className="h-16 w-auto object-contain" // larger height
+/>
             </div>
             <div>
               <CardTitle className="font-display text-3xl font-bold text-foreground">
@@ -228,7 +228,7 @@ useEffect(() => {
                   type="submit"
                   variant="wellness"
                   size="lg"
-                  className="w-full"
+                  className="w-full bg-foreground hover:bg-foreground/85"
                 >
                   Sign In
                 </Button>
