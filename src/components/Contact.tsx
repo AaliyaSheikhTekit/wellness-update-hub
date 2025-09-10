@@ -36,32 +36,38 @@ const Contact = () => {
     // Handle form submission here
   };
 
-  const contactInfo = [
-    {
-      icon: MapPin,
-      title: "Visit Our Clinic",
-      details: ["123 Wellness Street", "Health District, City - 400001"],
-      color: "text-wellness-sage"
-    },
-    {
-      icon: Phone,
-      title: "Call Us",
-      details: ["+91 98765 43210", "+91 98765 43211"],
-      color: "text-wellness-sage"
-    },
-    {
-      icon: Mail,
-      title: "Email Us",
-      details: ["info@iksha.com", "consultation@iksha.com"],
-      color: "text-wellness-sage"
-    },
-    {
-      icon: Clock,
-      title: "Clinic Hours",
-      details: ["Mon - Sat: 9:00 AM - 7:00 PM", "Sunday: 10:00 AM - 4:00 PM"],
-      color: "text-wellness-sage"
-    }
-  ];
+ const contactInfo = [
+  {
+    icon: MapPin,
+    title: "Visit Our Clinic",
+    details: [
+      "Ikshā Naturopathy, Empire Market Place",
+      "Infront of Bypass, next to Empire Estate",
+      "Sahara City Homes, Indore, Deoguradia",
+      "Madhya Pradesh - 452016",
+    ],
+    color: "text-wellness-sage",
+  },
+  {
+    icon: Phone,
+    title: "Call Us",
+    details: ["+91 98765 43210", "+91 98765 43211"],
+    color: "text-wellness-sage",
+  },
+  {
+    icon: Mail,
+    title: "Email Us",
+    details: ["info@iksha.com", "consultation@iksha.com"],
+    color: "text-wellness-sage",
+  },
+  {
+    icon: Clock,
+    title: "Clinic Hours",
+    details: ["Mon - Sat: 9:00 AM - 7:00 PM", "Sunday: 10:00 AM - 4:00 PM"],
+    color: "text-wellness-sage",
+  },
+];
+
 
   return (
     <section id="contact" className="py-20 bg-background">
@@ -124,7 +130,7 @@ const Contact = () => {
                   Need immediate assistance? Call us directly for urgent consultations
                   or emergency naturopathic guidance.
                 </p>
-                <Button variant="wellness" size="lg" className="w-full bg-foreground">
+                <Button variant="wellness" size="lg" className="w-full bg-foreground hover:bg-foreground/90">
                   <Phone className="h-4 w-4 mr-2" />
                   Call Now: +91 98765 43210
                 </Button>
@@ -206,7 +212,7 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button type="submit" variant="wellness" size="lg" className="w-full bg-foreground">
+                <Button type="submit" variant="wellness" size="lg" className="w-full bg-foreground hover:bg-foreground/90">
                   <Send className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>

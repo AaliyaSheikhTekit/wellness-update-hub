@@ -83,7 +83,7 @@ const Hero = () => {
               <Button
                 variant="wellness"
                 size="lg"
-                className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition bg-foreground text-white"
+                className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition bg-foreground text-white "
               >
                 Book Consultation
                 <ArrowRight className="ml-2 w-5 h-5" />
