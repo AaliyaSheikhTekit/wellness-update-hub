@@ -26,6 +26,9 @@ import {
 import { Users } from "lucide-react";
 import { signOut } from "aws-amplify/auth";
 import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
+import Appointments from "./Appointments";
+import Prescriptions from "./Prescriptions";
+import Invoices from "./Invoices";
 
 // Mock patient data
 const mockPatients = [
@@ -118,26 +121,41 @@ const Dashboard = () => {
   );
 
   const sidebarItems = [
-    {
-      name: "Overview",
-      icon: Users,
-      path: "/dashboard",
-      active: activeTab === "overview",
-    },
-    ...(userRole === "receptionist"
-      ? [
-          {
-            name: "Add Patient",
-            icon: Plus,
-            path: "/dashboard",
-            active: activeTab === "add-patient",
-          },
-        ]
-      : []),
-    { name: "Appointments", icon: Calendar, path: "/appointments" },
-    { name: "Prescriptions", icon: Pill, path: "/prescriptions" },
-    { name: "Invoices", icon: FileText, path: "/invoices" },
-  ];
+  {
+    name: "Overview",
+    icon: Users,
+    path: "/dashboard",
+    active: activeTab === "overview",
+  },
+  ...(userRole === "receptionist"
+    ? [
+        {
+          name: "Add Patient",
+          icon: Plus,
+          path: "/dashboard",
+          active: activeTab === "add-patient",
+        },
+      ]
+    : []),
+  {
+    name: "Appointments",
+    icon: Calendar,
+    path: "/appointments",
+    active: activeTab === "appointments",
+  },
+  {
+    name: "Prescriptions",
+    icon: Pill,
+    path: "/prescriptions",
+    active: activeTab === "prescriptions",
+  },
+  {
+    name: "Invoices",
+    icon: FileText,
+    path: "/invoices",
+    active: activeTab === "invoices",
+  },
+];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -209,23 +227,20 @@ const Dashboard = () => {
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => {
-                if (item.name === "Overview") setActiveTab("overview");
-                if (item.name === "Add Patient") setActiveTab("add-patient");
-              }}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg wellness-transition w-full text-left ${
-                item.active
-                  ? "bg-wellness-sage-light/20 text-wellness-sage border border-wellness-sage/20"
-                  : "text-muted-foreground hover:bg-wellness-sage-light/10 hover:text-foreground"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.name}</span>
-            </button>
-          ))}
+        {sidebarItems.map((item,id) => (
+  <button
+    key={id}
+    onClick={() => setActiveTab(item.name.toLowerCase().replace(" ", "-"))}
+    className={`flex items-center space-x-3 px-4 py-3 rounded-lg wellness-transition w-full text-left ${
+      item.active
+        ? "bg-wellness-sage-light/20 text-wellness-sage border border-wellness-sage/20"
+        : "text-muted-foreground hover:bg-wellness-sage-light/10 hover:text-foreground"
+    }`}
+  >
+    <item.icon className="h-5 w-5" />
+    <span>{item.name}</span>
+  </button>
+))}
         </nav>
 
         {/* Logout */}
@@ -558,8 +573,15 @@ const Dashboard = () => {
               </Card>
             </>
           ) : activeTab === "add-patient" ? (
-            <PatientForm onPatientAdded={handlePatientAdded} />
-          ) : null}
+  <PatientForm onPatientAdded={handlePatientAdded} />
+) : activeTab === "appointments" ? (
+  <Appointments />
+) : activeTab === "prescriptions" ? (
+  <Prescriptions />
+) : activeTab === "invoices" ? (
+  <Invoices />
+) : null}
+          
         </main>
       </div>
     </div>
