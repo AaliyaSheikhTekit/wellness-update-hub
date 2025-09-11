@@ -22,6 +22,7 @@ import {
   Plus,
   Stethoscope,
   UserCheck,
+  ChartArea,
 } from "lucide-react";
 import { Users } from "lucide-react";
 import { signOut } from "aws-amplify/auth";
@@ -29,6 +30,7 @@ import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo im
 import Appointments from "./Appointments";
 import Prescriptions from "./Prescriptions";
 import Invoices from "./Invoices";
+import Dietitians from "./Dietitians";
 
 // Mock patient data
 const mockPatients = [
@@ -148,6 +150,12 @@ const Dashboard = () => {
     icon: Pill,
     path: "/prescriptions",
     active: activeTab === "prescriptions",
+  },
+   {
+    name: "Dietitans",
+    icon: ChartArea,
+    path: "/dietitans",
+    active: activeTab === "dietitans",
   },
   {
     name: "Invoices",
@@ -578,7 +586,9 @@ const Dashboard = () => {
   <Appointments />
 ) : activeTab === "prescriptions" ? (
   <Prescriptions />
-) : activeTab === "invoices" ? (
+) : activeTab === "dietitans" ? (
+  <Dietitians />
+): activeTab === "invoices" ? (
   <Invoices />
 ) : null}
           
