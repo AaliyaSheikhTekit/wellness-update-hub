@@ -94,11 +94,13 @@ const Dashboard = () => {
   // Derive role based on email
   let userRole = "doctor"; // default
 
-  if (userEmail.includes("receptionist")) {
-    userRole = "receptionist";
-  } else if (userEmail.includes("doctor")) {
-    userRole = "doctor";
-  }
+if (userEmail.includes("superadmin")) {
+  userRole = "superadmin";
+} else if (userEmail.includes("receptionist")) {
+  userRole = "receptionist";
+} else if (userEmail.includes("doctor")) {
+  userRole = "doctor";
+}
   const userName = localStorage.getItem("userName") || "User";
 
   // Load patients from localStorage
@@ -122,48 +124,29 @@ const Dashboard = () => {
           .includes(searchTerm.toLowerCase()))
   );
 
-  const sidebarItems = [
-  {
-    name: "Overview",
-    icon: Users,
-    path: "/dashboard",
-    active: activeTab === "overview",
-  },
-  ...(userRole === "receptionist"
+ const sidebarItems =
+  userRole === "superadmin"
     ? [
-        {
-          name: "Add Patient",
-          icon: Plus,
-          path: "/dashboard",
-          active: activeTab === "add-patient",
-        },
+        { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
+        { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
+        { name: "Appointments", icon: Calendar, path: "/appointments", active: activeTab === "appointments" },
+        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
+        { name: "Dietitans", icon: ChartArea, path: "/dietitans", active: activeTab === "dietitans" },
+        { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
       ]
-    : []),
-  {
-    name: "Appointments",
-    icon: Calendar,
-    path: "/appointments",
-    active: activeTab === "appointments",
-  },
-  {
-    name: "Prescriptions",
-    icon: Pill,
-    path: "/prescriptions",
-    active: activeTab === "prescriptions",
-  },
-   {
-    name: "Dietitans",
-    icon: ChartArea,
-    path: "/dietitans",
-    active: activeTab === "dietitans",
-  },
-  {
-    name: "Invoices",
-    icon: FileText,
-    path: "/invoices",
-    active: activeTab === "invoices",
-  },
-];
+    : userRole === "receptionist"
+    ? [
+        { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
+        { name: "Appointments", icon: Calendar, path: "/appointments", active: activeTab === "appointments" },
+        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
+        { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
+      ]
+    : userRole === "doctor"
+    ? [
+        { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
+        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
+      ]
+    : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

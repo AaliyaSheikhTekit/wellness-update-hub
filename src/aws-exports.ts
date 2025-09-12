@@ -12,3 +12,5 @@ const awsconfig: ResourcesConfig = {
 };
 
 export default awsconfig;
+// superAdmin@eanaturopathyindia.com
+// Iksha@Super90
