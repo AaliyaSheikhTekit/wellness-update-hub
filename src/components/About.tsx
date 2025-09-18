@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Award, Users, Leaf, Heart } from "lucide-react";
 import consultationImage from "@/assets/consultation-room.jpg";
+import { Skeleton } from "./ui/skeleton";
 
 const About = () => {
   const achievements = [
@@ -135,36 +136,21 @@ const About = () => {
         </div>
 
         {/* CTA */}
+        {/* Skeleton section as requested */}
         <div className="mt-20 text-center">
           <div className="wellness-card-gradient rounded-3xl p-12 wellness-shadow max-w-4xl mx-auto">
-            <h3 className="font-display text-3xl font-bold text-foreground mb-6">
-              Ready to Begin Your Healing Journey?
-            </h3>
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-              Take the first step towards natural wellness. Our experienced
-              practitioners are here to guide you on your path to optimal health
-              and vitality.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                variant="wellness"
-                size="lg"
-                className="text-lg px-8 py-6 bg-foreground hover:bg-foreground/90"
-              >
-                Book Your Consultation
-              </Button>
-              <Button
-                variant="wellnessOutline"
-                size="lg"
-                className="text-lg px-8 py-6 hover:bg-foreground/5"
-              >
-                Call Us: +91 98765 43210
-              </Button>
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-3/4 mx-auto" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-5/6 mx-auto" />
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Skeleton className="h-12 w-48" />
+                <Skeleton className="h-12 w-48" />
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
+        </div></div></section>
+        
   );
 };
 
