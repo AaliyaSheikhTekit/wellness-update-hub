@@ -93,12 +93,12 @@ const Dashboard = () => {
 
   // Derive role based on email
   let userRole = "doctor"; // default
-
-if (userEmail.includes("superadmin")) {
-  userRole = "superadmin";
-} else if (userEmail.includes("receptionist")) {
+const normalizedEmail = userEmail.toLowerCase();
+if (normalizedEmail.includes("superAdmin")) {
+  userRole = "superAdmin";
+} else if (normalizedEmail.includes("receptionist")) {
   userRole = "receptionist";
-} else if (userEmail.includes("doctor")) {
+} else if (normalizedEmail.includes("doctor")) {
   userRole = "doctor";
 }
   const userName = localStorage.getItem("userName") || "User";
@@ -125,7 +125,7 @@ if (userEmail.includes("superadmin")) {
   );
 
  const sidebarItems =
-  userRole === "superadmin"
+  userRole === "superAdmin"
     ? [
         { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
         { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
