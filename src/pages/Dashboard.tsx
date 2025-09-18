@@ -89,7 +89,7 @@ const Dashboard = () => {
 
   // Get user role from localStorage
   // Get email from localStorage
-  const userEmail = localStorage.getItem("userEmail") || "";
+  const userEmail = localStorage.getItem("userName") || "";
 
   // Derive role based on email
   let userRole = "doctor"; // default
