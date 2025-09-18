@@ -93,12 +93,12 @@ const Dashboard = () => {
 
   // Derive role based on email
   let userRole = "doctor"; // default
-const normalizedEmail = userEmail.toLowerCase();
-if (normalizedEmail.includes("superAdmin")) {
+
+if (userEmail.includes("superAdmin")) {
   userRole = "superAdmin";
-} else if (normalizedEmail.includes("receptionist")) {
+} else if (userEmail.includes("receptionist")) {
   userRole = "receptionist";
-} else if (normalizedEmail.includes("doctor")) {
+} else if (userEmail.includes("doctor")) {
   userRole = "doctor";
 }
   const userName = localStorage.getItem("userName") || "User";
