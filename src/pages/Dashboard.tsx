@@ -87,22 +87,22 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
 
-  // Get user role from localStorage
-  // Get email from localStorage
-  const userEmail = localStorage.getItem("userName") || "";
 
   // Derive role based on email
-  let userRole = "doctor"; // default
+// Get role from localStorage
+const userName = localStorage.getItem("userName") || "";
 
-if (userEmail.includes("superAdmin")) {
+let userRole = "Naturopathy doctor"; // default
+
+if (userName.includes("superAdmin")) {
   userRole = "superAdmin";
-} else if (userEmail.includes("receptionist")) {
-  userRole = "receptionist";
-} else if (userEmail.includes("doctor")) {
-  userRole = "doctor";
+} else if (userName.includes("Naturopathy Recptionist")) {
+  userRole = "Naturopathy Recptionist";
+} else if (userName.includes("Naturopathy doctor")) {
+  userRole = "Naturopathy doctor";
 }
-  const userName = localStorage.getItem("userName") || "User";
 
+console.log("userName:", userName, "→ role:", userRole);
   // Load patients from localStorage
   useEffect(() => {
     const storedPatients = JSON.parse(localStorage.getItem("patients") || "[]");
@@ -125,7 +125,7 @@ if (userEmail.includes("superAdmin")) {
   );
 
  const sidebarItems =
-  userRole === "superAdmin"
+  userName === "superAdmin"
     ? [
         { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
         { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
@@ -134,14 +134,14 @@ if (userEmail.includes("superAdmin")) {
         { name: "Dietitans", icon: ChartArea, path: "/dietitans", active: activeTab === "dietitans" },
         { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
       ]
-    : userRole === "receptionist"
+    : userName === "Naturopathy Recptionist"
     ? [
         { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
         { name: "Appointments", icon: Calendar, path: "/appointments", active: activeTab === "appointments" },
         { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
         { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
       ]
-    : userRole === "doctor"
+    : userName === "Naturopathy doctor"
     ? [
         { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
         { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
@@ -261,13 +261,18 @@ if (userEmail.includes("superAdmin")) {
                 <Menu className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="font-display text-3xl font-bold text-foreground">
-                  {userRole === "doctor"
-                    ? "Doctor Dashboard"
-                    : "Receptionist Dashboard"}
-                </h1>
+               <h1 className="font-display text-3xl font-bold text-foreground">
+  {userName === "superAdmin"
+    ? "Admin Dashboard"
+    : userName === "Naturopathy Recptionist"
+    ? "Receptionist Dashboard"
+    : userName === "Naturopathy doctor"
+    ? "Doctor Dashboard"
+    : "Dashboard"}
+</h1>
+
                 <div className="flex items-center space-x-2 mt-1">
-                  {userRole === "doctor" ? (
+                  {userName === "doctor" ? (
                     <Stethoscope className="h-4 w-4 text-wellness-sage" />
                   ) : (
                     <UserCheck className="h-4 w-4 text-wellness-sage" />
@@ -471,7 +476,7 @@ if (userEmail.includes("superAdmin")) {
                 <CardHeader>
                   <CardTitle className="font-display text-2xl text-foreground flex items-center justify-between">
                     <span>Patient List</span>
-                    {userRole === "receptionist" && (
+                    {userName === "receptionist" && (
                       <Button
                         variant="wellness"
                         onClick={() => setActiveTab("add-patient")}
@@ -555,7 +560,7 @@ if (userEmail.includes("superAdmin")) {
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         No patients found.{" "}
-                        {userRole === "receptionist" &&
+                        {userName === "receptionist" &&
                           "Click 'Add New Patient' to get started."}
                       </div>
                     )}
