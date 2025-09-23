@@ -145,7 +145,8 @@ console.log("userName:", userName, "→ role:", userRole);
     ? [
         { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
         { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
-      ]
+     { name: "Dietitans", icon: ChartArea, path: "/dietitans", active: activeTab === "dietitans" },
+          ]
     : [];
 
   const getStatusColor = (status: string) => {
@@ -269,7 +270,7 @@ console.log("userName:", userName, "→ role:", userRole);
     : userName === "Naturopathy doctor"
     ? "Doctor Dashboard"
     : "Dashboard"}
-</h1>
+</h1>14
 
                 <div className="flex items-center space-x-2 mt-1">
                   {userName === "doctor" ? (
@@ -587,3 +588,4 @@ console.log("userName:", userName, "→ role:", userRole);
 };
 
 export default Dashboard;
+// Esha@Admin
