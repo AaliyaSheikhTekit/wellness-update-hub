@@ -8,7 +8,7 @@ const Header = () => {
   return (
     <header className="fixed top-0
      left-0 right-0 z-50 bg-background backdrop-blur-lg border-b border-border/50 wellness-transition">
-      <div className=  "container mx-auto p-25px flex items-center justify-between">
+      <div className=  "container mx-auto p-[25px] flex items-center justify-between">
        <div className=" h-12 flex items-center">
   <img
     src={IkshaLogo}
