@@ -10,6 +10,8 @@ import PatientDetail from "./pages/PatientDetail";
 import NotFound from "./pages/NotFound";
 import { Amplify } from "aws-amplify";
 import awsconfig from "./aws-exports";
+import TermsAndConditions from "./pages/terms-and-conditions";
+import PrivacyPolicy from "./pages/privacy-policy";
 
 Amplify.configure(awsconfig);
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patient/:id" element={<PatientDetail />} />
           <Route path="*" element={<NotFound />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

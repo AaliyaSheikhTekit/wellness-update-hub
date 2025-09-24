@@ -6,16 +6,16 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background backdrop-blur-lg border-b border-border/50 wellness-transition">
-      <div className="container mx-auto px-2 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <img
-            src={IkshaLogo}
-            alt="Iksha Naturopathy Logo"
-            className="h-16 w-auto object-contain" // larger height
-          />
-        </div>
-
+    <header className="fixed top-0
+     left-0 right-0 z-50 bg-background backdrop-blur-lg border-b border-border/50 wellness-transition">
+      <div className=  "container mx-auto p-25px flex items-center justify-between">
+       <div className=" h-12 flex items-center">
+  <img
+    src={IkshaLogo}
+    alt="Iksha Naturopathy Logo"
+    className="  h-32 w-auto object-contain"
+  />
+</div>
         <nav className="hidden md:flex items-center space-x-8">
           <a
             href="#home"

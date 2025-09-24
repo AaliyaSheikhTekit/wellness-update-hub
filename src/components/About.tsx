@@ -88,9 +88,7 @@ const About = () => {
               <Button variant="wellness" size="lg" className="bg-foreground hover:bg-foreground/90">
                 Meet Our Practitioners
               </Button>
-              <Button variant="wellnessOutline" size="lg" className="bg-background hover:bg-foreground/5">
-                Our Philosophy
-              </Button>
+          
             </div>
           </div>
 
@@ -112,44 +110,10 @@ const About = () => {
           </div>
         </div>
 
-        {/* Achievements */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {achievements.map((achievement, index) => (
-            <Card
-              key={index}
-              className="p-6 text-center text-foreground wellness-shadow-soft hover:wellness-shadow wellness-transition border-0 wellness-gradient"
-            >
-              <div className="flex justify-center mb-4">
-                {achievement.icon}
-              </div>
-              <div className="font-display text-3xl font-bold text-wellness-sage mb-2">
-                {achievement.number}
-              </div>
-              <div className="font-semibold text-white mb-2">
-                {achievement.label}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {achievement.description}
-              </div>
-            </Card>
-          ))}
-        </div>
+      
 
         {/* CTA */}
-        {/* Skeleton section as requested */}
-        <div className="mt-20 text-center">
-          <div className="wellness-card-gradient rounded-3xl p-12 wellness-shadow max-w-4xl mx-auto">
-            <div className="space-y-6">
-              <Skeleton className="h-8 w-3/4 mx-auto" />
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-5/6 mx-auto" />
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Skeleton className="h-12 w-48" />
-                <Skeleton className="h-12 w-48" />
-              </div>
-            </div>
-          </div>
-        </div></div></section>
+       </div></section>
         
   );
 };

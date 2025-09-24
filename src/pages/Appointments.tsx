@@ -9,7 +9,7 @@ const mockAppointments = [
   {
     id: 1,
     patientName: "Rahul Sharma",
-    patientPhone: "+91 98765 43210",
+    patientPhone: "+91 9343922950",
     patientEmail: "rahul.sharma@email.com",
     date: "2024-01-15",
     time: "10:00 AM",

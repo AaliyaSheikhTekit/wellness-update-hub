@@ -87,22 +87,21 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
 
-
   // Derive role based on email
-// Get role from localStorage
-const userName = localStorage.getItem("userName") || "";
+  // Get role from localStorage
+  const userName = localStorage.getItem("userName") || "";
 
-let userRole = "Naturopathy doctor"; // default
+  let userRole = "Naturopathy doctor"; // default
 
-if (userName.includes("superAdmin")) {
-  userRole = "superAdmin";
-} else if (userName.includes("Naturopathy Recptionist")) {
-  userRole = "Naturopathy Recptionist";
-} else if (userName.includes("Naturopathy doctor")) {
-  userRole = "Naturopathy doctor";
-}
+  if (userName.includes("superAdmin")) {
+    userRole = "superAdmin";
+  } else if (userName.includes("Naturopathy Recptionist")) {
+    userRole = "Naturopathy Recptionist";
+  } else if (userName.includes("Naturopathy doctor")) {
+    userRole = "Naturopathy doctor";
+  }
 
-console.log("userName:", userName, "→ role:", userRole);
+  console.log("userName:", userName, "→ role:", userRole);
   // Load patients from localStorage
   useEffect(() => {
     const storedPatients = JSON.parse(localStorage.getItem("patients") || "[]");
@@ -124,30 +123,95 @@ console.log("userName:", userName, "→ role:", userRole);
           .includes(searchTerm.toLowerCase()))
   );
 
- const sidebarItems =
-  userName === "superAdmin"
-    ? [
-        { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
-        { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
-        { name: "Appointments", icon: Calendar, path: "/appointments", active: activeTab === "appointments" },
-        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
-        { name: "Dietitans", icon: ChartArea, path: "/dietitans", active: activeTab === "dietitans" },
-        { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
-      ]
-    : userName === "Naturopathy Recptionist"
-    ? [
-        { name: "Add Patient", icon: Plus, path: "/dashboard", active: activeTab === "add-patient" },
-        { name: "Appointments", icon: Calendar, path: "/appointments", active: activeTab === "appointments" },
-        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
-        { name: "Invoices", icon: FileText, path: "/invoices", active: activeTab === "invoices" },
-      ]
-    : userName === "Naturopathy doctor"
-    ? [
-        { name: "Overview", icon: Users, path: "/dashboard", active: activeTab === "overview" },
-        { name: "Prescriptions", icon: Pill, path: "/prescriptions", active: activeTab === "prescriptions" },
-     { name: "Dietitans", icon: ChartArea, path: "/dietitans", active: activeTab === "dietitans" },
-          ]
-    : [];
+  const sidebarItems =
+    userName === "superAdmin"
+      ? [
+          {
+            name: "Overview",
+            icon: Users,
+            path: "/dashboard",
+            active: activeTab === "overview",
+          },
+          {
+            name: "Add Patient",
+            icon: Plus,
+            path: "/dashboard",
+            active: activeTab === "add-patient",
+          },
+          {
+            name: "Appointments",
+            icon: Calendar,
+            path: "/appointments",
+            active: activeTab === "appointments",
+          },
+          {
+            name: "Prescriptions",
+            icon: Pill,
+            path: "/prescriptions",
+            active: activeTab === "prescriptions",
+          },
+          {
+            name: "Dietitans",
+            icon: ChartArea,
+            path: "/dietitans",
+            active: activeTab === "dietitans",
+          },
+          {
+            name: "Invoices",
+            icon: FileText,
+            path: "/invoices",
+            active: activeTab === "invoices",
+          },
+        ]
+      : userName === "Naturopathy Recptionist"
+      ? [
+          {
+            name: "Add Patient",
+            icon: Plus,
+            path: "/dashboard",
+            active: activeTab === "add-patient",
+          },
+          {
+            name: "Appointments",
+            icon: Calendar,
+            path: "/appointments",
+            active: activeTab === "appointments",
+          },
+          {
+            name: "Prescriptions",
+            icon: Pill,
+            path: "/prescriptions",
+            active: activeTab === "prescriptions",
+          },
+          {
+            name: "Invoices",
+            icon: FileText,
+            path: "/invoices",
+            active: activeTab === "invoices",
+          },
+        ]
+      : userName === "Naturopathy doctor"
+      ? [
+          {
+            name: "Overview",
+            icon: Users,
+            path: "/dashboard",
+            active: activeTab === "overview",
+          },
+          {
+            name: "Prescriptions",
+            icon: Pill,
+            path: "/prescriptions",
+            active: activeTab === "prescriptions",
+          },
+          {
+            name: "Dietitans",
+            icon: ChartArea,
+            path: "/dietitans",
+            active: activeTab === "dietitans",
+          },
+        ]
+      : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -193,7 +257,7 @@ console.log("userName:", userName, "→ role:", userRole);
         className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 transform wellness-transition duration-300 z-30 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
-      >
+      > 
         {/* Header */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center justify-between">
@@ -219,20 +283,22 @@ console.log("userName:", userName, "→ role:", userRole);
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
-        {sidebarItems.map((item,id) => (
-  <button
-    key={id}
-    onClick={() => setActiveTab(item.name.toLowerCase().replace(" ", "-"))}
-    className={`flex items-center space-x-3 px-4 py-3 rounded-lg wellness-transition w-full text-left ${
-      item.active
-        ? "bg-wellness-sage-light/20 text-wellness-sage border border-wellness-sage/20"
-        : "text-muted-foreground hover:bg-wellness-sage-light/10 hover:text-foreground"
-    }`}
-  >
-    <item.icon className="h-5 w-5" />
-    <span>{item.name}</span>
-  </button>
-))}
+          {sidebarItems.map((item, id) => (
+            <button
+              key={id}
+              onClick={() =>
+                setActiveTab(item.name.toLowerCase().replace(" ", "-"))
+              }
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg wellness-transition w-full text-left ${
+                item.active
+                  ? "bg-wellness-sage-light/20 text-wellness-sage border border-wellness-sage/20"
+                  : "text-muted-foreground hover:bg-wellness-sage-light/10 hover:text-foreground"
+              }`}
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.name}</span>
+            </button>
+          ))}
         </nav>
 
         {/* Logout */}
@@ -262,16 +328,16 @@ console.log("userName:", userName, "→ role:", userRole);
                 <Menu className="h-5 w-5" />
               </Button>
               <div>
-               <h1 className="font-display text-3xl font-bold text-foreground">
-  {userName === "superAdmin"
-    ? "Admin Dashboard"
-    : userName === "Naturopathy Recptionist"
-    ? "Receptionist Dashboard"
-    : userName === "Naturopathy doctor"
-    ? "Doctor Dashboard"
-    : "Dashboard"}
-</h1>14
-
+                <h1 className="font-display text-3xl font-bold text-foreground">
+                  {userName === "superAdmin"
+                    ? "Admin Dashboard"
+                    : userName === "Naturopathy Recptionist"
+                    ? "Receptionist Dashboard"
+                    : userName === "Naturopathy doctor"
+                    ? "Doctor Dashboard"
+                    : "Dashboard"}
+                </h1>
+                14
                 <div className="flex items-center space-x-2 mt-1">
                   {userName === "doctor" ? (
                     <Stethoscope className="h-4 w-4 text-wellness-sage" />
@@ -570,17 +636,16 @@ console.log("userName:", userName, "→ role:", userRole);
               </Card>
             </>
           ) : activeTab === "add-patient" ? (
-  <PatientForm onPatientAdded={handlePatientAdded} />
-) : activeTab === "appointments" ? (
-  <Appointments />
-) : activeTab === "prescriptions" ? (
-  <Prescriptions />
-) : activeTab === "dietitans" ? (
-  <Dietitians />
-): activeTab === "invoices" ? (
-  <Invoices />
-) : null}
-          
+            <PatientForm onPatientAdded={handlePatientAdded} />
+          ) : activeTab === "appointments" ? (
+            <Appointments />
+          ) : activeTab === "prescriptions" ? (
+            <Prescriptions />
+          ) : activeTab === "dietitans" ? (
+            <Dietitians />
+          ) : activeTab === "invoices" ? (
+            <Invoices />
+          ) : null}
         </main>
       </div>
     </div>

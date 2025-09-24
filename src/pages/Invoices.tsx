@@ -10,7 +10,7 @@ const mockInvoices = [
   {
     id: "INV001",
     patientName: "Rahul Sharma",
-    patientPhone: "+91 98765 43210",
+    patientPhone: "+91 9343922950",
     patientEmail: "rahul.sharma@email.com",
     date: "2024-01-15",
     dueDate: "2024-01-22",
