@@ -91,14 +91,14 @@ const Dashboard = () => {
   // Get role from localStorage
   const userName = localStorage.getItem("userName") || "";
 
-  let userRole = "Naturopathy doctor"; // default
+  let userRole = "Naturopathy Doctor"; // default
 
   if (userName.includes("superAdmin")) {
     userRole = "superAdmin";
   } else if (userName.includes("Naturopathy Recptionist")) {
     userRole = "Naturopathy Recptionist";
-  } else if (userName.includes("Naturopathy doctor")) {
-    userRole = "Naturopathy doctor";
+  } else if (userName.includes("Naturopathy Doctor")) {
+    userRole = "Naturopathy Doctor";
   }
 
   console.log("userName:", userName, "→ role:", userRole);
@@ -190,7 +190,7 @@ const Dashboard = () => {
             active: activeTab === "invoices",
           },
         ]
-      : userName === "Naturopathy doctor"
+      : userName === "Naturopathy Doctor"
       ? [
           {
             name: "Overview",
@@ -333,7 +333,7 @@ const Dashboard = () => {
                     ? "Admin Dashboard"
                     : userName === "Naturopathy Recptionist"
                     ? "Receptionist Dashboard"
-                    : userName === "Naturopathy doctor"
+                    : userName === "Naturopathy Doctor"
                     ? "Doctor Dashboard"
                     : "Dashboard"}
                 </h1>
