@@ -3,34 +3,23 @@ import { Card } from "@/components/ui/card";
 import { Award, Users, Leaf, Heart } from "lucide-react";
 import consultationImage from "@/assets/consultation-room.jpg";
 import { Skeleton } from "./ui/skeleton";
-
+import { motion,AnimatePresence  } from "framer-motion";
 const About = () => {
-  const achievements = [
+  const team = [
     {
-      icon: <Users className="w-8 h-8 text-wellness-sage" />,
-      number: "500+",
-      label: "Patients Healed",
-      description: "Successfully treated with natural methods",
+      name: "Esha Agrawal",
+      role: "Founder, Naturopathy Consultant",
+      bio: `Esha’s journey into natural healing began with her own recovery from a chronic condition through holistic practices. With a Master's in Luxury Brand Management (London) and a Diploma in Naturopathy and Yoga, she transitioned her career to focus on wellness. She believes that any problematic conditions have natural cures without invasive treatments. Driven by her passion, she founded Ikshā Naturopathy to help others find health renewal.`,
+      image: "/team/esha.jpg", // replace with real image path
     },
     {
-      icon: <Award className="w-8 h-8 text-wellness-sage" />,
-      number: "15+",
-      label: "Years Experience",
-      description: "Dedicated practice in naturopathy",
+      name: "Dr. Mohit Patidar",
+      role: "BNYS, Naturopathy Physician",
+      bio: `Dr. Mohit has guided over 8000 patients toward better health, having worked at Patanjali Wellness for 4+ years and other retreats. With certifications in Ozone Therapy and Acupuncture, he specializes in lifestyle disorders and pain management. For him, every patient is a story of transformation, hope, and renewed health.`,
+      image: "/team/mohit.jpg", // replace with real image path
     },
-    {
-      icon: <Heart className="w-8 h-8 text-wellness-sage" />,
-      number: "98%",
-      label: "Success Rate",
-      description: "Patient satisfaction and healing outcomes",
-    },
-    {
-      icon: <Leaf className="w-8 h-8 text-wellness-sage" />,
-      number: "50+",
-      label: "Natural Remedies",
-      description: "Carefully curated herbal solutions",
-    },
-  ];
+  ]
+
 
   return (
     <section id="about" className="py-20">
@@ -84,12 +73,7 @@ const About = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="wellness" size="lg" className="bg-foreground hover:bg-foreground/90">
-                Meet Our Practitioners
-              </Button>
-          
-            </div>
+            
           </div>
 
           {/* Right Image */}
@@ -109,7 +93,45 @@ const About = () => {
             </div>
           </div>
         </div>
+ <section className="py-20 text-foreground" id="team">
+      <div className="max-w-6xl mx-auto px-6 text-center">
+        <motion.h2
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-4xl font-bold text-foreground mb-12"
+        >
+          Meet Our Team
+        </motion.h2>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {team.map((member, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: idx * 0.2 }}
+              className="bg-white rounded-2xl shadow-lg p-8 text-left flex flex-col md:flex-row items-center gap-6"
+            >
+              <img
+                src={member.image}
+                alt={member.name}
+                className="w-32 h-32 rounded-full object-cover shadow-md border-4 border-emerald-100"
+              />
+              <div>
+                <h3 className="text-2xl font-semibold text-foreground-90">
+                  {member.name}
+                </h3>
+                <p className="text-foreground font-medium mb-3">
+                  {member.role}
+                </p>
+                <p className="text-gray-700 leading-relaxed">{member.bio}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
       
 
         {/* CTA */}

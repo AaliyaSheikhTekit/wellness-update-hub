@@ -2,26 +2,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Leaf, Heart, Shield } from "lucide-react";
 import heroImage from "@/assets/hero_video.mp4";
 import { motion,AnimatePresence  } from "framer-motion";
-import CountUp from "react-countup";
 import { useState } from "react";
+
 
 const Hero = () => {
     const [showMore, setShowMore] = useState(false);
-    const team = [
-    {
-      name: "Esha Agrawal",
-      role: "Founder, Naturopathy Consultant",
-      bio: `Esha’s journey into natural healing began with her own recovery from a chronic condition through holistic practices. With a Master's in Luxury Brand Management (London) and a Diploma in Naturopathy and Yoga, she transitioned her career to focus on wellness. She believes that any problematic conditions have natural cures without invasive treatments. Driven by her passion, she founded Ikshā Naturopathy to help others find health renewal.`,
-      image: "/team/esha.jpg", // replace with real image path
-    },
-    {
-      name: "Dr. Mohit Patidar",
-      role: "BNYS, Naturopathy Physician",
-      bio: `Dr. Mohit has guided over 8000 patients toward better health, having worked at Patanjali Wellness for 4+ years and other retreats. With certifications in Ozone Therapy and Acupuncture, he specializes in lifestyle disorders and pain management. For him, every patient is a story of transformation, hope, and renewed health.`,
-      image: "/team/mohit.jpg", // replace with real image path
-    },
-  ]
-
+  
   return (<>
    <section
   id="home"
@@ -131,14 +117,19 @@ const Hero = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 }}
             >
-              <Button
-                variant="wellness"
-                size="lg"
-                className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition hover:bg-foreground-80 bg-foreground text-white "
-              >
-                Book Consultation
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+             
+<Button
+  asChild
+  variant="wellness"
+  size="lg"
+  className="text-lg px-8 py-6 shadow-md hover:shadow-lg transition hover:bg-foreground-80 bg-foreground text-white"
+>
+  <a href="#contact">
+    Book Consultation
+    <ArrowRight className="ml-2 w-5 h-5" />
+  </a>
+</Button>
+
                <Button
         variant={showMore ? "wellnessOutline" : "default"}
         size="lg"
@@ -199,45 +190,7 @@ const Hero = () => {
         </div>
       </div>
     </section>
-     <section className="py-20 text-foreground" id="team">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl font-bold text-foreground mb-12"
-        >
-          Meet Our Team
-        </motion.h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {team.map((member, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: idx * 0.2 }}
-              className="bg-white rounded-2xl shadow-lg p-8 text-left flex flex-col md:flex-row items-center gap-6"
-            >
-              <img
-                src={member.image}
-                alt={member.name}
-                className="w-32 h-32 rounded-full object-cover shadow-md border-4 border-emerald-100"
-              />
-              <div>
-                <h3 className="text-2xl font-semibold text-foreground-90">
-                  {member.name}
-                </h3>
-                <p className="text-foreground font-medium mb-3">
-                  {member.role}
-                </p>
-                <p className="text-gray-700 leading-relaxed">{member.bio}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
+    
     </>
   );
 };
