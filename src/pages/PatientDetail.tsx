@@ -21,6 +21,7 @@ import {
   Clock,
   Send
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Mock patient data with detailed information
 const mockPatientData = {
@@ -87,10 +88,40 @@ const mockPatientData = {
         type: "Initial Consultation",
         status: "Completed"
       }
-    ]
+    ], vitals: [
+      {
+        date: "2024-01-15",
+        values: {
+          "Blood Pressure": { pre: "140/90", post: "130/85" },
+          "Pulse": { pre: "92", post: "80" },
+          "Weight": { pre: "72", post: "70" },
+          "BMI": { pre: "26.5", post: "25.8" },
+        },
+      },
+      {
+        date: "2023-12-20",
+        values: {
+          "Blood Pressure": { pre: "150/95", post: "138/88" },
+          "Pulse": { pre: "98", post: "84" },
+          "Weight": { pre: "73", post: "72" },
+          "BMI": { pre: "27.0", post: "26.5" },
+        },
+      },
+    ],
   }
 };
-
+const naturopathyMedicines = [
+  "Aloe Vera Juice",
+  "Ashwagandha",
+  "Neem Capsules",
+  "Tulsi Drops",
+  "Triphala Powder",
+  "Brahmi",
+  "Giloy",
+  "Moringa",
+  "Shatavari",
+  "Turmeric Capsules",
+];
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -175,45 +206,68 @@ const PatientDetail = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+ <Dialog open={newPrescriptionOpen} onOpenChange={setNewPrescriptionOpen}>
+      <DialogTrigger asChild>
+        <Button variant="wellnessOutline" className="flex items-center space-x-2">
+          <Pill className="h-4 w-4" />
+          <span>Prescribe Medicine</span>
+        </Button>
+      </DialogTrigger>
 
-              <Dialog open={newPrescriptionOpen} onOpenChange={setNewPrescriptionOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="wellnessOutline" className="flex items-center space-x-2">
-                    <Pill className="h-4 w-4" />
-                    <span>Prescribe Medicine</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="wellness-card-gradient border-0">
-                  <DialogHeader>
-                    <DialogTitle>New Prescription</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="medicines">Medicines</Label>
-                      <Textarea
-                        id="medicines"
-                        placeholder="List medicines with dosage..."
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input id="duration" placeholder="e.g., 30 days" />
-                    </div>
-                    <div>
-                      <Label htmlFor="instructions">Instructions</Label>
-                      <Textarea
-                        id="instructions"
-                        placeholder="Usage instructions..."
-                      />
-                    </div>
-                    <Button onClick={handlePrescribeMedicine} variant="wellness" className="w-full">
-                      <Send className="h-4 w-4 mr-2" />
-                      Send to WhatsApp
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+      <DialogContent className="wellness-card-gradient border-0">
+        <DialogHeader>
+          <DialogTitle>New Prescription</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Select Box for medicines */}
+          <div>
+            <Label htmlFor="medicineSelect">Select Medicine</Label>
+            <Select>
+              <SelectTrigger id="medicineSelect" className="w-full mt-2">
+                <SelectValue placeholder="Choose a medicine" />
+              </SelectTrigger>
+              <SelectContent>
+                {naturopathyMedicines.map((med, idx) => (
+                  <SelectItem key={idx} value={med}>
+                    {med}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Free text medicines field */}
+          <div>
+            <Label htmlFor="medicines">Medicines</Label>
+            <Textarea
+              id="medicines"
+              placeholder="List medicines with dosage..."
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input id="duration" placeholder="e.g., 30 days" />
+          </div>
+
+          <div>
+            <Label htmlFor="instructions">Instructions</Label>
+            <Textarea id="instructions" placeholder="Usage instructions..." />
+          </div>
+
+          <Button
+            onClick={handlePrescribeMedicine}
+            variant="wellness"
+            className="w-full"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Send to WhatsApp
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
             </div>
           </div>
         </div>
@@ -269,12 +323,32 @@ const PatientDetail = () => {
 
         {/* Patient Details Tabs */}
         <Tabs defaultValue="history" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 wellness-card-gradient">
-  <TabsTrigger value="history">Medical History</TabsTrigger>
-  <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-  <TabsTrigger value="appointments">Appointments</TabsTrigger>
-  <TabsTrigger value="vitals">Vitals</TabsTrigger>
-</TabsList>
+        <TabsList className="flex flex-wrap gap-2 justify-center bg-muted/20 p-2 rounded-xl wellness-shadow">
+    <TabsTrigger
+      value="history"
+      className="rounded-full px-4 py-2 text-sm font-medium data-[state=active]:bg-wellness-sage-light data-[state=active]:text-wellness-sage-dark data-[state=active]:shadow-md transition-all"
+    >
+      Medical History
+    </TabsTrigger>
+    <TabsTrigger
+      value="prescriptions"
+      className="rounded-full px-4 py-2 text-sm font-medium data-[state=active]:bg-wellness-sage-light data-[state=active]:text-wellness-sage-dark data-[state=active]:shadow-md transition-all"
+    >
+      Prescriptions
+    </TabsTrigger>
+    <TabsTrigger
+      value="appointments"
+      className="rounded-full px-4 py-2 text-sm font-medium data-[state=active]:bg-wellness-sage-light data-[state=active]:text-wellness-sage-dark data-[state=active]:shadow-md transition-all"
+    >
+      Appointments
+    </TabsTrigger>
+    <TabsTrigger
+      value="vitals"
+      className="rounded-full px-4 py-2 text-sm font-medium data-[state=active]:bg-wellness-sage-light data-[state=active]:text-wellness-sage-dark data-[state=active]:shadow-md transition-all"
+    >
+      Vitals
+    </TabsTrigger>
+  </TabsList>
           <TabsContent value="history">
             <Card className="wellness-card-gradient border-0 wellness-shadow">
               <CardHeader>
@@ -387,12 +461,47 @@ const PatientDetail = () => {
               </CardContent>
             </Card>
           </TabsContent>
-       <TabsContent value="vitals">
+<TabsContent value="vitals">
   <Card className="wellness-card-gradient border-0 wellness-shadow">
     <CardHeader>
-      <CardTitle className="font-display text-2xl">Vitals & Anthropometric Measurements</CardTitle>
+      <CardTitle className="font-display text-2xl">
+        Vitals & Anthropometric Measurements
+      </CardTitle>
     </CardHeader>
     <CardContent>
+      {/* Previously recorded vitals */}
+      {patient.vitals && patient.vitals.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <h3 className="text-lg font-semibold">Previous Records</h3>
+          {patient.vitals.map((record, idx) => (
+            <div key={idx} className="p-4 border border-border/30 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-2">
+                Date: {record.date}
+              </p>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="p-2 text-left">Parameter</th>
+                    <th className="p-2 text-left">Pre</th>
+                    <th className="p-2 text-left">Post</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(record.values).map(([param, vals], i) => (
+                    <tr key={i} className="border-t border-border/30">
+                      <td className="p-2 font-medium">{param}</td>
+                      <td className="p-2">{vals.pre}</td>
+                      <td className="p-2">{vals.post}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Editable vitals entry form */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -422,7 +531,7 @@ const PatientDetail = () => {
               { name: "Body Fat %", unit: "%", range: "M: 10–20%, F: 18–28%" },
               { name: "Fasting Blood Sugar", unit: "mg/dL", range: "70–99 (fasting), <140 (2hr post)" },
               { name: "Random Blood Sugar", unit: "mg/dL", range: "<125" },
-              { name: "Fever", unit: "°F", range: "98.6°F (37°C)" }
+              { name: "Fever", unit: "°F", range: "98.6°F (37°C)" },
             ].map((vital, index) => (
               <tr key={index} className="border-t border-border/30">
                 <td className="p-2 font-medium">{vital.name}</td>
@@ -439,11 +548,15 @@ const PatientDetail = () => {
           </tbody>
         </table>
       </div>
+
       <div className="mt-4 flex justify-end">
         <Button
           variant="wellness"
           onClick={() =>
-            toast({ title: "Vitals Saved", description: "Recorded successfully" })
+            toast({
+              title: "Vitals Saved",
+              description: "Recorded successfully",
+            })
           }
         >
           Save Vitals
@@ -452,6 +565,7 @@ const PatientDetail = () => {
     </CardContent>
   </Card>
 </TabsContent>
+
 
         </Tabs>
       </div>
