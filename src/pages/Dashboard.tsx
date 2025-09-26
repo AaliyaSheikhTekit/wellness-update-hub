@@ -266,7 +266,7 @@ const Dashboard = () => {
                 <img
                   src={IkshaLogo}
                   alt="Iksha Naturopathy Logo"
-                  className="h-16 w-auto object-contain" // larger height
+                  className="h-24 w-auto object-fill" // larger height
                 />
               </div>
             </div>

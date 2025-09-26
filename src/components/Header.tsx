@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
+// Ensure you have the logo image in the specified path
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -9,13 +9,7 @@ const Header = () => {
     <header className="fixed top-0
      left-0 right-0 z-50 bg-background backdrop-blur-lg border-b border-border/50 wellness-transition">
       <div className=  "container mx-auto p-[25px] flex items-center justify-between">
-       <div className=" h-12 flex items-center">
-  <img
-    src={IkshaLogo}
-    alt="Iksha Naturopathy Logo"
-    className="  h-32 w-auto object-contain"
-  />
-</div>
+      
         <nav className="hidden md:flex items-center space-x-8">
           <a
             href="#home"  

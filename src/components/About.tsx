@@ -35,13 +35,11 @@ const About = () => {
                 </span>
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">
-                Welcome to Ikshā Naturopathy
+               A sanctuary of natural healing and balance.
               </h2>
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                 <p>
-                  <span className="font-semibold text-wellness-sage">
-                   A sanctuary of natural healing and balance.
-                  </span>{" "}
+                  
                   Rooted in the pure, innate wisdom of nature, our philosophy is
                   simple: true health comes from harmony between all the 5
                   elements of nature that our body consists of. At our
