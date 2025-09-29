@@ -4,9 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectContent } from "@radix-ui/react-select";
+import { Textarea } from "@/components/ui/textarea";
 
 const mockAppointments = [
   {
@@ -500,54 +503,75 @@ const Appointments = () => {
 
         {/* Add Appointment Dialog */}
         <Dialog open={newAppointmentOpen} onOpenChange={setNewAppointmentOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Book New Appointment</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="patient-name">Patient Name</Label>
-                <Input 
-                  id="patient-name"
-                  value={patientName} 
-                  onChange={(e) => setPatientName(e.target.value)} 
-                  placeholder="Enter patient name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="appointment-date">Date</Label>
-                <Input 
-                  id="appointment-date"
-                  type="date" 
-                  value={date} 
-                  onChange={(e) => setDate(e.target.value)} 
-                />
-              </div>
-              <div>
-                <Label htmlFor="appointment-time">Time</Label>
-                <Input 
-                  id="appointment-time"
-                  type="time" 
-                  value={time} 
-                  onChange={(e) => setTime(e.target.value)} 
-                />
-              </div>
-              <div>
-                <Label htmlFor="service-type">Service Type</Label>
-                <Input 
-                  id="service-type"
-                  value={type} 
-                  onChange={(e) => setType(e.target.value)} 
-                  placeholder="e.g., Consultation, Therapy"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleBookAppointment} className="w-full bg-foreground text-white hover:bg-gray-800">
-                Book Appointment
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+             <DialogTrigger asChild>
+                <Card className="cursor-pointer hover:shadow-card transition-all duration-300 bg-white border-0 shadow-soft">
+                  <CardContent className="p-8">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center">
+                        <Calendar className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">Schedule Appointment</h3>
+                        <p className="text-muted-foreground">Book a new appointment for a patient</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Schedule Appointment</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleBookAppointment} className="space-y-4">
+                  <div>
+                    <Label htmlFor="patientName">Patient Name</Label>
+                    <Input id="patientName" placeholder="Search or enter patient name" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="appointmentDate">Date</Label>
+                    <Input id="appointmentDate" type="date" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="appointmentTime">Time</Label>
+                    <Input id="appointmentTime" type="time" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="doctor">Doctor</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dr-smith">Dr. Smith - General Medicine</SelectItem>
+                        <SelectItem value="dr-johnson">Dr. Johnson - Cardiology</SelectItem>
+                        <SelectItem value="dr-williams">Dr. Williams - Pediatrics</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="appointmentType">Appointment Type</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select appointment type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="consultation">Consultation</SelectItem>
+                        <SelectItem value="checkup">Regular Checkup</SelectItem>
+                        <SelectItem value="followup">Follow-up</SelectItem>
+                        <SelectItem value="emergency">Emergency</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="appointmentNotes">Notes (Optional)</Label>
+                    <Textarea id="appointmentNotes" placeholder="Appointment details..." />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule Appointment
+                  </Button>
+                </form>
+              </DialogContent>
         </Dialog>
 
         {/* Edit Appointment Dialog */}
