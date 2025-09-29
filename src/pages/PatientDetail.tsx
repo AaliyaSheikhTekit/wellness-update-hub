@@ -176,36 +176,7 @@ const PatientDetail = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <Dialog open={newAppointmentOpen} onOpenChange={setNewAppointmentOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="wellness" className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Book Appointment</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="wellness-card-gradient border-0">
-                  <DialogHeader>
-                    <DialogTitle>Book New Appointment</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="appointment-date">Date</Label>
-                      <Input id="appointment-date" type="date" />
-                    </div>
-                    <div>
-                      <Label htmlFor="appointment-time">Time</Label>
-                      <Input id="appointment-time" type="time" />
-                    </div>
-                    <div>
-                      <Label htmlFor="appointment-type">Type</Label>
-                      <Input id="appointment-type" placeholder="e.g., Follow-up, Consultation" />
-                    </div>
-                    <Button onClick={handleBookAppointment} variant="wellness" className="w-full">
-                      Book & Send WhatsApp
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+            
  <Dialog open={newPrescriptionOpen} onOpenChange={setNewPrescriptionOpen}>
       <DialogTrigger asChild>
         <Button variant="wellnessOutline" className="flex items-center space-x-2">

@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Calendar, Clock, User, Phone, Mail, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, User, Phone, Mail, MapPin, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const mockAppointments = [
   {
@@ -68,7 +71,7 @@ const mockAppointments = [
   }
 ];
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status) => {
   switch (status) {
     case "confirmed":
       return "bg-green-500";
@@ -81,23 +84,243 @@ const getStatusColor = (status: string) => {
   }
 };
 
+// Enhanced Calendar Component
+const SimpleCalendar = ({ appointments, onEventClick }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+    
+    return days;
+  };
+  
+  const getAppointmentsForDay = (day) => {
+    if (!day) return [];
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return appointments.filter(apt => apt.date === dateStr);
+  };
+
+  const getStatusColorForCalendar = (status) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 border-green-300 text-green-800";
+      case "pending":
+        return "bg-yellow-100 border-yellow-300 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 border-red-300 text-red-800";
+      default:
+        return "bg-gray-100 border-gray-300 text-gray-800";
+    }
+  };
+  
+  const navigateMonth = (direction) => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + direction);
+      return newDate;
+    });
+  };
+  
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-4">
+      {/* Calendar Header */}
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigateMonth(-1)} size="sm">
+          ← Previous
+        </Button>
+        <h2 className="text-xl font-semibold">
+          {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+        </h2>
+        <Button variant="outline" onClick={() => navigateMonth(1)} size="sm">
+          Next →
+        </Button>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mb-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+          <span>Confirmed</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded"></div>
+          <span>Pending</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+          <span>Cancelled</span>
+        </div>
+      </div>
+      
+      {/* Day Headers */}
+      <div className="grid grid-cols-7 gap-2 mb-4">
+        {dayNames.map(day => (
+          <div key={day} className="text-center font-medium text-gray-500 py-2">
+            {day}
+          </div>
+        ))}
+      </div>
+      
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {getDaysInMonth(currentDate).map((day, index) => {
+          const dayAppointments = getAppointmentsForDay(day);
+          const isToday = day && 
+            currentDate.getMonth() === new Date().getMonth() && 
+            currentDate.getFullYear() === new Date().getFullYear() && 
+            day === new Date().getDate();
+          
+          return (
+            <div
+              key={index}
+              className={`min-h-32 p-1 border rounded-lg ${
+                day 
+                  ? `bg-white hover:bg-gray-50 cursor-pointer ${isToday ? 'ring-2 ring-blue-500' : ''}` 
+                  : 'bg-transparent'
+              }`}
+            >
+              {day && (
+                <>
+                  <div className={`font-medium text-sm mb-1 p-1 ${isToday ? 'bg-blue-500 text-white rounded text-center' : ''}`}>
+                    {day}
+                  </div>
+                  <div className="space-y-1">
+                    {dayAppointments.map((apt, i) => (
+                      <div
+                        key={i}
+                        className={`text-xs p-2 rounded border cursor-pointer hover:opacity-80 transition-opacity ${getStatusColorForCalendar(apt.status)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEventClick?.(apt);
+                        }}
+                        title={`${apt.patientName} - ${apt.service} at ${apt.time}`}
+                      >
+                        <div className="font-medium truncate">{apt.patientName}</div>
+                        <div className="truncate opacity-75">{apt.time}</div>
+                        <div className="truncate text-xs opacity-60">{apt.service}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {dayAppointments.length > 3 && (
+                    <div className="text-xs text-gray-500 mt-1 text-center">
+                      +{dayAppointments.length - 3} more
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState("2024-01-15");
+  const [appointments, setAppointments] = useState(mockAppointments);
+  const [newAppointmentOpen, setNewAppointmentOpen] = useState(false);
+  const [editAppointmentOpen, setEditAppointmentOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
-  const filteredAppointments = mockAppointments.filter(
+  // Form states
+  const [patientName, setPatientName] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [type, setType] = useState("");
+  
+  const filteredAppointments = appointments.filter(
     (appointment) => appointment.date === selectedDate
   );
 
-  const upcomingAppointments = mockAppointments.filter(
+  const upcomingAppointments = appointments.filter(
     (appointment) => new Date(appointment.date) >= new Date()
   );
 
+  // Add appointment
+  const handleBookAppointment = () => {
+    if (!patientName || !date || !time || !type) return;
+    
+    const newAppt = {
+      id: Date.now(),
+      patientName,
+      patientPhone: "+91 00000 00000",
+      patientEmail: `${patientName.toLowerCase().replace(' ', '.')}@email.com`,
+      date,
+      time,
+      service: type,
+      status: "confirmed",
+      duration: "30 mins",
+      notes: "New appointment"
+    };
+
+    setAppointments([...appointments, newAppt]);
+    setNewAppointmentOpen(false);
+    setPatientName("");
+    setDate("");
+    setTime("");
+    setType("");
+  };
+
+  // Update appointment
+  const handleUpdateAppointment = () => {
+    if (!selectedEvent) return;
+    setAppointments((prev) =>
+      prev.map((appt) =>
+        appt.id === selectedEvent.id 
+          ? { ...appt, patientName, date, time, service: type }
+          : appt
+      )
+    );
+    setEditAppointmentOpen(false);
+  };
+
+  // Delete appointment
+  const handleDeleteAppointment = () => {
+    if (!selectedEvent) return;
+    setAppointments((prev) => prev.filter((appt) => appt.id !== selectedEvent.id));
+    setEditAppointmentOpen(false);
+  };
+
+  const handleEventClick = (appointment) => {
+    setSelectedEvent(appointment);
+    setPatientName(appointment.patientName);
+    setType(appointment.service);
+    setDate(appointment.date);
+    setTime(appointment.time);
+    setEditAppointmentOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Appointments</h1>
-          <p className="text-muted-foreground">Manage patient appointments and schedules</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Appointments</h1>
+          <p className="text-gray-600">Manage patient appointments and schedules</p>
         </div>
 
         <Tabs defaultValue="today" className="space-y-6">
@@ -110,21 +333,21 @@ const Appointments = () => {
           <TabsContent value="today" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Today - January 15, 2024</h2>
-              <Button className="bg-primary hover:bg-primary-dark">
-                Add New Appointment
+              <Button onClick={() => setNewAppointmentOpen(true)} className="bg-foreground text-white hover:bg-gray-800">
+                + Book Appointment
               </Button>
             </div>
 
             <div className="grid gap-4">
               {filteredAppointments.map((appointment) => (
-                <Card key={appointment.id} className="shadow-natural">
+                <Card key={appointment.id} className="shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-primary" />
-                            <h3 className="font-semibold text-foreground">{appointment.patientName}</h3>
+                            <User className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
                           </div>
                           <Badge className={`${getStatusColor(appointment.status)} text-white`}>
                             {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
@@ -133,26 +356,26 @@ const Appointments = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Clock className="h-4 w-4" />
                               <span>{appointment.time} ({appointment.duration})</span>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Phone className="h-4 w-4" />
                               <span>{appointment.patientPhone}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Mail className="h-4 w-4" />
                               <span>{appointment.patientEmail}</span>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <MapPin className="h-4 w-4" />
                               <span>{appointment.service}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-600">
                               <strong>Notes:</strong> {appointment.notes}
                             </p>
                           </div>
@@ -160,7 +383,11 @@ const Appointments = () => {
                       </div>
 
                       <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEventClick(appointment)}
+                        >
                           Edit
                         </Button>
                         <Button variant="outline" size="sm">
@@ -177,21 +404,24 @@ const Appointments = () => {
           <TabsContent value="upcoming" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Upcoming Appointments</h2>
-              <Button className="bg-primary hover:bg-primary-dark">
+              <Button 
+                onClick={() => setNewAppointmentOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
                 Add New Appointment
               </Button>
             </div>
 
             <div className="grid gap-4">
               {upcomingAppointments.map((appointment) => (
-                <Card key={appointment.id} className="shadow-natural">
+                <Card key={appointment.id} className="shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-primary" />
-                            <h3 className="font-semibold text-foreground">{appointment.patientName}</h3>
+                            <User className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
                           </div>
                           <Badge className={`${getStatusColor(appointment.status)} text-white`}>
                             {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
@@ -200,7 +430,7 @@ const Appointments = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Calendar className="h-4 w-4" />
                               <span>{new Date(appointment.date).toLocaleDateString('en-IN', { 
                                 weekday: 'long', 
@@ -209,22 +439,22 @@ const Appointments = () => {
                                 day: 'numeric' 
                               })}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Clock className="h-4 w-4" />
                               <span>{appointment.time} ({appointment.duration})</span>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <Phone className="h-4 w-4" />
                               <span>{appointment.patientPhone}</span>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-gray-600">
                               <MapPin className="h-4 w-4" />
                               <span>{appointment.service}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-600">
                               <strong>Notes:</strong> {appointment.notes}
                             </p>
                           </div>
@@ -232,7 +462,11 @@ const Appointments = () => {
                       </div>
 
                       <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEventClick(appointment)}
+                        >
                           Edit
                         </Button>
                         <Button variant="outline" size="sm">
@@ -247,13 +481,127 @@ const Appointments = () => {
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-4">
-            <div className="text-center py-12">
-              <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">Calendar View</h3>
-              <p className="text-muted-foreground">Calendar integration coming soon</p>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Calendar View</h2>
+              <Button 
+                onClick={() => setNewAppointmentOpen(true)}
+                className="bg-foreground text-white hover:bg-gray-800"
+              >
+                + Book Appointment
+              </Button>
             </div>
+            
+            <SimpleCalendar 
+              appointments={appointments} 
+              onEventClick={handleEventClick}
+            />
           </TabsContent>
         </Tabs>
+
+        {/* Add Appointment Dialog */}
+        <Dialog open={newAppointmentOpen} onOpenChange={setNewAppointmentOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Book New Appointment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="patient-name">Patient Name</Label>
+                <Input 
+                  id="patient-name"
+                  value={patientName} 
+                  onChange={(e) => setPatientName(e.target.value)} 
+                  placeholder="Enter patient name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="appointment-date">Date</Label>
+                <Input 
+                  id="appointment-date"
+                  type="date" 
+                  value={date} 
+                  onChange={(e) => setDate(e.target.value)} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="appointment-time">Time</Label>
+                <Input 
+                  id="appointment-time"
+                  type="time" 
+                  value={time} 
+                  onChange={(e) => setTime(e.target.value)} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="service-type">Service Type</Label>
+                <Input 
+                  id="service-type"
+                  value={type} 
+                  onChange={(e) => setType(e.target.value)} 
+                  placeholder="e.g., Consultation, Therapy"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleBookAppointment} className="w-full bg-foreground text-white hover:bg-gray-800">
+                Book Appointment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Appointment Dialog */}
+        <Dialog open={editAppointmentOpen} onOpenChange={setEditAppointmentOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Appointment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-patient-name">Patient Name</Label>
+                <Input 
+                  id="edit-patient-name"
+                  value={patientName} 
+                  onChange={(e) => setPatientName(e.target.value)} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-date">Date</Label>
+                <Input 
+                  id="edit-date"
+                  type="date" 
+                  value={date} 
+                  onChange={(e) => setDate(e.target.value)} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-time">Time</Label>
+                <Input 
+                  id="edit-time"
+                  type="time" 
+                  value={time} 
+                  onChange={(e) => setTime(e.target.value)} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-type">Service Type</Label>
+                <Input 
+                  id="edit-type"
+                  value={type} 
+                  onChange={(e) => setType(e.target.value)} 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex justify-between">
+              <Button variant="destructive" onClick={handleDeleteAppointment}>
+                Delete
+              </Button>
+              <Button onClick={handleUpdateAppointment} className="bg-blue-600 hover:bg-blue-700">
+                Update
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
