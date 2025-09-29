@@ -51,7 +51,7 @@ const Contact = () => {
   {
     icon: Phone,
     title: "Call Us",
-    details: ["+91 9343922950"],
+    details: ["+91 9727778179"],
     color: "text-wellness-sage",
   },
   {
@@ -132,7 +132,7 @@ const Contact = () => {
                 </p>
                 <Button variant="wellness" size="lg" className="w-full bg-foreground hover:bg-foreground/90">
                   <Phone className="h-4 w-4 mr-2" />
-                  Call Now: +91 9343922950
+                  Call Now: +91 9727778179
 
                 </Button>
               </CardContent>
@@ -182,7 +182,7 @@ const Contact = () => {
                       id="phone"
                       name="phone"
                       type="tel"
-                      placeholder="+91 9343922950
+                      placeholder="+91 9727778179
 "
                       value={formData.phone}
                       onChange={handleInputChange}
