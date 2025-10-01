@@ -13,8 +13,11 @@ import {
   Calendar,
   Leaf
 } from "lucide-react";
+import {  useToast } from "@/hooks/use-toast";
+import { postData } from "@/lib/api";
 
 const Contact = () => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,12 +32,52 @@ const Contact = () => {
       [e.target.name]: e.target.value
     });
   };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Contact form submitted:", formData);
-    // Handle form submission here
+  const payload = {
+    name: formData.name,
+    email: formData.email,
+    phone: Number(formData.phone),
+    service_interested: formData.service,
+    message: formData.message,
   };
+
+  // Show loading toast
+   toast({
+    title: "Sending...",
+    description: "Your message is being sent.",
+  });
+
+  try {
+ const result = await postData("/contact-us/create", payload);
+
+    console.log("Form submitted successfully:", result);
+
+    // Update toast to success
+    toast({
+      title: "Message sent!",
+      description: "We will get back to you within 24 hours.",
+    });
+
+    // Reset form
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      service: "",
+      message: "",
+    });
+
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    toast({
+      title: "Error",
+      description: "Something went wrong. Please try again later.",
+    });
+  }
+};
+
 
  const contactInfo = [
   {
@@ -116,7 +159,6 @@ const Contact = () => {
                 })}
               </div>
             </div>
-
             {/* Quick Booking Card */}
             <Card className="wellness-card-gradient border-0 wellness-shadow">
               <CardHeader>
@@ -133,7 +175,6 @@ const Contact = () => {
                 <Button variant="wellness" size="lg" className="w-full bg-foreground hover:bg-foreground/90">
                   <Phone className="h-4 w-4 mr-2" />
                   Call Now: +91 9727778179
-
                 </Button>
               </CardContent>
             </Card>
@@ -182,8 +223,7 @@ const Contact = () => {
                       id="phone"
                       name="phone"
                       type="tel"
-                      placeholder="+91 9727778179
-"
+                      placeholder="+91 9727778179"
                       value={formData.phone}
                       onChange={handleInputChange}
                     />

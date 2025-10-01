@@ -82,12 +82,18 @@ const Dashboard = () => {
           { name: "Prescriptions", icon: Pill },
           { name: "Dietitians", icon: ChartArea },
           { name: "Invoices", icon: FileText },
+                  // Settings section for superAdmin
+        { name: "Add Post-Treatment", icon: Stethoscope },
+        { name: "Add Medicine Post", icon: Pill },
         ]
       : userRole === "Naturopathy Doctor"
       ? [
           { name: "Overview", icon: Users },
           { name: "Prescriptions", icon: Pill },
           { name: "Dietitians", icon: ChartArea },
+                  // Settings section for superAdmin
+        { name: "Add Post-Treatment", icon: Stethoscope },
+        { name: "Add Medicine Post", icon: Pill },
         ]
       : [
           // Receptionist
@@ -140,7 +146,8 @@ const Dashboard = () => {
         case "appointments":
           return <Appointments />;
              case "add-patient":
-        return <PatientForm onPatientAdded={handlePatientAdded} />;
+        return <PatientForm />;
+
         default:
           return <ReceptionDashboard />;
       }
@@ -156,7 +163,7 @@ const Dashboard = () => {
           </Card>
         );
       case "add-patient":
-        return <PatientForm onPatientAdded={handlePatientAdded} />;
+        return <PatientForm />;
       case "appointments":
         return <Appointments />;
       case "prescriptions":
@@ -165,6 +172,20 @@ const Dashboard = () => {
         return <Dietitians />;
       case "invoices":
         return <Invoices />;
+         case "add-post-treatment":
+      return (
+        <Card className="bg-white shadow-soft rounded-xl p-6">
+          <h2 className="text-xl font-bold mb-4">Add Post-Treatment</h2>
+          {/* Include your post-treatment form component or UI here */}
+        </Card>
+      );
+    case "add-medicine-post":
+      return (
+        <Card className="bg-white shadow-soft rounded-xl p-6">
+          <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
+          {/* Include your medicine post form component or UI here */}
+        </Card>
+      );
       default:
         return null;
     }

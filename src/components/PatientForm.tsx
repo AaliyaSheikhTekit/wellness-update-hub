@@ -1,473 +1,632 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarDays, User, Phone, Mail, MapPin, FileText, Heart } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import IkshaLogo from "../assets/iksha_logo.png";
+import SignatureStep from "./ConsentStep";
+const VITALS_FIELDS = [
+  { label: "Blood Pressure", unit: "mmHg", normal: "90-120/60-80" },
+  { label: "Pulse", unit: "Beat/min", normal: "60-100" },
+  { label: "Weight", unit: "Kg", normal: "Varies" },
+  { label: "Height", unit: "Cm", normal: "-" },
+  { label: "BMI", unit: "kg/m²", normal: "18.5–24.9" },
+  { label: "Temperature", unit: "°F", normal: "98.6" },
+];
 
-interface Patient {
-  id: string;
-  name: string;
-  age: string;
-  phone: string;
-  email: string;
-  address: string;
-  medicalHistory: string;
-  currentCondition: string;
-  allergies: string;
-  medications: string;
-  emergencyContact: string;
-  emergencyPhone: string;
-  consentGiven: boolean;
-  status: "Active" | "Pending";
-  dateAdded: string;
-
-  // Receptionist input
-  vitals: {
-    bloodPressure: string;
-    pulse: string;
-    weight: string;
-    height: string;
-    bmi: string;
-    muac: string; // Mid-upper arm circumference
-    waist: string;
-    hip: string;
-    whr: string;
-    skinfoldTriceps: string;
-    skinfoldBiceps: string;
-    skinfoldSubscapular: string;
-    skinfoldSuprailiac: string;
-    bodyFat: string;
-    fastingBloodSugar: string;
-    randomBloodSugar: string;
-    fever: string;
-  };
-}
-
-
-interface PatientFormProps {
-  onPatientAdded?: (patient: Patient) => void;
-}
-
-const PatientForm = ({ onPatientAdded }: PatientFormProps) => {
- const { toast } = useToast();
-  const [isConsentOpen, setIsConsentOpen] = useState(false);
-  const [consentGiven, setConsentGiven] = useState(false);
+const PatientRegistrationForm = () => {
+  const [step, setStep] = useState(1);
+  const [showPrint, setShowPrint] = useState(false);
+  const printRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
     age: "",
-    phone: "",
-    email: "",
+    sex: "",
+    fatherOrHusband: "",
     address: "",
-    medicalHistory: "",
-    currentCondition: "",
+    contactNumber: "",
+    maritalStatus: "",
+    dateOfVisit: "",
+    occupation: "",
+    reference: "",
+    dateOfBirth: "",
+    bloodType: "",
+    primaryHealthConcern: "",
+    chronicIllnesses: "",
+    surgeries: "",
     allergies: "",
-    medications: "",
-    emergencyContact: "",
-    emergencyPhone: "",
-
-    // vitals
-    bloodPressure: "",
-    pulse: "",
-    weight: "",
-    height: "",
-    bmi: "",
-    muac: "",
-    waist: "",
-    hip: "",
-    whr: "",
-    skinfoldTriceps: "",
-    skinfoldBiceps: "",
-    skinfoldSubscapular: "",
-    skinfoldSuprailiac: "",
-    bodyFat: "",
-    fastingBloodSugar: "",
-    randomBloodSugar: "",
-    fever: ""
+    familyHistory: "",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const [vitals, setVitals] = useState({});
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [signature, setSignature] = useState("");
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleConsentSubmit = () => {
-    if (!consentGiven) {
-      toast({
-        title: "Consent Required",
-        description: "Patient must give consent to proceed.",
-        variant: "destructive"
-      });
+  const handleVitalsChange = (field, value) => {
+    setVitals({ ...vitals, [field]: value });
+  };
+
+  const handleNext = () => {
+    if (step === 1 && (!formData.name || !formData.contactNumber)) {
+      alert("Please fill Name and Contact Number");
       return;
     }
-
-    const newPatient: Patient = {
-      id: Date.now().toString(),
-      ...formData,
-      vitals: {
-        bloodPressure: formData.bloodPressure,
-        pulse: formData.pulse,
-        weight: formData.weight,
-        height: formData.height,
-        bmi: formData.bmi,
-        muac: formData.muac,
-        waist: formData.waist,
-        hip: formData.hip,
-        whr: formData.whr,
-        skinfoldTriceps: formData.skinfoldTriceps,
-        skinfoldBiceps: formData.skinfoldBiceps,
-        skinfoldSubscapular: formData.skinfoldSubscapular,
-        skinfoldSuprailiac: formData.skinfoldSuprailiac,
-        bodyFat: formData.bodyFat,
-        fastingBloodSugar: formData.fastingBloodSugar,
-        randomBloodSugar: formData.randomBloodSugar,
-        fever: formData.fever
-      },
-      consentGiven: true,
-      status: "Active",
-      dateAdded: new Date().toISOString().split('T')[0]
-    };
-
-    // Save to localStorage (mock db)
-    const existingPatients = JSON.parse(localStorage.getItem("patients") || "[]");
-    localStorage.setItem("patients", JSON.stringify([...existingPatients, newPatient]));
-
-    onPatientAdded?.(newPatient);
-    toast({
-      title: "Patient Added Successfully",
-      description: `${newPatient.name} has been registered successfully.`,
-    });
-
-    // Reset
-    setFormData({
-      name: "",
-      age: "",
-      phone: "",
-      email: "",
-      address: "",
-      medicalHistory: "",
-      currentCondition: "",
-      allergies: "",
-      medications: "",
-      emergencyContact: "",
-      emergencyPhone: "",
-      bloodPressure: "",
-      pulse: "",
-      weight: "",
-      height: "",
-      bmi: "",
-      muac: "",
-      waist: "",
-      hip: "",
-      whr: "",
-      skinfoldTriceps: "",
-      skinfoldBiceps: "",
-      skinfoldSubscapular: "",
-      skinfoldSuprailiac: "",
-      bodyFat: "",
-      fastingBloodSugar: "",
-      randomBloodSugar: "",
-      fever: ""
-    });
-    setConsentGiven(false);
-    setIsConsentOpen(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.name || !formData.phone || !formData.currentCondition) {
-      toast({
-        title: "Missing Required Fields",
-        description: "Please fill in all required fields (Name, Phone, Current Condition).",
-        variant: "destructive"
-      });
+    if (step === 2 && !consentGiven) {
+      alert("Please give consent to proceed");
       return;
     }
-
-    setIsConsentOpen(true);
+    if (step === 3 && !paymentMethod) {
+      alert("Please select a payment method");
+      return;
+    }
+    setStep(step + 1);
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Card className="wellness-card-gradient border-0 wellness-shadow">
-        <CardHeader>
-          <CardTitle className="font-display text-3xl text-foreground flex items-center space-x-2">
-            <User className="w-8 h-8 text-wellness-sage" />
-            <span>New Patient Registration</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-foreground flex items-center space-x-2">
-                <User className="w-5 h-5 text-wellness-sage" />
-                <span>Personal Information</span>
-              </h3>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter patient's full name"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="age">Age</Label>
-                  <Input
-                    id="age"
-                    name="age"
-                    type="number"
-                    value={formData.age}
-                    onChange={handleInputChange}
-                    placeholder="Enter age"
-                  />
-                </div>
-              </div>
+  const handlePrint = () => {
+    setShowPrint(true);
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Enter phone number"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Enter email address"
-                  />
-                </div>
-              </div>
+  const handleFinish = () => {
+    handlePrint();
+  };
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="Enter complete address"
-                  rows={2}
+  if (showPrint) {
+    return (
+      <div ref={printRef} className="print-view bg-white p-8 max-w-4xl mx-auto">
+        <style>{`
+          @media print {
+            body { margin: 0; padding: 20px; }
+            .no-print { display: none !important; }
+            .print-view { box-shadow: none !important; }
+          }
+        `}</style>
+
+        {/* Header with Logo */}
+        <div className="border-b-4 border-amber-600 pb-4 mb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className=" mb-6  h-12 flex items-center">
+                <img
+                  src={IkshaLogo}
+                  alt="Iksha Naturopathy Logo"
+                  className="  h-36 w-auto object-contain"
                 />
               </div>
+              <p className="text-sm text-gray-600">
+                {" "}
+                Integrated Natural Healing system for a comprehensive
+              </p>
             </div>
+            <div className="text-right text-sm">
+              <p>📞 +91 9343922950</p>
+              <p>📧 admin@ikshanaturopathy.com</p>
+              <p>📍 Bhopal, Madhya Pradesh</p>
+            </div>
+          </div>
+        </div>
 
-            {/* Medical Information */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-foreground flex items-center space-x-2">
-                <Heart className="w-5 h-5 text-wellness-sage" />
-                <span>Medical Information</span>
-              </h3>
+        {/* Patient Information */}
+        <h2 className="text-xl font-bold text-amber-700 mb-4 border-b-2 border-amber-200 pb-2">
+          PATIENT INFORMATION
+        </h2>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-6 text-sm">
+          <div>
+            <span className="font-semibold">Name:</span> {formData.name}
+          </div>
+          <div>
+            <span className="font-semibold">Age:</span> {formData.age}
+          </div>
+          <div>
+            <span className="font-semibold">Sex:</span> {formData.sex}
+          </div>
+          <div>
+            <span className="font-semibold">Blood Type:</span>{" "}
+            {formData.bloodType}
+          </div>
+          <div>
+            <span className="font-semibold">Father/Husband:</span>{" "}
+            {formData.fatherOrHusband}
+          </div>
+          <div>
+            <span className="font-semibold">DOB:</span> {formData.dateOfBirth}
+          </div>
+          <div>
+            <span className="font-semibold">Contact:</span>{" "}
+            {formData.contactNumber}
+          </div>
+          <div>
+            <span className="font-semibold">Marital Status:</span>{" "}
+            {formData.maritalStatus}
+          </div>
+          <div className="col-span-2">
+            <span className="font-semibold">Address:</span> {formData.address}
+          </div>
+          <div>
+            <span className="font-semibold">Occupation:</span>{" "}
+            {formData.occupation}
+          </div>
+          <div>
+            <span className="font-semibold">Reference:</span>{" "}
+            {formData.reference}
+          </div>
+          <div className="col-span-2">
+            <span className="font-semibold">Date of Visit:</span>{" "}
+            {formData.dateOfVisit}
+          </div>
+        </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentCondition">Current Condition/Chief Complaint *</Label>
+        {/* Primary Health Concern */}
+        <h2 className="text-xl font-bold text-amber-700 mb-4 border-b-2 border-amber-200 pb-2">
+          PRIMARY HEALTH CONCERN
+        </h2>
+        <p className="mb-6 text-sm bg-amber-50 p-3 rounded">
+          {formData.primaryHealthConcern}
+        </p>
+
+        {/* Medical History */}
+        <h2 className="text-xl font-bold text-amber-700 mb-4 border-b-2 border-amber-200 pb-2">
+          MEDICAL HISTORY
+        </h2>
+        <div className="space-y-3 mb-6 text-sm">
+          {formData.chronicIllnesses && (
+            <div>
+              <span className="font-semibold">Chronic Illnesses:</span>{" "}
+              {formData.chronicIllnesses}
+            </div>
+          )}
+          {formData.surgeries && (
+            <div>
+              <span className="font-semibold">Surgeries:</span>{" "}
+              {formData.surgeries}
+            </div>
+          )}
+          {formData.allergies && (
+            <div>
+              <span className="font-semibold">Allergies:</span>{" "}
+              {formData.allergies}
+            </div>
+          )}
+          {formData.familyHistory && (
+            <div>
+              <span className="font-semibold">Family History:</span>{" "}
+              {formData.familyHistory}
+            </div>
+          )}
+        </div>
+
+        {/* Vitals */}
+        <h2 className="text-xl font-bold text-amber-700 mb-4 border-b-2 border-amber-200 pb-2">
+          VITALS & MEASUREMENTS
+        </h2>
+        <div className="grid grid-cols-3 gap-4 mb-6 text-sm">
+          {Object.entries(vitals).map(
+            ([key, value]) =>
+              value && (
+                <div key={key} className="bg-gray-50 p-2 rounded">
+                  <span className="font-semibold">{key}:</span> {String(value)}
+                </div>
+              )
+          )}
+        </div>
+
+        {/* Payment */}
+        <div className="mb-6 text-sm">
+          <span className="font-semibold">Payment Method:</span> {paymentMethod}
+        </div>
+
+        {/* Signature */}
+        {signature && (
+          <div className="mb-6">
+            <p className="font-semibold text-sm mb-2">Patient Signature:</p>
+            <img
+              src={signature}
+              alt="Signature"
+              className="border border-gray-300 h-20"
+            />
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="border-t-4 border-amber-600 pt-4 mt-8 text-center text-xs text-gray-600">
+          <p className="font-semibold">
+            {" "}
+           
+            Integrated Natural Healing system for a comprehensive
+          </p>
+          <p>
+            📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐
+            www.ikshanaturopathy.com
+          </p>
+          <p className="mt-2">
+            © {new Date().getFullYear()} Iksha Naturopathy. All rights reserved.
+          </p>
+        </div>
+
+        <Button onClick={() => setShowPrint(false)} className="no-print mt-4">
+          Back to Form
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white p-4 md:p-8">
+      {/* Clipboard/Wooden Board Effect */}
+      <div className="max-w-4xl mx-auto relative">
+        {/* Clipboard Clip */}
+        <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-32 h-12 bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-lg shadow-xl z-10">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-20 h-6 bg-gray-600 rounded shadow-inner"></div>
+          </div>
+        </div>
+
+        {/* Wooden Board */}
+        <Card className="bg-gradient-to-br from-amber-100 to-amber-200 shadow-2xl border-8 border-amber-800 rounded-lg overflow-hidden">
+          <CardContent className="p-8">
+            {/* Paper Effect */}
+            <div className="bg-white rounded shadow-inner p-6 md:p-8">
+              {/* Logo and Header */}
+              <div className="text-center mb-6 border-b-4 border-amber-600 pb-4 flex flex-col items-center">
+                <div className=" mb-6  h-12 flex items-center">
+                  <img
+                    src={IkshaLogo}
+                    alt="Iksha Naturopathy Logo"
+                    className="  h-36 w-auto object-contain"
+                  />
+                </div>
+                <p className="text-gray-600 text-sm">
+                  {" "}
+                  Integrated Natural Healing system for a comprehensive
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com
+                </p>
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="flex justify-between mb-6">
+                {[1, 2, 3, 4].map((s) => (
+                  <div key={s} className="flex items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                        step >= s
+                          ? "bg-amber-600 text-white"
+                          : "bg-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {s}
+                    </div>
+                    {s < 4 && (
+                      <div
+                        className={`h-1 w-16 md:w-24 ${
+                          step > s ? "bg-amber-600" : "bg-gray-200"
+                        }`}
+                      ></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Step 1: Patient Info */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+                    Patient Information
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Input
+                      name="name"
+                      placeholder="Full Name *"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="age"
+                      placeholder="Age"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="sex"
+                      placeholder="Sex"
+                      value={formData.sex}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="fatherOrHusband"
+                      placeholder="Father/Husband Name"
+                      value={formData.fatherOrHusband}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="contactNumber"
+                      placeholder="Contact Number *"
+                      value={formData.contactNumber}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="maritalStatus"
+                      placeholder="Marital Status"
+                      value={formData.maritalStatus}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="dateOfBirth"
+                      placeholder="Date of Birth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="bloodType"
+                      placeholder="Blood Type"
+                      value={formData.bloodType}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="occupation"
+                      placeholder="Occupation"
+                      value={formData.occupation}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="reference"
+                      placeholder="Reference"
+                      value={formData.reference}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Input
+                      name="dateOfVisit"
+                      placeholder="Date of Visit"
+                      type="date"
+                      value={formData.dateOfVisit}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                   <Textarea
-                    id="currentCondition"
-                    name="currentCondition"
-                    value={formData.currentCondition}
+                    name="address"
+                    placeholder="Address"
+                    value={formData.address}
                     onChange={handleInputChange}
-                    placeholder="Describe the main health concern or condition"
+                    required
+                  />
+                  <Textarea
+                    name="primaryHealthConcern"
+                    placeholder="Primary Health Concern *"
+                    value={formData.primaryHealthConcern}
+                    onChange={handleInputChange}
+                    required
                     rows={3}
+                  />
+
+                  <h4 className="font-semibold text-amber-700 mt-4">
+                    Medical History
+                  </h4>
+                  <Textarea
+                    name="chronicIllnesses"
+                    placeholder="Chronic Illnesses"
+                    value={formData.chronicIllnesses}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Textarea
+                    name="surgeries"
+                    placeholder="Surgeries/Injuries"
+                    value={formData.surgeries}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Textarea
+                    name="allergies"
+                    placeholder="Allergies"
+                    value={formData.allergies}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Textarea
+                    name="familyHistory"
+                    placeholder="Family History"
+                    value={formData.familyHistory}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="medicalHistory">Medical History</Label>
-                  <Textarea
-                    id="medicalHistory"
-                    name="medicalHistory"
-                    value={formData.medicalHistory}
-                    onChange={handleInputChange}
-                    placeholder="Previous medical conditions, surgeries, treatments"
-                    rows={3}
-                  />
-                </div>
+              {/* Step 2: Consent */}
+              {step === 2 && (
+                <div className="space-y-4">
+    <h3 className="font-semibold text-lg">Informed Consent Form</h3>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="allergies">Allergies</Label>
-                    <Textarea
-                      id="allergies"
-                      name="allergies"
-                      value={formData.allergies}
-                      onChange={handleInputChange}
-                      placeholder="Food, drug, or environmental allergies"
-                      rows={2}
-                    />
+    {/* Consent Text */}
+    <div className="space-y-2 max-h-96 overflow-y-auto p-4 border rounded bg-gray-50 text-gray-800">
+      <p className="font-semibold">Treatment Details:</p>
+      <p>
+        The procedure may include Naturopathy treatments such as dietary changes, fasting therapy,
+        hydrotherapy, mud therapy, yoga, pranayama, massage, colon hydrotherapy, acupuncture, 
+        physiotherapy, chromotherapy, magneto therapy, reflexology, and cupping therapy. It may also 
+        involve Panchakarma procedures such as Shirodhara, Nasya (Nasal Therapy), External Basti, 
+        Akshitarpan, Raktamokshana (bloodletting, if needed), Abhyanga (oil massage), and Swedana (steam therapy). 
+        These therapies will be prescribed specifically based on your condition and requirements.
+      </p>
+
+      <p className="font-semibold">Expected Benefits:</p>
+      <p>
+        These therapies aim to detoxify and cleanse the body, rejuvenate the body and mind, improve digestion 
+        and metabolism, increase energy and vitality, relieve stress, enhance mental clarity, reduce pain and stiffness, 
+        strengthen the immune system, and promote overall well-being.
+      </p>
+
+      <p className="font-semibold">Risks and Limitations:</p>
+      <p>
+        I understand that possible risks include mild nausea, dizziness, fatigue, headache, skin irritation, 
+        temporary digestive changes, and emotional fluctuations. Unforeseen complications may occur, which can include 
+        serious conditions. The management reserves the right to transfer me to an appropriate medical facility if required 
+        and will not be held liable for any adverse reactions. I also understand that results may vary depending on adherence 
+        to protocol and advice given by the doctor and no guarantee of success is provided.
+      </p>
+
+      <p className="font-semibold">Conditions & Policies:</p>
+      <p>
+        I have been informed that there will be no refund for the treatment under any circumstances. The management reserves 
+        the right to discontinue the treatment at any time if necessary. I agree to follow all instructions given by the doctor 
+        and their team to ensure the success of the treatment.
+      </p>
+
+      <p className="font-semibold">Medical Information:</p>
+      <p>
+        I have shared my complete medical history, including allergies, medications, and any pre-existing conditions. I confirm 
+        that I do not have pregnancy, severe heart disease, active infections, or unstable psychiatric issues. I will inform the 
+        practitioner immediately if any such condition exists or develops. I affirm that I have read the basic rules and answered 
+        all the above questions in absolute honesty. I hereby declare that the above information is complete and an accurate record 
+        of my current and past health condition to the best of my knowledge, as on the undersigned date. I am aware of the nature 
+        of treatments, therapies, facilities, activities and services and that they are undertaken at my own risk and complete responsibility.
+      </p>
+
+      <p className="font-semibold">Final Declaration:</p>
+      <p>
+        I have been given sufficient time to ask questions, consider alternative options, and make an informed decision. I understand 
+        that I can withdraw my consent at any time. I am giving this consent voluntarily, without any pressure or influence, after 
+        understanding all details of the proposed treatments in a language which I understand, to undergo Panchakarma and Naturopathy 
+        treatments as a holistic wellness approach.
+      </p>
+    </div>
+
+    {/* Checkbox */}
+    <div className="flex items-center gap-2 mt-2">
+      <Checkbox checked={consentGiven} onCheckedChange={(c) => setConsentGiven(c === true)} />
+      <span>I have read and understood the consent form and give my consent.</span>
+    </div>
+
+    {/* Signature Canvas */}
+    {consentGiven && (
+      <div className="mt-4">
+        <h3 className="font-semibold text-lg">Patient Signature</h3>
+        <SignatureStep onSaveSignature={(sig) => console.log("Signature saved", sig)} />
+      </div>
+    )}
+  </div>
+              )}
+
+              {/* Step 3: Payment */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+                    Payment Method
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    <Button
+                      onClick={() => setPaymentMethod("UPI")}
+                      className={`h-20 text-lg ${
+                        paymentMethod === "UPI"
+                          ? "bg-amber-600 hover:bg-amber-700"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                      }`}
+                    >
+                      💳 UPI/QR Payment
+                    </Button>
+                    <Button
+                      onClick={() => setPaymentMethod("Cash")}
+                      className={`h-20 text-lg ${
+                        paymentMethod === "Cash"
+                          ? "bg-amber-600 hover:bg-amber-700"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                      }`}
+                    >
+                      💵 Cash Payment
+                    </Button>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="medications">Current Medications</Label>
-                    <Textarea
-                      id="medications"
-                      name="medications"
-                      value={formData.medications}
-                      onChange={handleInputChange}
-                      placeholder="Current medications and supplements"
-                      rows={2}
-                    />
+                </div>
+              )}
+
+              {/* Step 4: Vitals */}
+              {step === 4 && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+                    Vitals & Measurements
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {VITALS_FIELDS.map((v) => (
+                      <div key={v.label} className="space-y-1">
+                        <label className="font-medium text-sm">
+                          {v.label} ({v.unit})
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          Normal: {v.normal}
+                        </p>
+                        <Input
+                          value={vitals[v.label] || ""}
+                          onChange={(e) =>
+                            handleVitalsChange(v.label, e.target.value)
+                          }
+                          required
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
- <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-foreground">Vitals & Anthropometric Measurements (Receptionist)</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Input name="bloodPressure" placeholder="Blood Pressure (mmHg)" value={formData.bloodPressure} onChange={handleInputChange}/>
-                <Input name="pulse" placeholder="Pulse (bpm)" value={formData.pulse} onChange={handleInputChange}/>
-                <Input name="weight" placeholder="Weight (Kg)" value={formData.weight} onChange={handleInputChange}/>
-                <Input name="height" placeholder="Height (cm)" value={formData.height} onChange={handleInputChange}/>
-                <Input name="bmi" placeholder="BMI (kg/m²)" value={formData.bmi} onChange={handleInputChange}/>
-                <Input name="muac" placeholder="Mid-Upper Arm Circumference (cm)" value={formData.muac} onChange={handleInputChange}/>
-                <Input name="waist" placeholder="Waist Circumference (cm)" value={formData.waist} onChange={handleInputChange}/>
-                <Input name="hip" placeholder="Hip Circumference (cm)" value={formData.hip} onChange={handleInputChange}/>
-                <Input name="whr" placeholder="Waist-Hip Ratio" value={formData.whr} onChange={handleInputChange}/>
-                <Input name="skinfoldTriceps" placeholder="Skinfold Triceps (mm)" value={formData.skinfoldTriceps} onChange={handleInputChange}/>
-                <Input name="skinfoldBiceps" placeholder="Skinfold Biceps (mm)" value={formData.skinfoldBiceps} onChange={handleInputChange}/>
-                <Input name="skinfoldSubscapular" placeholder="Skinfold Subscapular (mm)" value={formData.skinfoldSubscapular} onChange={handleInputChange}/>
-                <Input name="skinfoldSuprailiac" placeholder="Skinfold Suprailiac (mm)" value={formData.skinfoldSuprailiac} onChange={handleInputChange}/>
-                <Input name="bodyFat" placeholder="Body Fat %" value={formData.bodyFat} onChange={handleInputChange}/>
-                <Input name="fastingBloodSugar" placeholder="Fasting Blood Sugar (mg/dl)" value={formData.fastingBloodSugar} onChange={handleInputChange}/>
-                <Input name="randomBloodSugar" placeholder="Random Blood Sugar (mg/dl)" value={formData.randomBloodSugar} onChange={handleInputChange}/>
-                <Input name="fever" placeholder="Fever (°F)" value={formData.fever} onChange={handleInputChange}/>
-              </div>
-            </div>
-            {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-foreground flex items-center space-x-2">
-                <Phone className="w-5 h-5 text-wellness-sage" />
-                <span>Emergency Contact</span>
-              </h3>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContact">Emergency Contact Name</Label>
-                  <Input
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    value={formData.emergencyContact}
-                    onChange={handleInputChange}
-                    placeholder="Enter emergency contact name"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyPhone">Emergency Contact Phone</Label>
-                  <Input
-                    id="emergencyPhone"
-                    name="emergencyPhone"
-                    type="tel"
-                    value={formData.emergencyPhone}
-                    onChange={handleInputChange}
-                    placeholder="Enter emergency contact phone"
-                  />
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between mt-8 pt-6 border-t-2 border-amber-200">
+                {step > 1 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(step - 1)}
+                    className="border-amber-600 text-amber-700 hover:bg-amber-50"
+                  >
+                    ← Back
+                  </Button>
+                )}
+                <div className="ml-auto">
+                  {step < 4 && (
+                    <Button
+                      onClick={handleNext}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Next →
+                    </Button>
+                  )}
+                  {step === 4 && (
+                    <Button
+                      onClick={handleFinish}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      ✓ Finish & Print
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex justify-end space-x-4 pt-6">
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-              <Button type="submit" variant="wellness" size="lg" className="bg-foreground hover:bg-foreground/85">
-                Register Patient
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Consent Dialog */}
-      <Dialog open={isConsentOpen} onOpenChange={setIsConsentOpen}>
-        <DialogContent className="max-w-2xl wellness-card-gradient">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl text-foreground flex items-center space-x-2">
-              <FileText className="w-6 h-6 text-wellness-sage" />
-              <span>Patient Consent & Agreement</span>
-            </DialogTitle>
-            <DialogDescription className="text-base">
-              Please review and confirm the following consent agreement for {formData.name}.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 max-h-96 overflow-y-auto py-4">
-            <div className="space-y-3 text-sm text-foreground">
-              <h4 className="font-semibold text-wellness-sage">Treatment Consent:</h4>
-              <p>I consent to the naturopathic treatment and examination as recommended by the practitioner. I understand that naturopathic treatments are designed to support the body's natural healing processes.</p>
-              
-              <h4 className="font-semibold text-wellness-sage">Information Sharing:</h4>
-              <p>I authorize the sharing of my medical information between authorized healthcare providers within this clinic for the purpose of providing comprehensive care.</p>
-              
-              <h4 className="font-semibold text-wellness-sage">Privacy & Confidentiality:</h4>
-              <p>I understand that my personal health information will be kept confidential in accordance with applicable privacy laws and will only be shared with my consent or as required by law.</p>
-              
-              <h4 className="font-semibold text-wellness-sage">Treatment Risks:</h4>
-              <p>I understand that while naturopathic treatments are generally safe, there may be potential risks or side effects, and I will inform my practitioner of any adverse reactions.</p>
-              
-              <h4 className="font-semibold text-wellness-sage">Lifestyle Recommendations:</h4>
-              <p>I understand that treatment may include recommendations for dietary changes, lifestyle modifications, and natural supplements, which I agree to follow as prescribed.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 pt-4">
-            <Checkbox
-              id="consent"
-              checked={consentGiven}
-              onCheckedChange={(checked) => setConsentGiven(checked === true)}
-            />
-            <Label htmlFor="consent" className="text-sm">
-              I have read and understood the above information and give my consent for treatment and information sharing within the clinic.
-            </Label>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConsentOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="wellness" 
-              className="bg-foreground"
-              onClick={handleConsentSubmit}
-              disabled={!consentGiven}
-            >
-              Confirm Registration
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Wood texture shadow effect */}
+        <div className="absolute -bottom-2 left-4 right-4 h-4 bg-amber-900 rounded-b-lg opacity-30 blur-sm"></div>
+      </div>
     </div>
   );
 };
 
-export default PatientForm;
+export default PatientRegistrationForm;
