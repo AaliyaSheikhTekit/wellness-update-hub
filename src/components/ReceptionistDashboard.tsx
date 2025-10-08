@@ -17,13 +17,15 @@ const ReceptionDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
+ const [filter, setFilter] = useState<"all" | "today" | "pending">("today");
+  const [page, setPage] = useState(1);
+  const limit = 10;
+   useEffect(() => {
     const fetchAppointments = async () => {
       setLoading(true);
       try {
         const res = await fetch(
-          `https://api.ikshanaturopathy.com/v1/appointment/get?page=1&limit=11&filter=today`
+          `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`
         );
         const response = await res.json();
         setAppointments(response.data);
@@ -37,7 +39,19 @@ const ReceptionDashboard = () => {
       }
     };
     fetchAppointments();
-  }, []);
+  }, [page, filter]);
+
+  const handleFilterChange = (newFilter: "all" | "today" | "pending") => {
+    setFilter(newFilter);
+    setPage(1); // reset page when filter changes
+  };
+
+  const filteredAppointments = appointments.filter(
+    (apt) =>
+      apt.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apt.doctor?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
 
   const today = new Date();
   const todaysAppointments = appointments.filter((apt) => {
@@ -51,11 +65,6 @@ const ReceptionDashboard = () => {
 
   const pendingAppointments = appointments.filter((apt) => apt.status === "pending");
 
-  const filteredAppointments = pendingAppointments
-    .filter((apt) =>
-      apt.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.doctor?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
   const handleAddPatient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +224,18 @@ const ReceptionDashboard = () => {
         {/* Latest Appointments */}
         <motion.section initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Latest Appointments</h2>
-          <div className="space-y-4">
+          {/* Filter */}
+            <Select onValueChange={(val) => handleFilterChange(val as any)} value={filter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Filter appointments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          <div className="space-y-4 mt-8">
             {filteredAppointments.map((latestAppointment, index) => (
               <motion.div
                 key={latestAppointment.id}
@@ -251,6 +271,23 @@ const ReceptionDashboard = () => {
                 </Card>
               </motion.div>
             ))}
+          </div>
+            {/* Pagination */}
+          <div className="flex justify-center mt-6 space-x-4">
+            <Button
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-2">{page}</span>
+            <Button
+              onClick={() => setPage((prev) => prev + 1)}
+              className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+              Next
+            </Button>
           </div>
         </motion.section>
       </main>

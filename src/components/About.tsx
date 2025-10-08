@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Award, Users, Leaf, Heart } from "lucide-react";
 import consultationImage from "@/assets/consultation-room.jpg";
 import { Skeleton } from "./ui/skeleton";
-import { motion,AnimatePresence  } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import doctor from "@/assets/images/doctor.jpg";
 const About = () => {
   const team = [
     {
@@ -16,10 +17,9 @@ const About = () => {
       name: "Dr. Mohit Patidar",
       role: "BNYS, Naturopathy Physician",
       bio: `Dr. Mohit has guided over 8000 patients toward better health, having worked at Patanjali Wellness for 4+ years and other retreats. With certifications in Ozone Therapy and Acupuncture, he specializes in lifestyle disorders and pain management. For him, every patient is a story of transformation, hope, and renewed health.`,
-      image: "/team/mohit.jpg", // replace with real image path
+      image: doctor,
     },
-  ]
-
+  ];
 
   return (
     <section id="about" className="py-20">
@@ -35,11 +35,10 @@ const About = () => {
                 </span>
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">
-               A sanctuary of natural healing and balance.
+                A sanctuary of natural healing and balance.
               </h2>
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                 <p>
-                  
                   Rooted in the pure, innate wisdom of nature, our philosophy is
                   simple: true health comes from harmony between all the 5
                   elements of nature that our body consists of. At our
@@ -70,8 +69,6 @@ const About = () => {
                 </p>
               </div>
             </div>
-
-            
           </div>
 
           {/* Right Image */}
@@ -91,51 +88,53 @@ const About = () => {
             </div>
           </div>
         </div>
- <section className="py-20 text-foreground" id="team">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl font-bold text-foreground mb-12"
-        >
-          Meet Our Team
-        </motion.h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {team.map((member, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 40 }}
+        <section className="py-20 text-foreground" id="team">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <motion.h2
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: idx * 0.2 }}
-              className="bg-white rounded-2xl shadow-lg p-8 text-left flex flex-col md:flex-row items-center gap-6"
+              transition={{ duration: 0.6 }}
+              className="text-4xl font-bold text-foreground mb-12"
             >
-              <img
-                src={member.image}
-                alt={member.name}
-                className="w-32 h-32 rounded-full object-cover shadow-md border-4 border-emerald-100"
-              />
-              <div>
-                <h3 className="text-2xl font-semibold text-foreground-90">
-                  {member.name}
-                </h3>
-                <p className="text-foreground font-medium mb-3">
-                  {member.role}
-                </p>
-                <p className="text-gray-700 leading-relaxed">{member.bio}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-      
+              Meet Our Team
+            </motion.h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {team.map((member, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: idx * 0.2 }}
+                  className="bg-white rounded-2xl shadow-lg p-8 text-left flex flex-col md:flex-row items-center gap-6"
+                >
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="w-40 h-40 rounded-full object-cover shadow-md border-4 border-emerald-100"
+                  />
+                  <div>
+                    <h3 className="text-2xl font-semibold text-foreground-90">
+                      {member.name}
+                    </h3>
+                    <p className="text-foreground font-medium mb-3">
+                      {member.role}
+                    </p>
+                    <p className="text-gray-700 leading-relaxed">
+                      {member.bio}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* CTA */}
-       </div></section>
-        
+      </div>
+    </section>
   );
 };
 
 export default About;
+//

@@ -6,20 +6,107 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import IkshaLogo from "../assets/iksha_logo.png";
 import SignatureStep from "./ConsentStep";
+import { useNavigate } from "react-router-dom";
+// Define all Vitals & Anthropometric fields
 const VITALS_FIELDS = [
   { label: "Blood Pressure", unit: "mmHg", normal: "90-120/60-80" },
   { label: "Pulse", unit: "Beat/min", normal: "60-100" },
-  { label: "Weight", unit: "Kg", normal: "Varies" },
+  { label: "Weight", unit: "Kg", normal: "Varies by height (use BMI)" },
   { label: "Height", unit: "Cm", normal: "-" },
   { label: "BMI", unit: "kg/m²", normal: "18.5–24.9" },
   { label: "Temperature", unit: "°F", normal: "98.6" },
+  { label: "Pain Scale", unit: "", normal: "-" },
+  { label: "Mid-Upper Arm Circumference", unit: "Cm", normal: "22–32 cm" },
+  {
+    label: "Waist Circumference",
+    unit: "Cm",
+    normal: "Men < 94 cm, Women < 80 cm",
+  },
+  { label: "Hip Circumference", unit: "Cm", normal: "-" },
+  {
+    label: "Waist-Hip Ratio (WHR)",
+    unit: "-",
+    normal: "Men < 0.90, Women < 0.85",
+  },
+  {
+    label: "Skinfold Thickness (Triceps)",
+    unit: "Mm",
+    normal: "Men: 6–13 mm, Women: 12–23 mm",
+  },
+  {
+    label: "Skinfold Thickness (Biceps)",
+    unit: "Mm",
+    normal: "Men: 4–12 mm, Women: 9–18 mm",
+  },
+  {
+    label: "Skinfold (Subscapular)",
+    unit: "Mm",
+    normal: "Men: 10–18 mm, Women: 12–25 mm",
+  },
+  {
+    label: "Skinfold (Suprailiac)",
+    unit: "Mm",
+    normal: "Men: 8–15 mm, Women: 11–22 mm",
+  },
+  { label: "Body Fat %", unit: "%", normal: "Men: 10–20%, Women: 18–28%" },
 ];
+const LIFESTYLE_FIELDS = {
+  diet: { options: ["Veg", "Non-Veg", "Mixed", "Vegan"], other: true },
+  appetite: { options: ["Good", "Moderate", "Poor"], other: false },
+  taste: {
+    options: ["Normal", "Bitter", "Sour", "Salty", "Foul"],
+    other: false,
+  },
+  bowel: {
+    options: ["Regular", "Irregular", "Loose", "Constipated"],
+    other: true,
+    frequency: true,
+  },
+  sleep: {
+    options: ["Sound", "Disturbed", "Insomnia"],
+    other: false,
+    wakeTime: true,
+    sleepTime: true,
+  },
+  addictions: {
+    options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee"],
+    other: true,
+  },
+  physicalActivity: {
+    options: ["Sedentary", "Active", "Walking", "Yoga", "Exercise"],
+    other: true,
+  },
+  waterIntake: { options: [], other: true },
+  stress: { options: ["Low", "Moderate", "High"], other: false },
+  mentalState: {
+    options: ["Calm", "Anxious", "Irritable", "Depressed"],
+    other: false,
+  },
+};
 
 const PatientRegistrationForm = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
   const printRef = useRef(null);
-
+  const [lifestyle, setLifestyle] = useState({
+    diet: [],
+    appetite: [],
+    taste: [],
+    bowel: [],
+    sleep: [],
+    addictions: [],
+    physicalActivity: [],
+    waterIntake: "",
+    stress: [],
+    mentalState: [],
+    wakeTime: "",
+    sleepTime: "",
+    otherDiet: "",
+    otherAddictions: "",
+    otherBowel: "",
+    otherSleep: "",
+  });
   const [formData, setFormData] = useState({
     name: "",
     age: "",
@@ -58,11 +145,11 @@ const PatientRegistrationForm = () => {
       alert("Please fill Name and Contact Number");
       return;
     }
-    if (step === 2 && !consentGiven) {
+    if (step === 5 && !consentGiven) {
       alert("Please give consent to proceed");
       return;
     }
-    if (step === 3 && !paymentMethod) {
+    if (step === 4 && !paymentMethod) {
       alert("Please select a payment method");
       return;
     }
@@ -240,7 +327,6 @@ const PatientRegistrationForm = () => {
         <div className="border-t-4 border-amber-600 pt-4 mt-8 text-center text-xs text-gray-600">
           <p className="font-semibold">
             {" "}
-           
             Integrated Natural Healing system for a comprehensive
           </p>
           <p>
@@ -272,7 +358,7 @@ const PatientRegistrationForm = () => {
 
         {/* Wooden Board */}
         <Card className="bg-gradient-to-br from-amber-100 to-amber-200 shadow-2xl border-8 border-amber-800 rounded-lg overflow-hidden">
-          <CardContent className="p-8">
+          <CardContent className="p-4 md:p-8">
             {/* Paper Effect */}
             <div className="bg-white rounded shadow-inner p-6 md:p-8">
               {/* Logo and Header */}
@@ -293,28 +379,70 @@ const PatientRegistrationForm = () => {
                 </p>
               </div>
 
-              {/* Progress Indicator */}
-              <div className="flex justify-between mb-6">
-                {[1, 2, 3, 4].map((s) => (
-                  <div key={s} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                        step >= s
-                          ? "bg-amber-600 text-white"
-                          : "bg-gray-200 text-gray-500"
-                      }`}
-                    >
-                      {s}
-                    </div>
-                    {s < 4 && (
-                      <div
-                        className={`h-1 w-16 md:w-24 ${
-                          step > s ? "bg-amber-600" : "bg-gray-200"
+              <div className="relative mb-12">
+                {/* Background Line */}
+                <div
+                  className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full"
+                  style={{ left: "20px", right: "20px" }}
+                ></div>
+
+                {/* Active Progress Line */}
+                <div
+                  className="absolute top-5 left-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    left: "20px",
+                    width: `calc(${((step - 1) / 4) * 100}% - ${
+                      step === 1 ? 20 : 0
+                    }px)`,
+                  }}
+                ></div>
+
+                {/* Steps */}
+                <div className="relative flex justify-between">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <div key={s} className="flex flex-col items-center">
+                      <button
+                        onClick={() => setStep(s)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 ${
+                          step >= s
+                            ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/50"
+                            : "bg-white border-2 border-gray-300 text-gray-400 hover:border-amber-400"
+                        } ${
+                          step === s ? "ring-4 ring-amber-200 scale-110" : ""
                         }`}
-                      ></div>
-                    )}
-                  </div>
-                ))}
+                      >
+                        {step > s ? (
+                          <svg
+                            className="w-5 h-5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        ) : (
+                          s
+                        )}
+                      </button>
+
+                      {/* Step Label */}
+                      <span
+                        className={`mt-3 text-xs font-medium transition-colors duration-300 text-center ${
+                          step >= s ? "text-amber-600" : "text-gray-400"
+                        }`}
+                      >
+                        {s === 1 && "Patient Info"}
+                        {s === 2 && "Lifestyle"}
+                        {s === 3 && "Vitals"}
+                        {s === 4 && "Payment"}
+                        {s === 5 && "Consent"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Step 1: Patient Info */}
@@ -421,7 +549,8 @@ const PatientRegistrationForm = () => {
                   />
 
                   <h4 className="font-semibold text-amber-700 mt-4">
-                    Medical History
+                    Your primary health concern and please specify how long you
+                    have had this condition.
                   </h4>
                   <Textarea
                     name="chronicIllnesses"
@@ -430,7 +559,7 @@ const PatientRegistrationForm = () => {
                     onChange={handleInputChange}
                     required
                   />
-                  <Textarea
+                  {/* <Textarea
                     name="surgeries"
                     placeholder="Surgeries/Injuries"
                     value={formData.surgeries}
@@ -450,87 +579,146 @@ const PatientRegistrationForm = () => {
                     value={formData.familyHistory}
                     onChange={handleInputChange}
                     required
-                  />
+                  /> */}
                 </div>
               )}
-
-              {/* Step 2: Consent */}
               {step === 2 && (
                 <div className="space-y-4">
-    <h3 className="font-semibold text-lg">Informed Consent Form</h3>
+                  {Object.entries(LIFESTYLE_FIELDS).map(([key, config]) => (
+                    <div key={key}>
+                      <p className="font-semibold">
+                        {key.replace(/([A-Z])/g, " $1")}
+                      </p>
 
-    {/* Consent Text */}
-    <div className="space-y-2 max-h-96 overflow-y-auto p-4 border rounded bg-gray-50 text-gray-800">
-      <p className="font-semibold">Treatment Details:</p>
-      <p>
-        The procedure may include Naturopathy treatments such as dietary changes, fasting therapy,
-        hydrotherapy, mud therapy, yoga, pranayama, massage, colon hydrotherapy, acupuncture, 
-        physiotherapy, chromotherapy, magneto therapy, reflexology, and cupping therapy. It may also 
-        involve Panchakarma procedures such as Shirodhara, Nasya (Nasal Therapy), External Basti, 
-        Akshitarpan, Raktamokshana (bloodletting, if needed), Abhyanga (oil massage), and Swedana (steam therapy). 
-        These therapies will be prescribed specifically based on your condition and requirements.
-      </p>
+                      {/* Checkboxes for predefined options */}
+                      {config.options.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {config.options.map((opt) => (
+                            <label
+                              key={opt}
+                              className="flex items-center space-x-1"
+                            >
+                              <Checkbox
+                                checked={lifestyle[key]?.includes(opt)}
+                                onCheckedChange={() => {
+                                  const current = lifestyle[key] || [];
+                                  setLifestyle({
+                                    ...lifestyle,
+                                    [key]: current.includes(opt)
+                                      ? current.filter((i) => i !== opt)
+                                      : [...current, opt],
+                                  });
+                                }}
+                              />
+                              <span>{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
 
-      <p className="font-semibold">Expected Benefits:</p>
-      <p>
-        These therapies aim to detoxify and cleanse the body, rejuvenate the body and mind, improve digestion 
-        and metabolism, increase energy and vitality, relieve stress, enhance mental clarity, reduce pain and stiffness, 
-        strengthen the immune system, and promote overall well-being.
-      </p>
+                      {/* "Other" input */}
+                      {config.other && (
+                        <Input
+                          placeholder={`Other ${key}`}
+                          value={lifestyle[`other_${key}`] || ""}
+                          onChange={(e) =>
+                            setLifestyle({
+                              ...lifestyle,
+                              [`other_${key}`]: e.target.value,
+                            })
+                          }
+                          className="mb-2"
+                        />
+                      )}
 
-      <p className="font-semibold">Risks and Limitations:</p>
-      <p>
-        I understand that possible risks include mild nausea, dizziness, fatigue, headache, skin irritation, 
-        temporary digestive changes, and emotional fluctuations. Unforeseen complications may occur, which can include 
-        serious conditions. The management reserves the right to transfer me to an appropriate medical facility if required 
-        and will not be held liable for any adverse reactions. I also understand that results may vary depending on adherence 
-        to protocol and advice given by the doctor and no guarantee of success is provided.
-      </p>
+                      {/* Frequency for Bowel */}
+                      {config?.frequency && (
+                        <Input
+                          placeholder="Frequency"
+                          value={lifestyle[`frequency_${key}`] || ""}
+                          onChange={(e) =>
+                            setLifestyle({
+                              ...lifestyle,
+                              [`frequency_${key}`]: e.target.value,
+                            })
+                          }
+                          className="mb-2"
+                        />
+                      )}
 
-      <p className="font-semibold">Conditions & Policies:</p>
-      <p>
-        I have been informed that there will be no refund for the treatment under any circumstances. The management reserves 
-        the right to discontinue the treatment at any time if necessary. I agree to follow all instructions given by the doctor 
-        and their team to ensure the success of the treatment.
-      </p>
+                      {/* Wake/Sleep time for Sleep */}
+                      {config.wakeTime && (
+                        <div className="flex gap-2 mb-2">
+                          <Input
+                            placeholder="Wake up time"
+                            value={lifestyle[`wakeTime`]}
+                            onChange={(e) =>
+                              setLifestyle({
+                                ...lifestyle,
+                                wakeTime: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            placeholder="Sleeping time"
+                            value={lifestyle[`sleepTime`]}
+                            onChange={(e) =>
+                              setLifestyle({
+                                ...lifestyle,
+                                sleepTime: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      )}
 
-      <p className="font-semibold">Medical Information:</p>
-      <p>
-        I have shared my complete medical history, including allergies, medications, and any pre-existing conditions. I confirm 
-        that I do not have pregnancy, severe heart disease, active infections, or unstable psychiatric issues. I will inform the 
-        practitioner immediately if any such condition exists or develops. I affirm that I have read the basic rules and answered 
-        all the above questions in absolute honesty. I hereby declare that the above information is complete and an accurate record 
-        of my current and past health condition to the best of my knowledge, as on the undersigned date. I am aware of the nature 
-        of treatments, therapies, facilities, activities and services and that they are undertaken at my own risk and complete responsibility.
-      </p>
-
-      <p className="font-semibold">Final Declaration:</p>
-      <p>
-        I have been given sufficient time to ask questions, consider alternative options, and make an informed decision. I understand 
-        that I can withdraw my consent at any time. I am giving this consent voluntarily, without any pressure or influence, after 
-        understanding all details of the proposed treatments in a language which I understand, to undergo Panchakarma and Naturopathy 
-        treatments as a holistic wellness approach.
-      </p>
-    </div>
-
-    {/* Checkbox */}
-    <div className="flex items-center gap-2 mt-2">
-      <Checkbox checked={consentGiven} onCheckedChange={(c) => setConsentGiven(c === true)} />
-      <span>I have read and understood the consent form and give my consent.</span>
-    </div>
-
-    {/* Signature Canvas */}
-    {consentGiven && (
-      <div className="mt-4">
-        <h3 className="font-semibold text-lg">Patient Signature</h3>
-        <SignatureStep onSaveSignature={(sig) => console.log("Signature saved", sig)} />
-      </div>
-    )}
-  </div>
+                      {/* Water Intake */}
+                      {key === "waterIntake" && (
+                        <Input
+                          placeholder="Water Intake (Liters)"
+                          value={lifestyle.waterIntake}
+                          onChange={(e) =>
+                            setLifestyle({
+                              ...lifestyle,
+                              waterIntake: e.target.value,
+                            })
+                          }
+                          className="mb-2"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-
-              {/* Step 3: Payment */}
+              {/* Step 4: Vitals */}
               {step === 3 && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+                    Vitals & Anthropometric Measurements
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {VITALS_FIELDS.map((v) => (
+                      <div key={v.label} className="space-y-1">
+                        <label className="font-medium text-sm">
+                          {v.label} {v.unit && `(${v.unit})`}
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          Normal: {v.normal}
+                        </p>
+                        <Input
+                          value={vitals[v.label] || ""}
+                          onChange={(e) =>
+                            handleVitalsChange(v.label, e.target.value)
+                          }
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Step 3: Payment */}
+              {step === 4 && (
                 <div className="space-y-4">
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Payment Method
@@ -559,32 +747,120 @@ const PatientRegistrationForm = () => {
                   </div>
                 </div>
               )}
-
-              {/* Step 4: Vitals */}
-              {step === 4 && (
+              {/* Step 2: Consent */}
+              {step === 5 && (
                 <div className="space-y-4">
-                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
-                    Vitals & Measurements
+                  <h3 className="font-semibold text-lg">
+                    Informed Consent Form
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {VITALS_FIELDS.map((v) => (
-                      <div key={v.label} className="space-y-1">
-                        <label className="font-medium text-sm">
-                          {v.label} ({v.unit})
-                        </label>
-                        <p className="text-xs text-gray-500">
-                          Normal: {v.normal}
-                        </p>
-                        <Input
-                          value={vitals[v.label] || ""}
-                          onChange={(e) =>
-                            handleVitalsChange(v.label, e.target.value)
-                          }
-                          required
-                        />
-                      </div>
-                    ))}
+
+                  {/* Consent Text */}
+                  <div className="space-y-2 max-h-96 overflow-y-auto p-4 border rounded bg-gray-50 text-gray-800">
+                    <p className="font-semibold">Treatment Details:</p>
+                    <p>
+                      The procedure may include Naturopathy treatments such as
+                      dietary changes, fasting therapy, hydrotherapy, mud
+                      therapy, yoga, pranayama, massage, colon hydrotherapy,
+                      acupuncture, physiotherapy, chromotherapy, magneto
+                      therapy, reflexology, and cupping therapy. It may also
+                      involve Panchakarma procedures such as Shirodhara, Nasya
+                      (Nasal Therapy), External Basti, Akshitarpan,
+                      Raktamokshana (bloodletting, if needed), Abhyanga (oil
+                      massage), and Swedana (steam therapy). These therapies
+                      will be prescribed specifically based on your condition
+                      and requirements.
+                    </p>
+
+                    <p className="font-semibold">Expected Benefits:</p>
+                    <p>
+                      These therapies aim to detoxify and cleanse the body,
+                      rejuvenate the body and mind, improve digestion and
+                      metabolism, increase energy and vitality, relieve stress,
+                      enhance mental clarity, reduce pain and stiffness,
+                      strengthen the immune system, and promote overall
+                      well-being.
+                    </p>
+
+                    <p className="font-semibold">Risks and Limitations:</p>
+                    <p>
+                      I understand that possible risks include mild nausea,
+                      dizziness, fatigue, headache, skin irritation, temporary
+                      digestive changes, and emotional fluctuations. Unforeseen
+                      complications may occur, which can include serious
+                      conditions. The management reserves the right to transfer
+                      me to an appropriate medical facility if required and will
+                      not be held liable for any adverse reactions. I also
+                      understand that results may vary depending on adherence to
+                      protocol and advice given by the doctor and no guarantee
+                      of success is provided.
+                    </p>
+
+                    <p className="font-semibold">Conditions & Policies:</p>
+                    <p>
+                      I have been informed that there will be no refund for the
+                      treatment under any circumstances. The management reserves
+                      the right to discontinue the treatment at any time if
+                      necessary. I agree to follow all instructions given by the
+                      doctor and their team to ensure the success of the
+                      treatment.
+                    </p>
+
+                    <p className="font-semibold">Medical Information:</p>
+                    <p>
+                      I have shared my complete medical history, including
+                      allergies, medications, and any pre-existing conditions. I
+                      confirm that I do not have pregnancy, severe heart
+                      disease, active infections, or unstable psychiatric
+                      issues. I will inform the practitioner immediately if any
+                      such condition exists or develops. I affirm that I have
+                      read the basic rules and answered all the above questions
+                      in absolute honesty. I hereby declare that the above
+                      information is complete and an accurate record of my
+                      current and past health condition to the best of my
+                      knowledge, as on the undersigned date. I am aware of the
+                      nature of treatments, therapies, facilities, activities
+                      and services and that they are undertaken at my own risk
+                      and complete responsibility.
+                    </p>
+
+                    <p className="font-semibold">Final Declaration:</p>
+                    <p>
+                      I have been given sufficient time to ask questions,
+                      consider alternative options, and make an informed
+                      decision. I understand that I can withdraw my consent at
+                      any time. I am giving this consent voluntarily, without
+                      any pressure or influence, after understanding all details
+                      of the proposed treatments in a language which I
+                      understand, to undergo Panchakarma and Naturopathy
+                      treatments as a holistic wellness approach.
+                    </p>
                   </div>
+
+                  {/* Checkbox */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Checkbox
+                      checked={consentGiven}
+                      onCheckedChange={(c) => setConsentGiven(c === true)}
+                    />
+                    <span>
+                      I have read and understood the consent form and give my
+                      consent.
+                    </span>
+                  </div>
+
+                  {/* Signature Canvas */}
+                  {consentGiven && (
+                    <div className="mt-4">
+                      <h3 className="font-semibold text-lg">
+                        Patient Signature
+                      </h3>
+                      <SignatureStep
+                        onSaveSignature={(sig) =>
+                          console.log("Signature saved", sig)
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -600,7 +876,7 @@ const PatientRegistrationForm = () => {
                   </Button>
                 )}
                 <div className="ml-auto">
-                  {step < 4 && (
+                  {step < 5 && (
                     <Button
                       onClick={handleNext}
                       className="bg-amber-600 hover:bg-amber-700"
@@ -608,13 +884,19 @@ const PatientRegistrationForm = () => {
                       Next →
                     </Button>
                   )}
-                  {step === 4 && (
-                    <Button
-                      onClick={handleFinish}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      ✓ Finish & Print
-                    </Button>
+                  {step === 5 && (
+                    <div className="flex gap-4 mt-4">
+                      <Button
+                        onClick={handlePrint} // print the patient form
+                        className="bg-yellow-500 hover:bg-yellow-600"
+                      >
+                        🖨 Print Form
+                      </Button>
+
+                      <Button className="bg-green-600 hover:bg-green-700">
+                        ➡ Forward to Doctor
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

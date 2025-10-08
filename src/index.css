@@ -9,6 +9,14 @@ html, body {
   overflow-x: hidden;
   
 }
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
 
 @layer base {
   :root {
@@ -85,8 +93,8 @@ html, body {
     --shadow-glow: 0 0 30px hsl(var(--primary) / 0.2);
 
     /* Typography */
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Inter', sans-serif;
+    --font-display: 'Gadugi', 'Inter', sans-serif;
+    --font-body: 'Gadugi', sans-serif;
 
     /* Animations */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);

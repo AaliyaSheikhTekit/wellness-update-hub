@@ -30,6 +30,8 @@ import {
   UserCheck,
   ChartArea,
 } from "lucide-react";
+import DoctorForm from "@/components/DoctoreForm";
+import NewTreatmentForm from "@/pages/NewTreatmentForm";
 
 // Mock patient data
 const mockPatients = [
@@ -59,77 +61,50 @@ const mockPatients = [
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [patients, setPatients] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
 
-  // Get role from localStorage
   const userName = localStorage.getItem("userName") || "";
   let userRole = "Naturopathy Doctor"; // default
-
   if (userName.includes("superAdmin")) userRole = "superAdmin";
   else if (userName.includes("Naturopathy Recptionist")) userRole = "Naturopathy Recptionist";
-  else if (userName.includes("Naturopathy Doctor")) userRole = "Naturopathy Doctor";
 
-  // Sidebar items by role
-  const sidebarItems =
-    userRole === "superAdmin"
-      ? [
-          { name: "Overview", icon: Users },
-          { name: "Add Patient", icon: Plus },
-          { name: "Appointments", icon: Calendar },
-          { name: "Prescriptions", icon: Pill },
-          { name: "Dietitians", icon: ChartArea },
-          { name: "Invoices", icon: FileText },
-                  // Settings section for superAdmin
-        { name: "Add Post-Treatment", icon: Stethoscope },
-        { name: "Add Medicine Post", icon: Pill },
-        ]
-      : userRole === "Naturopathy Doctor"
-      ? [
-          { name: "Overview", icon: Users },
-          { name: "Prescriptions", icon: Pill },
-          { name: "Dietitians", icon: ChartArea },
-                  // Settings section for superAdmin
-        { name: "Add Post-Treatment", icon: Stethoscope },
-        { name: "Add Medicine Post", icon: Pill },
-        ]
-      : [
-          // Receptionist
-  { name: "Overview", icon: Users },
-        { name: "Add Patient", icon: Plus },       // Added
-        { name: "Appointments", icon: Calendar },
-        { name: "Invoices", icon: FileText },  
-        ];
+  // Sidebar items with keys
+  const sidebarItems = userRole === "superAdmin"
+    ? [
+        { key: "overview", name: "Overview", icon: Users },
+        { key: "add-patient", name: "Add Patient", icon: Plus },
+        { key: "appointments", name: "Appointments", icon: Calendar },
+        { key: "prescriptions", name: "Prescriptions", icon: Pill },
+        { key: "dietitians", name: "Dietitians", icon: ChartArea },
+        { key: "invoices", name: "Invoices", icon: FileText },
+        { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
+        { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
+        { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+      ]
+    : userRole === "Naturopathy Doctor"
+    ? [
+        { key: "overview", name: "Overview", icon: Users },
+        { key: "prescriptions", name: "Prescriptions", icon: Pill },
+        { key: "dietitians", name: "Dietitians", icon: ChartArea },
+        { key: "doctor", name: "Doctor", icon: FileText },
+        { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
+        { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
+        { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+      ]
+    : [
+        { key: "overview", name: "Overview", icon: Users },
+        { key: "add-patient", name: "Add Patient", icon: Plus },
+        { key: "appointments", name: "Appointments", icon: Calendar },
+        { key: "invoices", name: "Invoices", icon: FileText },
+      ];
 
-  // Load patients from localStorage
+  // Load patients
   useEffect(() => {
     const storedPatients = JSON.parse(localStorage.getItem("patients") || "[]");
     setPatients([...mockPatients, ...storedPatients]);
   }, []);
-
-  const handlePatientAdded = (newPatient: any) => {
-    setPatients((prev) => [...prev, newPatient]);
-  };
-
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (patient.condition &&
-        patient.condition.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-success/10 text-success border-success/30";
-      case "Completed":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -137,31 +112,10 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  // Main content based on role & tab
   const renderMainContent = () => {
-    if (userRole === "Naturopathy Recptionist") {
-      switch (activeTab.toLowerCase()) {
-        case "overview":
-          return <ReceptionDashboard />;
-        case "appointments":
-          return <Appointments />;
-             case "add-patient":
-        return <PatientForm />;
-
-        default:
-          return <ReceptionDashboard />;
-      }
-    }
-
-    // SuperAdmin & Doctor
-    switch (activeTab.toLowerCase()) {
+    switch (activeTab) {
       case "overview":
-        return (
-          <Card className="bg-white border-0 shadow-soft rounded-xl p-6">
-            <h2 className="text-xl font-bold">Patient Overview</h2>
-            <p>Total Patients: {patients.length}</p>
-          </Card>
-        );
+        return <ReceptionDashboard />;
       case "add-patient":
         return <PatientForm />;
       case "appointments":
@@ -172,53 +126,41 @@ const Dashboard = () => {
         return <Dietitians />;
       case "invoices":
         return <Invoices />;
-         case "add-post-treatment":
-      return (
-        <Card className="bg-white shadow-soft rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">Add Post-Treatment</h2>
-          {/* Include your post-treatment form component or UI here */}
-        </Card>
-      );
-    case "add-medicine-post":
-      return (
-        <Card className="bg-white shadow-soft rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
-          {/* Include your medicine post form component or UI here */}
-        </Card>
-      );
+      case "doctor":
+        return <DoctorForm />;
+      case "add-new-treatment":
+        return <NewTreatmentForm />;
+      case "add-post-treatment":
+        return (
+          <Card className="bg-white shadow-soft rounded-xl p-6">
+            <h2 className="text-xl font-bold mb-4">Add Post-Treatment</h2>
+          </Card>
+        );
+      case "add-medicine-post":
+        return (
+          <Card className="bg-white shadow-soft rounded-xl p-6">
+            <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
+          </Card>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+   <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 transform transition-transform duration-300 z-30 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
-      >
+      <div className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30`}>
         <div className="p-6 border-b border-border/50">
           <h2 className="font-semibold text-foreground">Healthcare Dashboard</h2>
         </div>
-
-        {/* Navigation */}
         <nav className="p-4 space-y-2">
-          {sidebarItems.map((item, id) => (
+          {sidebarItems.map((item) => (
             <button
-              key={id}
-              onClick={() => setActiveTab(item.name.toLowerCase().replace(" ", "-"))}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-left ${
-                activeTab.toLowerCase() === item.name.toLowerCase().replace(" ", "-")
+              key={item.key}
+              onClick={() => setActiveTab(item.key)}
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left ${
+                activeTab === item.key
                   ? "bg-primary/10 text-primary border border-primary/20"
                   : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
               }`}
@@ -229,7 +171,6 @@ const Dashboard = () => {
           ))}
         </nav>
 
-        {/* Logout */}
         <div className="absolute bottom-4 left-4 right-4">
           <button
             onClick={handleLogout}
@@ -243,7 +184,6 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="lg:ml-64 p-6">
-        {/* Header */}
         <header className="bg-white border-b border-border/50 p-4 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-foreground">
             {userRole === "superAdmin"
@@ -257,7 +197,6 @@ const Dashboard = () => {
           </Button>
         </header>
 
-        {/* Render content based on role & active tab */}
         {renderMainContent()}
       </div>
     </div>

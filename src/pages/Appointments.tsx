@@ -264,9 +264,7 @@ const Appointments = () => {
           minute: "2-digit",
         }),
         status: appt.status,
-        note:
-          appt.note ||
-          "No notes",
+        note: appt.note || "No notes",
       }));
 
       setAppointments(mappedAppointments);
@@ -308,11 +306,11 @@ const Appointments = () => {
     // API payload
     const payload = {
       date: new Date(`${date}T${time}`).toISOString(),
-      type,
+      consultationType: type, // now matches API
       patientName,
-      doctor: type, // Replace if you have separate doctor state
-      consultationType: type,
-      // notes: notes || "New appointment",
+      doctor,
+      type: "Consultation", // use doctor state, not type
+      note: notes || "New appointment",
     };
 
     toast({
@@ -331,9 +329,10 @@ const Appointments = () => {
         doctor, // Matches payload
         date,
         time,
+        type: "Consultation",
         service: type, // Appointment type
         status: "confirmed", // or set to "pending" as needed
-        notes: "",
+        note: "",
       };
 
       setAppointments([...appointments, newAppt]);
@@ -418,6 +417,7 @@ const Appointments = () => {
             </p>
           </div>
           {/* Add Appointment Dialog */}
+          {/* Add Appointment Dialog */}
           <Dialog
             open={newAppointmentOpen}
             onOpenChange={setNewAppointmentOpen}
@@ -427,12 +427,13 @@ const Appointments = () => {
                 + Book Appointment
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[450px] overflow-y-auto scrollbar-none">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">
                   Schedule Appointment
                 </DialogTitle>
               </DialogHeader>
+
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -492,22 +493,31 @@ const Appointments = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="consultation">Consultation</SelectItem>
-                      <SelectItem value="checkup">Regular Checkup</SelectItem>
-                      <SelectItem value="followup">Follow-up</SelectItem>
+                      <SelectItem value="regular_checkup">
+                        Regular Checkup
+                      </SelectItem>
+                      <SelectItem value="follow_up">Follow-up</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-    <Label htmlFor="note">Notes (Optional)</Label>
-    <Textarea
-      id="note"
-      placeholder="Appointment details..."
-      value={notes}
-      onChange={(e) => setNotes(e.target.value)}
-    />
-  </div>
+                  <Label htmlFor="note">Notes (Optional)</Label>
+                  <Textarea
+                    id="note"
+                    placeholder="Appointment details..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-foreground text-white hover:bg-gray-800"
+                >
+                  Schedule
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
