@@ -17,7 +17,7 @@ const ReceptionDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
- const [filter, setFilter] = useState<"all" | "today" | "pending">("today");
+ const [filter, setFilter] = useState<"all" | "today" | "pending">("all");
   const [page, setPage] = useState(1);
   const limit = 10;
    useEffect(() => {

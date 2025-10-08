@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { Clock, User, Phone, Mail, MapPin, Calendar } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useMemo, useState } from "react";
+import { Clock, User, MapPin, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,27 +16,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
+  SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SelectContent } from "@radix-ui/react-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { appointmentPost } from "@/lib/api";
+
 interface Appointment {
   id: string;
   patientName?: string;
   doctor?: string;
-  date: string;
-  time?: string;
+  date: string; // ISO date (YYYY-MM-DD)
+  time?: string; // e.g. "03:15 PM"
   status: string;
   note?: string;
   prescriptions?: any[];
   consultationType?: string;
 }
 
-// Enhanced Calendar Component
+// ------------------------- SimpleCalendar -------------------------
 interface SimpleCalendarProps {
   appointments: Appointment[];
   onEventClick?: (apt: Appointment) => void;
@@ -70,9 +71,9 @@ const SimpleCalendar = ({
 
   const navigateMonth = (dir: number) => {
     setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() + dir);
-      return newDate;
+      const nd = new Date(prev);
+      nd.setMonth(prev.getMonth() + dir);
+      return nd;
     });
   };
 
@@ -91,9 +92,9 @@ const SimpleCalendar = ({
   };
 
   const getAppointmentsForDay = (day: number | null) => {
-    if (!day) return [];
+    if (!day) return [] as Appointment[];
     return appointments.filter((apt) => {
-      const aptDate = new Date(apt.date + "T00:00:00"); // force local midnight
+      const aptDate = new Date(apt.date + "T00:00:00");
       return (
         aptDate.getFullYear() === currentDate.getFullYear() &&
         aptDate.getMonth() === currentDate.getMonth() &&
@@ -119,11 +120,11 @@ const SimpleCalendar = ({
     <div className="bg-white rounded-lg shadow-lg p-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <Button onClick={() => navigateMonth(-1)}>← Previous</Button>
+        <Button variant="outline" onClick={() => navigateMonth(-1)}>← Previous</Button>
         <h2 className="text-xl font-semibold">
           {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
         </h2>
-        <Button onClick={() => navigateMonth(1)}>Next →</Button>
+        <Button variant="outline" onClick={() => navigateMonth(1)}>Next →</Button>
       </div>
 
       {/* Day Names */}
@@ -140,7 +141,7 @@ const SimpleCalendar = ({
         {getDaysInMonth(currentDate).map((day, index) => {
           const dayAppointments = getAppointmentsForDay(day);
           const isToday =
-            day &&
+            !!day &&
             currentDate.getMonth() === new Date().getMonth() &&
             currentDate.getFullYear() === new Date().getFullYear() &&
             day === new Date().getDate();
@@ -154,8 +155,8 @@ const SimpleCalendar = ({
           return (
             <div
               key={index}
-              className={`min-h-32 p-1 border rounded-lg cursor-pointer ${
-                day ? "bg-white hover:bg-gray-50" : "bg-transparent"
+              className={`min-h-32 p-1 border rounded-lg ${
+                day ? "bg-white hover:bg-gray-50 cursor-pointer" : "bg-transparent"
               } ${isToday ? "ring-2 ring-blue-500" : ""} ${
                 selectedDate === dateStr ? "ring-2 ring-indigo-500" : ""
               }`}
@@ -165,9 +166,7 @@ const SimpleCalendar = ({
                 <>
                   <div
                     className={`font-medium text-sm mb-1 p-1 ${
-                      isToday
-                        ? "bg-blue-500 text-white rounded text-center"
-                        : ""
+                      isToday ? "bg-blue-500 text-white rounded text-center" : ""
                     }`}
                   >
                     {day}
@@ -176,7 +175,7 @@ const SimpleCalendar = ({
                     {dayAppointments.slice(0, 3).map((apt, i) => (
                       <div
                         key={i}
-                        className={`text-xs p-2 rounded border cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(
+                        className={`text-xs p-2 rounded border hover:opacity-80 transition-opacity ${getStatusColor(
                           apt.status
                         )}`}
                         onClick={(e) => {
@@ -190,13 +189,9 @@ const SimpleCalendar = ({
                         <div className="font-medium truncate">
                           {apt.patientName || "Unknown"}
                         </div>
-                        <div className="truncate opacity-75">
-                          {apt.time || "N/A"}
-                        </div>
+                        <div className="truncate opacity-75">{apt.time || "N/A"}</div>
                         {apt.note && (
-                          <div className="truncate text-xs opacity-60">
-                            {apt.note}
-                          </div>
+                          <div className="truncate text-xs opacity-60">{apt.note}</div>
                         )}
                       </div>
                     ))}
@@ -216,8 +211,10 @@ const SimpleCalendar = ({
   );
 };
 
+// --------------------------- Appointments ---------------------------
 const Appointments = () => {
   const { toast } = useToast();
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -225,17 +222,18 @@ const Appointments = () => {
 
   // Pagination states
   const [page, setPage] = useState(1);
-  const [limit] = useState(5);
+  const [limit] = useState(10); // ✅ ensure a default limit (avoid "undefined")
   const [totalPages, setTotalPages] = useState(1);
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState("today");
+  // Tabs — default to "all" as requested
+  const [activeTab, setActiveTab] = useState<"all" | "today" | "upcoming" | "calendar">("all");
 
   // Dialogs
   const [newAppointmentOpen, setNewAppointmentOpen] = useState(false);
   const [editAppointmentOpen, setEditAppointmentOpen] = useState(false);
+  const [viewAppointmentOpen, setViewAppointmentOpen] = useState(false);
 
-  // Selected event for editing
+  // Selected event for editing / viewing
   const [selectedEvent, setSelectedEvent] = useState<Appointment | null>(null);
 
   // Form states
@@ -245,39 +243,44 @@ const Appointments = () => {
   const [type, setType] = useState("");
   const [doctor, setDoctor] = useState("");
   const [notes, setNotes] = useState("");
-  // Fetch appointments dynamically based on tab and page
+
+  // --------------------------- Data Fetch ---------------------------
   const fetchAppointments = async () => {
     try {
-      const filter = activeTab === "today" ? "today" : "upcoming";
+      // API supports filter=all|today (based on your code). We use today for Today tab; all for others.
+      const filter = activeTab === "today" ? "today" : "all";
       const res = await fetch(
         `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`
       );
       const data = await res.json();
 
-      const mappedAppointments = data.data.map((appt: any) => ({
+      const mappedAppointments: Appointment[] = (data?.data || []).map((appt: any) => ({
         id: appt.id,
         patientName: appt.patientName || "Unknown",
         doctor: appt.doctor || "N/A",
-        date: appt.date.split("T")[0],
-        time: new Date(appt.date).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        status: appt.status,
+        date: (appt.date || "").split("T")[0],
+        time: appt.date
+          ? new Date(appt.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : undefined,
+        status: appt.status || "pending",
         note: appt.note || "No notes",
+        consultationType: appt.consultationType,
       }));
 
       setAppointments(mappedAppointments);
-      setTotalPages(data.meta.totalPages || 1);
+      setTotalPages(data?.meta?.totalPages || 1);
     } catch (error) {
       console.error("Failed to fetch appointments:", error);
+      toast({ title: "Error", description: "Failed to fetch appointments." });
     }
   };
 
   useEffect(() => {
     fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, page]);
 
+  // --------------------------- Helpers ---------------------------
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -291,147 +294,130 @@ const Appointments = () => {
     }
   };
 
-  // Add appointment
+  const capitalize = (str?: string) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : "");
+
+  // Derived lists
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  const todaysAppointments = useMemo(
+    () => appointments.filter((a) => a.date === todayISO),
+    [appointments, todayISO]
+  );
+
+  const upcomingAppointments = useMemo(
+    () => appointments.filter((a) => new Date(a.date) >= new Date(todayISO)),
+    [appointments, todayISO]
+  );
+
+  const filteredBySelectedDate = useMemo(
+    () => appointments.filter((a) => a.date === selectedDate),
+    [appointments, selectedDate]
+  );
+
+  // --------------------------- CRUD ---------------------------
   const handleBookAppointment = async () => {
-    // Validate required fields
     if (!patientName || !date || !time || !type) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required appointment details.",
-        // variant: "error",
       });
       return;
     }
 
-    // API payload
     const payload = {
       date: new Date(`${date}T${time}`).toISOString(),
-      consultationType: type, // now matches API
+      consultationType: type,
       patientName,
       doctor,
-      type: "Consultation", // use doctor state, not type
+      type: "Consultation",
       note: notes || "New appointment",
     };
 
-    toast({
-      title: "Scheduling...",
-      description: "Your appointment is being scheduled.",
-    });
+    toast({ title: "Scheduling...", description: "Your appointment is being scheduled." });
 
     try {
       const result = await appointmentPost("/appointment/create", payload);
 
-      // Add to local state
-      const newAppt = {
-        id: Date.now().toString(),
+      // locally append (optimistic)
+      const newAppt: Appointment = {
+        id: String(Date.now()),
         patientName,
-        patientPhone: "+91 00000 00000",
-        doctor, // Matches payload
+        doctor,
         date,
         time,
-        type: "Consultation",
-        service: type, // Appointment type
-        status: "confirmed", // or set to "pending" as needed
-        note: "",
+        status: "confirmed",
+        note: notes || "New appointment",
+        consultationType: type,
       };
 
-      setAppointments([...appointments, newAppt]);
+      setAppointments((prev) => [newAppt, ...prev]);
       setNewAppointmentOpen(false);
 
-      // Reset form fields
+      // reset
       setPatientName("");
       setDate("");
       setTime("");
       setType("");
+      setDoctor("");
       setNotes("");
 
-      toast({
-        title: "Appointment Scheduled",
-        description: "Your appointment has been successfully created.",
-        // variant: "success",
-      });
-
+      toast({ title: "Appointment Scheduled", description: "Appointment created successfully." });
       console.log("Appointment created:", result);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to schedule appointment. Please try again later.",
-        // variant: "error",
-      });
+      toast({ title: "Error", description: "Failed to schedule appointment. Please try again." });
     }
   };
 
-  // Update appointment
   const handleUpdateAppointment = () => {
     if (!selectedEvent) return;
     setAppointments((prev) =>
       prev.map((appt) =>
         appt.id === selectedEvent.id
-          ? { ...appt, patientName, date, time, service: type }
+          ? { ...appt, patientName, date, time, consultationType: type, doctor }
           : appt
       )
     );
     setEditAppointmentOpen(false);
   };
 
-  // Delete appointment
   const handleDeleteAppointment = () => {
     if (!selectedEvent) return;
-    setAppointments((prev) =>
-      prev.filter((appt) => appt.id !== selectedEvent.id)
-    );
+    setAppointments((prev) => prev.filter((appt) => appt.id !== selectedEvent.id));
+    setEditAppointmentOpen(false);
   };
 
-  function handleEventClick(appointment: Appointment): void {
-    // Set form state for editing
+  function openEdit(appointment: Appointment) {
     setSelectedEvent(appointment);
     setPatientName(appointment.patientName || "");
     setDate(appointment.date);
     setTime(appointment.time || "");
-    setType((appointment as any).service || appointment.consultationType || "");
+    setType(appointment.consultationType || (appointment as any).service || "");
     setDoctor(appointment.doctor || "");
     setEditAppointmentOpen(true);
   }
-  const filteredAppointments = appointments.filter(
-    (appointment) => appointment.date === selectedDate
-  );
 
-  // Upcoming appointments (today and future)
-  const upcomingAppointments = appointments.filter(
-    (appointment) => new Date(appointment.date) >= new Date()
-  );
-  const capitalize = (str?: string) =>
-    str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+  function openView(appointment: Appointment) {
+    setSelectedEvent(appointment);
+    setViewAppointmentOpen(true);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            {" "}
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Appointments
-            </h1>
-            <p className="text-gray-600">
-              Manage patient appointments and schedules
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Appointments</h1>
+            <p className="text-gray-600">Manage patient appointments and schedules</p>
           </div>
+
           {/* Add Appointment Dialog */}
-          {/* Add Appointment Dialog */}
-          <Dialog
-            open={newAppointmentOpen}
-            onOpenChange={setNewAppointmentOpen}
-          >
+          <Dialog open={newAppointmentOpen} onOpenChange={setNewAppointmentOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-foreground text-white hover:bg-gray-800">
-                + Book Appointment
-              </Button>
+              <Button className="bg-foreground text-white hover:bg-gray-800">+ Book Appointment</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[450px] overflow-y-auto scrollbar-none">
+            <DialogContent className="max-w-md max-h-[480px] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-xl font-semibold">
-                  Schedule Appointment
-                </DialogTitle>
+                <DialogTitle className="text-xl font-semibold">Schedule Appointment</DialogTitle>
               </DialogHeader>
 
               <form
@@ -443,46 +429,22 @@ const Appointments = () => {
               >
                 <div>
                   <Label htmlFor="patientName">Patient Name</Label>
-                  <Input
-                    id="patientName"
-                    placeholder="Search or enter patient name"
-                    value={patientName}
-                    onChange={(e) => setPatientName(e.target.value)}
-                    required
-                  />
+                  <Input id="patientName" placeholder="Enter patient name" value={patientName} onChange={(e) => setPatientName(e.target.value)} required />
                 </div>
 
                 <div>
                   <Label htmlFor="appointmentDate">Date</Label>
-                  <Input
-                    id="appointmentDate"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    required
-                  />
+                  <Input id="appointmentDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
                 </div>
 
                 <div>
                   <Label htmlFor="appointmentTime">Time</Label>
-                  <Input
-                    id="appointmentTime"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    required
-                  />
+                  <Input id="appointmentTime" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
                 </div>
 
                 <div>
                   <Label htmlFor="doctor">Doctor</Label>
-                  <Input
-                    id="doctor"
-                    placeholder="Enter doctor name"
-                    value={doctor}
-                    onChange={(e) => setDoctor(e.target.value)}
-                    required
-                  />
+                  <Input id="doctor" placeholder="Enter doctor name" value={doctor} onChange={(e) => setDoctor(e.target.value)} required />
                 </div>
 
                 <div>
@@ -493,9 +455,7 @@ const Appointments = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="consultation">Consultation</SelectItem>
-                      <SelectItem value="regular_checkup">
-                        Regular Checkup
-                      </SelectItem>
+                      <SelectItem value="regular_checkup">Regular Checkup</SelectItem>
                       <SelectItem value="follow_up">Follow-up</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
                     </SelectContent>
@@ -504,20 +464,10 @@ const Appointments = () => {
 
                 <div>
                   <Label htmlFor="note">Notes (Optional)</Label>
-                  <Textarea
-                    id="note"
-                    placeholder="Appointment details..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
+                  <Textarea id="note" placeholder="Appointment details..." value={notes} onChange={(e) => setNotes(e.target.value)} />
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-foreground text-white hover:bg-gray-800"
-                >
-                  Schedule
-                </Button>
+                <Button type="submit" className="w-full bg-foreground text-white hover:bg-gray-800">Schedule</Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -526,39 +476,107 @@ const Appointments = () => {
         <Tabs
           value={activeTab}
           onValueChange={(val) => {
-            setActiveTab(val);
+            setActiveTab(val as any);
             setPage(1);
           }}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="today">Today's Appointments</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="today" className="space-y-4">
+          {/* ALL */}
+          <TabsContent value="all" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Today - {selectedDate}</h2>
+              <h2 className="text-xl font-semibold">All Appointments</h2>
             </div>
 
             <div className="grid gap-4">
-              {filteredAppointments.map((appointment) => (
+              {appointments.map((appointment) => (
                 <Card key={appointment.id} className="shadow-sm">
                   <CardContent className="p-6 flex justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center gap-2">
                           <User className="h-5 w-5 text-blue-600" />
-                          <h3 className="font-semibold text-gray-900">
-                            {appointment.patientName}
-                          </h3>
+                          <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
                         </div>
-                        <Badge
-                          className={`${getStatusColor(
-                            appointment.status
-                          )} text-white`}
-                        >
+                        <Badge className={`${getStatusColor(appointment.status)} text-white`}>
+                          {capitalize(appointment.status)}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              {appointment.date} {appointment.time ? `• ${appointment.time}` : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <MapPin className="h-4 w-4" />
+                            <span>{appointment.doctor}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600">
+                            <strong>Notes:</strong> {appointment.note}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 ml-4">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(appointment)}>
+                        Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => openView(appointment)}>
+                        View
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-center gap-4 mt-4">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                Previous
+              </Button>
+              <span className="mt-2">Page {page} of {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* TODAY */}
+          <TabsContent value="today" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Today - {todayISO}</h2>
+            </div>
+
+            <div className="grid gap-4">
+              {todaysAppointments.map((appointment) => (
+                <Card key={appointment.id} className="shadow-sm">
+                  <CardContent className="p-6 flex justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <User className="h-5 w-5 text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
+                        </div>
+                        <Badge className={`${getStatusColor(appointment.status)} text-white`}>
                           {capitalize(appointment.status)}
                         </Badge>
                       </div>
@@ -583,46 +601,20 @@ const Appointments = () => {
                     </div>
 
                     <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEventClick(appointment)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => openEdit(appointment)}>
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm">
-                        View Details
+                      <Button variant="outline" size="sm" onClick={() => openView(appointment)}>
+                        View
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-
-            {/* Pagination */}
-            <div className="flex justify-center gap-4 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Previous
-              </Button>
-              <span className="mt-2">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                Next
-              </Button>
-            </div>
           </TabsContent>
 
+          {/* UPCOMING */}
           <TabsContent value="upcoming" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Upcoming Appointments</h2>
@@ -636,15 +628,9 @@ const Appointments = () => {
                       <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center gap-2">
                           <User className="h-5 w-5 text-blue-600" />
-                          <h3 className="font-semibold text-gray-900">
-                            {appointment.patientName}
-                          </h3>
+                          <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
                         </div>
-                        <Badge
-                          className={`${getStatusColor(
-                            appointment.status
-                          )} text-white`}
-                        >
+                        <Badge className={`${getStatusColor(appointment.status)} text-white`}>
                           {capitalize(appointment.status)}
                         </Badge>
                       </div>
@@ -653,7 +639,9 @@ const Appointments = () => {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="h-4 w-4" />
-                            <span>{appointment.time}</span>
+                            <span>
+                              {appointment.date} {appointment.time ? `• ${appointment.time}` : ""}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 text-gray-600">
                             <MapPin className="h-4 w-4" />
@@ -669,15 +657,11 @@ const Appointments = () => {
                     </div>
 
                     <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEventClick(appointment)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => openEdit(appointment)}>
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm">
-                        View Details
+                      <Button variant="outline" size="sm" onClick={() => openView(appointment)}>
+                        View
                       </Button>
                     </div>
                   </CardContent>
@@ -686,25 +670,51 @@ const Appointments = () => {
             </div>
           </TabsContent>
 
+          {/* CALENDAR */}
           <TabsContent value="calendar" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Calendar View</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Calendar className="h-5 w-5" /> Calendar View
+              </h2>
             </div>
 
             <SimpleCalendar
               appointments={appointments}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-              onEventClick={(apt) => console.log(apt)}
+              onEventClick={(apt) => openView(apt)}
             />
+
+            {/* List selected-day items beneath calendar */}
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2">{selectedDate} — {filteredBySelectedDate.length} appointment(s)</h3>
+              <div className="grid gap-3">
+                {filteredBySelectedDate.map((appointment) => (
+                  <Card key={appointment.id}>
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <div className="font-medium">{appointment.patientName}</div>
+                          <div className="text-sm text-gray-600">{appointment.time} • {appointment.doctor}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${getStatusColor(appointment.status)} text-white`}>
+                          {capitalize(appointment.status)}
+                        </Badge>
+                        <Button variant="outline" size="sm" onClick={() => openView(appointment)}>View</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 
         {/* Edit Appointment Dialog */}
-        <Dialog
-          open={editAppointmentOpen}
-          onOpenChange={setEditAppointmentOpen}
-        >
+        <Dialog open={editAppointmentOpen} onOpenChange={setEditAppointmentOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Edit Appointment</DialogTitle>
@@ -712,49 +722,66 @@ const Appointments = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="edit-patient-name">Patient Name</Label>
-                <Input
-                  id="edit-patient-name"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                />
+                <Input id="edit-patient-name" value={patientName} onChange={(e) => setPatientName(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="edit-date">Date</Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+                <Input id="edit-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="edit-time">Time</Label>
-                <Input
-                  id="edit-time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
+                <Input id="edit-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="edit-type">Service Type</Label>
-                <Input
-                  id="edit-type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                />
+                <Input id="edit-type" value={type} onChange={(e) => setType(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="edit-doctor">Doctor</Label>
+                <Input id="edit-doctor" value={doctor} onChange={(e) => setDoctor(e.target.value)} />
               </div>
             </div>
             <DialogFooter className="flex justify-between">
-              <Button variant="destructive" onClick={handleDeleteAppointment}>
-                Delete
-              </Button>
-              <Button
-                onClick={handleUpdateAppointment}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Update
-              </Button>
+              <Button variant="destructive" onClick={handleDeleteAppointment}>Delete</Button>
+              <Button onClick={handleUpdateAppointment} className="bg-blue-600 hover:bg-blue-700">Update</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Appointment Dialog (from calendar slot click or list "View") */}
+        <Dialog open={viewAppointmentOpen} onOpenChange={setViewAppointmentOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Appointment Details</DialogTitle>
+            </DialogHeader>
+            {selectedEvent ? (
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2"><User className="h-4 w-4" /><span className="font-medium">{selectedEvent.patientName}</span></div>
+                <div className="flex items-center gap-2"><Clock className="h-4 w-4" /><span>{selectedEvent.date} • {selectedEvent.time}</span></div>
+                <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{selectedEvent.doctor}</span></div>
+                <div>
+                  <span className="font-medium">Status:</span>{" "}
+                  <Badge className={`${getStatusColor(selectedEvent.status)} text-white ml-2`}>
+                    {capitalize(selectedEvent.status)}
+                  </Badge>
+                </div>
+                {selectedEvent.consultationType && (
+                  <div>
+                    <span className="font-medium">Type:</span> {selectedEvent.consultationType}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium">Notes:</span> {selectedEvent.note || "—"}
+                </div>
+              </div>
+            ) : (
+              <div>No appointment selected.</div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewAppointmentOpen(false)}>Close</Button>
+              {selectedEvent && (
+                <Button onClick={() => { setViewAppointmentOpen(false); openEdit(selectedEvent); }}>Edit</Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
