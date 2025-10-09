@@ -22,11 +22,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { getBackendToken, getPatients } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 const ReceptionDashboard = () => {
   const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const { toast } = useToast();
+  const navigate=useNavigate(); // <-- add this
   const [searchTerm, setSearchTerm] = useState("");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -532,7 +534,9 @@ const ReceptionDashboard = () => {
                         <Card
                           key={p.id || p._id}
                           className="border-l-4 border-indigo-400 hover:shadow-md transition-shadow"
-                        >
+                         onClick={() => navigate(`/patient/${p.id || p._id}`)}   // <-- go to detail
+      
+                       >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
                               <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
