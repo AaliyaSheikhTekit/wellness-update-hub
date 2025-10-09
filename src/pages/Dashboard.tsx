@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-
+import IkshaLogo from "../assets/iksha_logo.png";
 import PatientForm from "@/components/PatientForm";
 import ReceptionDashboard from "@/components/ReceptionistDashboard";
 import Appointments from "./Appointments";
@@ -151,9 +151,13 @@ const Dashboard = () => {
    <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <div className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30`}>
-        <div className="p-6 border-b border-border/50">
-          <h2 className="font-semibold text-foreground">Healthcare Dashboard</h2>
-        </div>
+       <div className=" mb-6 mt-8  h-12 flex items-center">
+                  <img
+                    src={IkshaLogo}
+                    alt="Iksha Naturopathy Logo"
+                    className="  h-36 w-auto object-contain"
+                  />
+                </div>
         <nav className="p-4 space-y-2">
           {sidebarItems.map((item) => (
             <button

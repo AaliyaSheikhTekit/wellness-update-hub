@@ -5,13 +5,14 @@ import consultationImage from "@/assets/consultation-room.jpg";
 import { Skeleton } from "./ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import doctor from "@/assets/images/doctor.jpg";
+import esha from "@/assets/images/Esha.jpg";
 const About = () => {
   const team = [
     {
       name: "Esha Agrawal",
       role: "Founder, Naturopathy Consultant",
       bio: `Esha’s journey into natural healing began with her own recovery from a chronic condition through holistic practices. With a Master's in Luxury Brand Management (London) and a Diploma in Naturopathy and Yoga, she transitioned her career to focus on wellness. She believes that any problematic conditions have natural cures without invasive treatments. Driven by her passion, she founded Ikshā Naturopathy to help others find health renewal.`,
-      image: "/team/esha.jpg", // replace with real image path
+      image: esha, // replace with real image path
     },
     {
       name: "Dr. Mohit Patidar",

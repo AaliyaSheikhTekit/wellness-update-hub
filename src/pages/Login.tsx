@@ -21,6 +21,7 @@ import {
   signOut
 } from "aws-amplify/auth";
 import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
+import { loginWithCognitoToken } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -45,43 +46,45 @@ const Login = () => {
   };
 
   // --- Sign In ---
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const { isSignedIn, nextStep } = await signIn({
+      username: formData.email,
+      password: formData.password,
+    });
+
+    if (isSignedIn) {
+      const user = await getCurrentUser();
+      const session = await fetchAuthSession();
+
+      const payload = session.tokens?.idToken?.payload || {};
+      const preferredUsername = payload["preferred_username"] || payload.username || "User";
+      const email = payload["email"] || formData.email;
+
+      // Save user info
+      localStorage.setItem("userName", String(preferredUsername));
+      localStorage.setItem("userEmail", String(email));
+
+      // --- NEW: Call backend login with Cognito token ---
       try {
-        const { isSignedIn, nextStep } = await signIn({
-          username: formData.email,
-          password: formData.password,
-        });
-
-        if (isSignedIn) {
-          const user = await getCurrentUser();
-          const session = await fetchAuthSession();
-
-          // console.log("SignIn Success:", user);
-          // console.log("Session:", session);
-
-          // Extract attributes from ID token payload
-          const payload = session.tokens?.idToken?.payload || {};
-
-          // console.log("SignIn Success:", payload);
-          const preferredUsername =
-            payload["preferred_username"] || payload.username || "User";
-          const email = payload["email"] || formData.email;
-          // console.log("payload.username Success:", payload.username);
-          // Save in localStorage
-          localStorage.setItem("userName", String(preferredUsername));
-          localStorage.setItem("userEmail", String(email));
-
-          navigate("/dashboard");
-        } else {
-          console.log("Next step required:", nextStep);
-          setNextStep(nextStep);
-        }
-      } catch (error: any) {
-        console.error("Auth Error:", error);
-        alert(error.message || "Authentication failed.");
+        await loginWithCognitoToken(String(preferredUsername), "admin"); // adjust role if needed
+        console.log("Backend token acquired and saved");
+      } catch (err) {
+        console.error("Backend login failed:", err);
       }
-    };
+
+      navigate("/dashboard");
+    } else {
+      console.log("Next step required:", nextStep);
+      setNextStep(nextStep);
+    }
+  } catch (error: any) {
+    console.error("Auth Error:", error);
+    alert(error.message || "Authentication failed.");
+  }
+};
+
 useEffect(() => {
     const clearSession = async () => {
       try {

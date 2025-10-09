@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { getBackendToken } from "@/lib/api";
 
 const ReceptionDashboard = () => {
   const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
@@ -23,10 +24,19 @@ const ReceptionDashboard = () => {
    useEffect(() => {
     const fetchAppointments = async () => {
       setLoading(true);
+      const token = getBackendToken();
+      console.log("Using backend token:", token);
       try {
-        const res = await fetch(
-          `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`
-        );
+     const res = await fetch(
+  `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
+  {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // <-- send token here
+    },
+  }
+);
         const response = await res.json();
         setAppointments(response.data);
       } catch (err) {
@@ -46,11 +56,14 @@ const ReceptionDashboard = () => {
     setPage(1); // reset page when filter changes
   };
 
-  const filteredAppointments = appointments.filter(
-    (apt) =>
-      apt.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.doctor?.toLowerCase().includes(searchTerm.toLowerCase())
+const filteredAppointments = appointments.filter((apt) => {
+  const patientName = apt.patient?.fullName?.toLowerCase() || "";
+  const doctorName = apt.doctor?.username?.toLowerCase() || "";
+  return (
+    patientName.includes(searchTerm.toLowerCase()) ||
+    doctorName.includes(searchTerm.toLowerCase())
   );
+});
 
 
   const today = new Date();
@@ -250,7 +263,7 @@ const ReceptionDashboard = () => {
                       <div className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                         <User className="w-4 h-4 text-indigo-500" />
                         <span>
-                          {latestAppointment.patientName || "Unknown"} - {latestAppointment.doctor || "N/A"}
+                          {latestAppointment.patient?.fullName || "Unknown"} - {latestAppointment.doctor?.username || "N/A"}
                         </span>
                       </div>
                       <div className="flex items-center space-x-4 text-xs text-gray-500">
