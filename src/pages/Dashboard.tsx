@@ -13,7 +13,7 @@ import Appointments from "./Appointments";
 import Prescriptions from "./Prescriptions";
 import Invoices from "./Invoices";
 import Dietitians from "./Dietitians";
-
+import QrUpload from "@/pages/QrUpload";
 import {
   FileText,
   Pill,
@@ -27,7 +27,7 @@ import {
   Users,
   Plus,
   Stethoscope,
-  UserCheck,
+  QrCode ,
   ChartArea,
 } from "lucide-react";
 import DoctorForm from "@/components/DoctoreForm";
@@ -82,6 +82,7 @@ const Dashboard = () => {
         { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
         { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
         { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+     { key: "upload-qr", name: "Upload QR Code", icon: QrCode }, 
       ]
     : userRole === "Naturopathy Doctor"
     ? [
@@ -142,22 +143,51 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
           </Card>
         );
+        case "upload-qr":
+        return <QrUpload />;
       default:
         return null;
     }
   };
+const [open, setOpen] = useState(false);
 
+  // close on ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // lock body scroll when open (mobile)
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+  }, [open]);
   return (
    <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30`}>
-       <div className=" mb-6 mt-8  h-12 flex items-center">
-                  <img
-                    src={IkshaLogo}
-                    alt="Iksha Naturopathy Logo"
-                    className="  h-36 w-auto object-contain"
-                  />
-                </div>
+        <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
+        <div className="h-14 px-3 flex items-center justify-between">
+          <button
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
+            className="p-2 rounded-md hover:bg-muted transition"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <div className="flex items-center gap-2">
+            <img src={IkshaLogo} alt="Iksha Naturopathy" className="h-8 w-auto" />
+          </div>
+          <div className="w-10" /> {/* spacer */}
+        </div>
+      </header>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:block fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30">
+        <div className="mb-6 mt-8 h-12 flex items-center justify-center">
+          <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-16 w-auto object-contain" />
+        </div>
+
         <nav className="p-4 space-y-2">
           {sidebarItems.map((item) => (
             <button
@@ -184,7 +214,72 @@ const Dashboard = () => {
             <span>Logout</span>
           </button>
         </div>
-      </div>
+      </aside>
+
+      {/* Mobile drawer + overlay */}
+      {/* Overlay */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 bg-black/40 transition-opacity ${
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setOpen(false)}
+        aria-hidden={!open}
+      />
+
+      {/* Drawer */}
+      <aside
+        className={`md:hidden fixed left-0 top-0 h-full w-72 max-w-[85vw] bg-white border-r border-border/50 z-50
+        transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation"
+      >
+        <div className="flex items-center justify-between px-4 h-14 border-b">
+          <div className="flex items-center gap-2">
+            <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-8 w-auto" />
+          </div>
+          <button
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            className="p-2 rounded-md hover:bg-muted transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="p-4 space-y-2">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                setActiveTab(item.key);
+                setOpen(false);
+              }}
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left ${
+                activeTab === item.key
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+              }`}
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.name}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-4 left-4 right-4">
+          <button
+            onClick={() => {
+              setOpen(false);
+              handleLogout();
+            }}
+            className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-lg transition-colors w-full text-left"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
 
       {/* Main Content */}
       <div className="lg:ml-64 p-6">

@@ -98,3 +98,136 @@ export const getData = async (endpoint: string, params: Record<string, any> = {}
   if (!response.ok) throw new Error(`Error: ${response.status}`);
   return await response.json();
 };
+export const createPatient = async (payload: any) => {
+ const backendToken = getBackendToken();
+  const response = await fetch(`${API_BASE_URL}/patient/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Create failed: ${response.status}`);
+  return await response.json();
+};
+
+/** 🧾 Update patient details (PUT /patient/:id) */
+export const updatePatient = async (patientId: string, payload: any) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/patient/${patientId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) throw new Error(`Update failed: ${response.status}`);
+  return await response.json();
+};
+
+/** 🧾 Fetch existing patient (GET /patient/:id) */
+export const getPatient = async (patientId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/patient/${patientId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+
+/** 💳 Get payment QR (GET /qr) */
+export const getPaymentQr = async () => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/qr`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+  if (!response.ok) throw new Error(`QR fetch failed: ${response.status}`);
+  return await response.json();
+};
+
+export const uploadPatientSignature = async (file: File) => {
+  const backendToken = getBackendToken(); // your existing getter
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s
+
+  try {
+    const form = new FormData();
+    // keep the field name EXACTLY "signature"
+    form.append("signature", file, "signature.png"); // simple filename
+
+    const res = await fetch(`${API_BASE_URL}/patient/upload`, {
+      method: "POST",
+      headers: {
+        // IMPORTANT: raw token (no "Bearer ") to mirror your working snippet
+        Authorization: `Bearer ${backendToken}`,
+      } as any,
+      body: form,
+      redirect: "follow",
+      signal: controller.signal,
+    });
+
+    // some backends return text, others JSON — handle both
+    const raw = await res.text();
+    let data: any = {};
+    try { data = JSON.parse(raw); } catch { /* server returned text */ }
+
+    if (!res.ok) {
+      const msg = data?.message || data?.error || raw || `HTTP ${res.status}`;
+      throw new Error(`Signature upload failed: ${msg}`);
+    }
+
+    // Your server example returned: { "signatureUrl": "https://..." }
+    const url =
+      data?.signatureUrl ||
+      data?.data?.signatureUrl ||
+      data?.data?.url ||
+      data?.url ||
+      data?.signature ||
+      raw; // last resort if the server just returns a URL string
+
+    if (!url || typeof url !== "string")
+      throw new Error("Upload succeeded but no signature URL returned.");
+    return url;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+export const getPatients = async (search:any) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/patient/get?search=${search}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+  if (!response.ok) throw new Error(`QR fetch failed: ${response.status}`);
+  return await response.json();
+};

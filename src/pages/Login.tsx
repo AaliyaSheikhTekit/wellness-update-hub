@@ -44,7 +44,16 @@ const Login = () => {
       [e.target.name]: e.target.value,
     });
   };
+const determineRole = (username: string): string => {
+  const nameLower = username.toLowerCase();
 
+  if (nameLower.includes("superadmin")) return "admin";
+  if (nameLower.includes("doctor")) return "doctor";
+  if (nameLower.includes("receptionist")) return "receptionist";
+
+  // fallback
+  return "user";
+};
   // --- Sign In ---
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -65,7 +74,8 @@ const Login = () => {
       // Save user info
       localStorage.setItem("userName", String(preferredUsername));
       localStorage.setItem("userEmail", String(email));
-
+// Determine role dynamically
+      const role = determineRole(preferredUsername as any);
       // --- NEW: Call backend login with Cognito token ---
       try {
         await loginWithCognitoToken(String(preferredUsername), "admin"); // adjust role if needed

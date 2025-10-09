@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import IkshaLogo from "../assets/iksha_logo.png";
 import SignatureStep from "./ConsentStep";
 import { useNavigate } from "react-router-dom";
-
-// 🔐 Configure your API base URL and token here (prefer .env)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "{{base_url}}";
-const API_TOKEN = import.meta.env.VITE_API_TOKEN || "{{token}}";
+import {
+  uploadPatientSignature,
+  createPatient,
+  updatePatient,
+  getPaymentQr,
+} from "@/lib/api";
 
 // Define all Vitals & Anthropometric fields
 const VITALS_FIELDS = [
@@ -56,7 +58,16 @@ const VITALS_FIELDS = [
   { label: "Body Fat %", unit: "%", normal: "Men: 10–20%, Women: 18–28%" },
 ];
 
-const LIFESTYLE_FIELDS = {
+const LIFESTYLE_FIELDS: Record<
+  string,
+  {
+    options: string[];
+    other?: boolean;
+    frequency?: boolean;
+    wakeTime?: boolean;
+    sleepTime?: boolean;
+  }
+> = {
   diet: { options: ["Veg", "Non-Veg", "Mixed", "Vegan"], other: true },
   appetite: { options: ["Good", "Moderate", "Poor"], other: false },
   taste: {
@@ -94,9 +105,9 @@ const PatientRegistrationForm = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
-  const printRef = useRef(null);
+  const printRef = useRef<HTMLDivElement | null>(null);
 
-  const [lifestyle, setLifestyle] = useState({
+  const [lifestyle, setLifestyle] = useState<Record<string, any>>({
     diet: [],
     appetite: [],
     taste: [],
@@ -115,7 +126,7 @@ const PatientRegistrationForm = () => {
     otherSleep: "",
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Record<string, any>>({
     name: "",
     age: "",
     sex: "",
@@ -135,39 +146,34 @@ const PatientRegistrationForm = () => {
     familyHistory: "",
   });
 
-  const [vitals, setVitals] = useState({});
+  const [vitals, setVitals] = useState<Record<string, any>>({});
   const [consentGiven, setConsentGiven] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [signature, setSignature] = useState("");
+  const [uploadingSignature, setUploadingSignature] = useState(false);
+  // NEW: backend auth + patient progress state
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [qr, setQr] = useState<{
+    imageUrl?: string;
+    upiId?: string;
+    qrId?: string;
+  } | null>(null);
 
   // 📡 API submission state
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [apiSuccess, setApiSuccess] = useState("");
-  const [apiResponse, setApiResponse] = useState(null);
+  const [apiResponse, setApiResponse] = useState<any>(null);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleVitalsChange = (field, value) => {
+  const handleVitalsChange = (field: string, value: any) => {
     setVitals({ ...vitals, [field]: value });
-  };
-
-  const handleNext = () => {
-    if (step === 1 && (!formData.name || !formData.contactNumber)) {
-      alert("Please fill Name and Contact Number");
-      return;
-    }
-    if (step === 5 && !consentGiven) {
-      alert("Please give consent to proceed");
-      return;
-    }
-    if (step === 4 && !paymentMethod) {
-      alert("Please select a payment method");
-      return;
-    }
-    setStep(step + 1);
   };
 
   const handlePrint = () => {
@@ -177,74 +183,231 @@ const PatientRegistrationForm = () => {
     }, 100);
   };
 
-  const handleFinish = () => {
-    handlePrint();
+  // 🧰 Helpers
+  const toISODate = (d: string) =>
+    d ? new Date(d).toISOString().slice(0, 10) : "";
+
+  // Build payloads
+  const buildCreatePayload = () => {
+    const payload: Record<string, any> = {
+      fullName: formData.name?.trim(),
+      age: formData.age ? Number(formData.age) : undefined,
+      sex: formData.sex || undefined,
+      fatherOrHusbandName: formData.fatherOrHusband || undefined,
+      contactNumber: formData.contactNumber || undefined,
+      maritalStatus: formData.maritalStatus || undefined,
+      dateOfBirth: toISODate(formData.dateOfBirth) || undefined,
+      bloodType: formData.bloodType || undefined,
+      occupation: formData.occupation || undefined,
+      reference: formData.reference || undefined,
+      registrationDate: toISODate(formData.dateOfVisit) || undefined,
+      address: formData.address || undefined,
+      primaryHealthConcern: formData.primaryHealthConcern || undefined,
+      chronicIllnesses: formData.chronicIllnesses || undefined,
+      surgeriesOrInjuries: formData.surgeries || undefined,
+      allergies: formData.allergies || undefined,
+      familyHistory: formData.familyHistory || undefined,
+    };
+    Object.keys(payload).forEach(
+      (k) => payload[k] === undefined && delete payload[k]
+    );
+    return payload;
   };
 
-  // 🧰 Helpers
-  const toISODate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+  const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
+    const base: Record<string, any> = {
+      familyHistory: formData.familyHistory || undefined,
+      signature: signature || undefined,
+      bloodPressure: vitals["Blood Pressure"] || undefined,
+      pulse: vitals["Pulse"] ? Number(vitals["Pulse"]) : undefined,
+      weight: vitals["Weight"] ? Number(vitals["Weight"]) : undefined,
+      height: vitals["Height"] ? Number(vitals["Height"]) : undefined,
+      BMI: vitals["BMI"] ? Number(vitals["BMI"]) : undefined,
+      temperature: vitals["Temperature"]
+        ? Number(vitals["Temperature"])
+        : undefined,
+      paymentMethod: paymentMethod || undefined,
+      upiId: "9876543210@upi", // hardcoded for now
+      qrId: qr?.qrId || undefined,
+    };
+    if (opts.includeConsent) base.consent = !!consentGiven;
+    Object.keys(base).forEach((k) => base[k] === undefined && delete base[k]);
+    return base;
+  };
 
-  // 🚀 Submit to API (maps UI -> backend contract)
-  const submitRegistration = async () => {
-    setApiError("");
-    setApiSuccess("");
-    setSubmitting(true);
+  // Step advancement with API side-effects
+  const handleNext = async () => {
+    // validations
+    if (step === 1 && (!formData.name || !formData.contactNumber)) {
+      alert("Please fill Name and Contact Number");
+      return;
+    }
+
+    if (step === 5 && !consentGiven) {
+      alert("Please give consent to proceed");
+      return;
+    }
 
     try {
-      // Only send fields the API expects. Extend here if backend supports more.
-      const payload = {
-        fullName: formData.name?.trim(),
-        age: formData.age ? Number(formData.age) : undefined,
-        sex: formData.sex || undefined,
-        fatherOrHusbandName: formData.fatherOrHusband || undefined,
-        contactNumber: formData.contactNumber || undefined,
-        maritalStatus: formData.maritalStatus || undefined,
-        dateOfBirth: toISODate(formData.dateOfBirth) || undefined,
-        bloodType: formData.bloodType || undefined,
-        occupation: formData.occupation || undefined,
-        reference: formData.reference || undefined,
-        registrationDate: toISODate(formData.dateOfVisit) || undefined,
-        address: formData.address || undefined,
-        primaryHealthConcern: formData.primaryHealthConcern || undefined,
-        chronicIllnesses: formData.chronicIllnesses || undefined,
-        surgeriesOrInjuries: formData.surgeries || undefined,
-        allergies: formData.allergies || undefined,
-        familyHistory: formData.familyHistory || undefined,
-      };
+      setApiError("");
 
-      // Clean undefined keys
-      Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
-
-      const res = await fetch(`${API_BASE_URL}/patient/create`, {
-        method: "POST",
-        headers: {
-          Authorization: API_TOKEN,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        redirect: "follow",
-      });
-
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-      if (!res.ok) {
-        throw new Error(
-          data?.message || data?.error || `Request failed (${res.status})`
-        );
+      // step 1 -> create patient
+      if (step === 1) {
+        setSubmitting(true);
+        const res = await createPatient(buildCreatePayload());
+        setSubmitting(false);
+        const id = res?.data?.id || res?.id;
+        if (!id) throw new Error("No patient id received");
+        setPatientId(id);
+        setApiSuccess("Patient created.");
       }
 
-      setApiResponse(data);
-      setApiSuccess("Patient registered successfully.");
-      // ⚠️ optional: navigate(`/patients/${data?.id}`)
-    } catch (err) {
-      setApiError(err.message || "Something went wrong.");
-    } finally {
+      // step 3 -> entering payment: fetch QR
+      if (step === 3) {
+        try {
+          const qrRes = await getPaymentQr();
+          setQr({
+            imageUrl: qrRes?.data?.qrCodeUrl || qrRes?.qrCodeUrl,
+            upiId: qrRes?.data?.upiId || qrRes?.upiId,
+            qrId: qrRes?.data?.qrId || qrRes?.qrId,
+          });
+          console.log(qrRes?.data?.qrCodeUrl);
+        } catch (e) {
+          console.error(e);
+          // proceed even if QR fails (cash option can still be used)
+        }
+      }
+
+      // step 4 -> save payment method & QR refs
+      if (step === 4 && patientId) {
+        setSubmitting(true);
+        await updatePatient(
+          patientId,
+          buildUpdatePayload({ includeConsent: false })
+        );
+        setSubmitting(false);
+      }
+
+      setStep(step + 1);
+    } catch (err: any) {
+      console.error(err);
       setSubmitting(false);
+      setApiError(err?.message || "Something went wrong.");
+    }
+  };
+  // 1) helper to turn dataURL -> File
+ const dataUrlToFile = async (
+  dataUrl: string,
+  fileName = "signature.jpg"
+): Promise<File> => {
+  const blob = await (await fetch(dataUrl)).blob();
+
+  // compress to JPEG (~0.82 quality) to avoid timeouts
+  const bitmap = await createImageBitmap(blob);
+  const off = document.createElement("canvas");
+  off.width = bitmap.width;
+  off.height = bitmap.height;
+  const ctx = off.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0);
+  const jpegBlob: Blob = await new Promise((resolve) =>
+    off.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.82)
+  );
+  return new File([jpegBlob], fileName, { type: "image/jpeg" });
+};
+// Accepts inputs like "120/80", "120-80", "120 80", "120:80", "  120  /  80 "
+const normalizeBloodPressure = (value: string): string | null => {
+  if (!value) return null;
+  const compact = String(value).trim().replace(/\s+/g, "");
+  // matches 2–3 digit / 2–3 digit with / - :
+  const m = compact.match(/^(\d{2,3})[\/\-\:](\d{2,3})$/);
+  if (m) return `${m[1]}/${m[2]}`;
+
+  // fallback: extract the first two 2–3 digit numbers
+  const nums = String(value).match(/\d{2,3}/g);
+  if (nums && nums.length >= 2) return `${nums[0]}/${nums[1]}`;
+
+  return null;
+};
+
+// Optional: basic physiology guardrails to prevent obvious typos
+const isBloodPressureInPlausibleRange = (bp: string): boolean => {
+  const m = bp.match(/^(\d{2,3})\/(\d{2,3})$/);
+  if (!m) return false;
+  const sys = parseInt(m[1], 10);
+  const dia = parseInt(m[2], 10);
+  // tweak ranges if your clinic wants different thresholds
+  return sys >= 70 && sys <= 250 && dia >= 40 && dia <= 150 && sys > dia;
+};
+
+  // 2) upload + auto-submit
+  const handleSignatureSave = async (dataUrl: string) => {
+    try {
+      setApiError("");
+      setApiSuccess("");
+      setUploadingSignature(true);
+
+      if (!patientId)
+        throw new Error("No patient id. Please complete Step 1 first.");
+      if (!consentGiven) throw new Error("Consent is required before signing.");
+
+      const file = await dataUrlToFile(dataUrl, "signature.png");
+
+      // upload -> get public URL (now returns data.signatureUrl)
+      const url = await uploadPatientSignature(file);
+
+      setSignature(url); // for preview
+      setApiSuccess("Signature uploaded. Submitting form…");
+
+      // auto-submit using the fresh URL
+      await submitFinal(url);
+    } catch (e: any) {
+      console.error(e);
+      setApiError(e?.message || "Failed to upload signature.");
+    } finally {
+      setUploadingSignature(false);
     }
   };
 
+ const submitFinal = async (signatureOverride?: string) => {
+  if (!patientId) return setApiError("No patient id. Please complete Step 1 again.");
+  if (!consentGiven) return setApiError("Consent is required.");
+
+  // --- Blood Pressure normalize + validate ---
+  const bpInput = vitals["Blood Pressure"] || "";
+  const normalizedBP = normalizeBloodPressure(bpInput);
+  if (!normalizedBP) {
+    return setApiError('Please enter blood pressure like "120/80" (e.g., 118/76).');
+  }
+  if (!isBloodPressureInPlausibleRange(normalizedBP)) {
+    return setApiError('Blood pressure looks out of range. Enter something like "120/80".');
+  }
+
+  const sigToSend = signatureOverride ?? signature;
+  if (!sigToSend) return setApiError("Signature is required. Please sign first.");
+
+  setSubmitting(true);
+  setApiError("");
+  setApiSuccess("");
+  try {
+    const payload = buildUpdatePayload({ includeConsent: true });
+
+    // Force the normalized BP into the payload key the backend expects
+    payload.bloodPressure = normalizedBP;
+    payload.signature = sigToSend;
+
+    const data = await updatePatient(patientId, payload);
+    setSignature(sigToSend);
+    setApiResponse(data);
+    setApiSuccess("Patient updated & forwarded successfully.");
+  } catch (err: any) {
+    setApiError(err?.message || "Something went wrong.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  // PRINT VIEW
   if (showPrint) {
     return (
       <div ref={printRef} className="print-view bg-white p-8 max-w-4xl mx-auto">
@@ -268,7 +431,6 @@ const PatientRegistrationForm = () => {
                 />
               </div>
               <p className="text-sm text-gray-600">
-                {" "}
                 Integrated Natural Healing system for a comprehensive
               </p>
             </div>
@@ -404,7 +566,6 @@ const PatientRegistrationForm = () => {
         {/* Footer */}
         <div className="border-t-4 border-amber-600 pt-4 mt-8 text-center text-xs text-gray-600">
           <p className="font-semibold">
-            {" "}
             Integrated Natural Healing system for a comprehensive
           </p>
           <p>
@@ -449,7 +610,6 @@ const PatientRegistrationForm = () => {
                   />
                 </div>
                 <p className="text-gray-600 text-sm">
-                  {" "}
                   Integrated Natural Healing system for a comprehensive
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
@@ -650,7 +810,6 @@ const PatientRegistrationForm = () => {
                         {key.replace(/([A-Z])/g, " $1")}
                       </p>
 
-                      {/* Checkboxes for predefined options */}
                       {config.options.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2">
                           {config.options.map((opt) => (
@@ -659,13 +818,13 @@ const PatientRegistrationForm = () => {
                               className="flex items-center space-x-1"
                             >
                               <Checkbox
-                                checked={lifestyle[key]?.includes(opt)}
+                                checked={(lifestyle[key] || []).includes(opt)}
                                 onCheckedChange={() => {
                                   const current = lifestyle[key] || [];
                                   setLifestyle({
                                     ...lifestyle,
                                     [key]: current.includes(opt)
-                                      ? current.filter((i) => i !== opt)
+                                      ? current.filter((i: string) => i !== opt)
                                       : [...current, opt],
                                   });
                                 }}
@@ -676,7 +835,6 @@ const PatientRegistrationForm = () => {
                         </div>
                       )}
 
-                      {/* "Other" input */}
                       {config.other && (
                         <Input
                           placeholder={`Other ${key}`}
@@ -691,7 +849,6 @@ const PatientRegistrationForm = () => {
                         />
                       )}
 
-                      {/* Frequency for Bowel */}
                       {config?.frequency && (
                         <Input
                           placeholder="Frequency"
@@ -706,7 +863,6 @@ const PatientRegistrationForm = () => {
                         />
                       )}
 
-                      {/* Wake/Sleep time for Sleep */}
                       {config.wakeTime && (
                         <div className="flex gap-2 mb-2">
                           <Input
@@ -732,7 +888,6 @@ const PatientRegistrationForm = () => {
                         </div>
                       )}
 
-                      {/* Water Intake */}
                       {key === "waterIntake" && (
                         <Input
                           placeholder="Water Intake (Liters)"
@@ -763,10 +918,14 @@ const PatientRegistrationForm = () => {
                         <label className="font-medium text-sm">
                           {v.label} {v.unit && `(${v.unit})`}
                         </label>
-                        <p className="text-xs text-gray-500">Normal: {v.normal}</p>
+                        <p className="text-xs text-gray-500">
+                          Normal: {v.normal}
+                        </p>
                         <Input
                           value={vitals[v.label] || ""}
-                          onChange={(e) => handleVitalsChange(v.label, e.target.value)}
+                          onChange={(e) =>
+                            handleVitalsChange(v.label, e.target.value)
+                          }
                           required
                         />
                       </div>
@@ -781,9 +940,25 @@ const PatientRegistrationForm = () => {
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Payment Method
                   </h3>
+
+                  {qr?.imageUrl && (
+                    <div className="p-3 rounded border bg-white">
+                      <p className="text-sm mb-2">
+                        Scan to pay (UPI: {qr?.upiId || "—"})
+                      </p>
+                      <img
+                        src={qr.imageUrl}
+                        alt="Payment QR"
+                        className="max-w-[240px]"
+                      />
+                    </div>
+                  )}
                   <div className="flex flex-col gap-4">
                     <Button
-                      onClick={() => setPaymentMethod("UPI")}
+                      onClick={() => {
+                        setPaymentMethod("UPI");
+                        setStep(5); // go straight to consent/signature
+                      }}
                       className={`h-20 text-lg ${
                         paymentMethod === "UPI"
                           ? "bg-amber-600 hover:bg-amber-700"
@@ -792,8 +967,12 @@ const PatientRegistrationForm = () => {
                     >
                       💳 UPI/QR Payment
                     </Button>
+
                     <Button
-                      onClick={() => setPaymentMethod("Cash")}
+                      onClick={() => {
+                        setPaymentMethod("Cash");
+                        setStep(5); // go straight to consent/signature
+                      }}
                       className={`h-20 text-lg ${
                         paymentMethod === "Cash"
                           ? "bg-amber-600 hover:bg-amber-700"
@@ -809,38 +988,89 @@ const PatientRegistrationForm = () => {
               {/* Step 5: Consent */}
               {step === 5 && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Informed Consent Form</h3>
+                  <h3 className="font-semibold text-lg">
+                    Informed Consent Form
+                  </h3>
 
                   {/* Consent Text */}
                   <div className="space-y-2 max-h-96 overflow-y-auto p-4 border rounded bg-gray-50 text-gray-800">
                     <p className="font-semibold">Treatment Details:</p>
                     <p>
-                      The procedure may include Naturopathy treatments such as dietary changes, fasting therapy, hydrotherapy, mud therapy, yoga, pranayama, massage, colon hydrotherapy, acupuncture, physiotherapy, chromotherapy, magneto therapy, reflexology, and cupping therapy. It may also involve Panchakarma procedures such as Shirodhara, Nasya (Nasal Therapy), External Basti, Akshitarpan, Raktamokshana (bloodletting, if needed), Abhyanga (oil massage), and Swedana (steam therapy). These therapies will be prescribed specifically based on your condition and requirements.
+                      The procedure may include Naturopathy treatments such as
+                      dietary changes, fasting therapy, hydrotherapy, mud
+                      therapy, yoga, pranayama, massage, colon hydrotherapy,
+                      acupuncture, physiotherapy, chromotherapy, magneto
+                      therapy, reflexology, and cupping therapy. It may also
+                      involve Panchakarma procedures such as Shirodhara, Nasya
+                      (Nasal Therapy), External Basti, Akshitarpan,
+                      Raktamokshana (bloodletting, if needed), Abhyanga (oil
+                      massage), and Swedana (steam therapy). These therapies
+                      will be prescribed specifically based on your condition
+                      and requirements.
                     </p>
 
                     <p className="font-semibold">Expected Benefits:</p>
                     <p>
-                      These therapies aim to detoxify and cleanse the body, rejuvenate the body and mind, improve digestion and metabolism, increase energy and vitality, relieve stress, enhance mental clarity, reduce pain and stiffness, strengthen the immune system, and promote overall well-being.
+                      These therapies aim to detoxify and cleanse the body,
+                      rejuvenate the body and mind, improve digestion and
+                      metabolism, increase energy and vitality, relieve stress,
+                      enhance mental clarity, reduce pain and stiffness,
+                      strengthen the immune system, and promote overall
+                      well-being.
                     </p>
 
                     <p className="font-semibold">Risks and Limitations:</p>
                     <p>
-                      I understand that possible risks include mild nausea, dizziness, fatigue, headache, skin irritation, temporary digestive changes, and emotional fluctuations. Unforeseen complications may occur, which can include serious conditions. The management reserves the right to transfer me to an appropriate medical facility if required and will not be held liable for any adverse reactions. I also understand that results may vary depending on adherence to protocol and advice given by the doctor and no guarantee of success is provided.
+                      I understand that possible risks include mild nausea,
+                      dizziness, fatigue, headache, skin irritation, temporary
+                      digestive changes, and emotional fluctuations. Unforeseen
+                      complications may occur, which can include serious
+                      conditions. The management reserves the right to transfer
+                      me to an appropriate medical facility if required and will
+                      not be held liable for any adverse reactions. I also
+                      understand that results may vary depending on adherence to
+                      protocol and advice given by the doctor and no guarantee
+                      of success is provided.
                     </p>
 
                     <p className="font-semibold">Conditions & Policies:</p>
                     <p>
-                      I have been informed that there will be no refund for the treatment under any circumstances. The management reserves the right to discontinue the treatment at any time if necessary. I agree to follow all instructions given by the doctor and their team to ensure the success of the treatment.
+                      I have been informed that there will be no refund for the
+                      treatment under any circumstances. The management reserves
+                      the right to discontinue the treatment at any time if
+                      necessary. I agree to follow all instructions given by the
+                      doctor and their team to ensure the success of the
+                      treatment.
                     </p>
 
                     <p className="font-semibold">Medical Information:</p>
                     <p>
-                      I have shared my complete medical history, including allergies, medications, and any pre-existing conditions. I confirm that I do not have pregnancy, severe heart disease, active infections, or unstable psychiatric issues. I will inform the practitioner immediately if any such condition exists or develops. I affirm that I have read the basic rules and answered all the above questions in absolute honesty. I hereby declare that the above information is complete and an accurate record of my current and past health condition to the best of my knowledge, as on the undersigned date. I am aware of the nature of treatments, therapies, facilities, activities and services and that they are undertaken at my own risk and complete responsibility.
+                      I have shared my complete medical history, including
+                      allergies, medications, and any pre-existing conditions. I
+                      confirm that I do not have pregnancy, severe heart
+                      disease, active infections, or unstable psychiatric
+                      issues. I will inform the practitioner immediately if any
+                      such condition exists or develops. I affirm that I have
+                      read the basic rules and answered all the above questions
+                      in absolute honesty. I hereby declare that the above
+                      information is complete and an accurate record of my
+                      current and past health condition to the best of my
+                      knowledge, as on the undersigned date. I am aware of the
+                      nature of treatments, therapies, facilities, activities
+                      and services and that they are undertaken at my own risk
+                      and complete responsibility.
                     </p>
 
                     <p className="font-semibold">Final Declaration:</p>
                     <p>
-                      I have been given sufficient time to ask questions, consider alternative options, and make an informed decision. I understand that I can withdraw my consent at any time. I am giving this consent voluntarily, without any pressure or influence, after understanding all details of the proposed treatments in a language which I understand, to undergo Panchakarma and Naturopathy treatments as a holistic wellness approach.
+                      I have been given sufficient time to ask questions,
+                      consider alternative options, and make an informed
+                      decision. I understand that I can withdraw my consent at
+                      any time. I am giving this consent voluntarily, without
+                      any pressure or influence, after understanding all details
+                      of the proposed treatments in a language which I
+                      understand, to undergo Panchakarma and Naturopathy
+                      treatments as a holistic wellness approach.
                     </p>
                   </div>
 
@@ -851,34 +1081,53 @@ const PatientRegistrationForm = () => {
                       onCheckedChange={(c) => setConsentGiven(c === true)}
                     />
                     <span>
-                      I have read and understood the consent form and give my consent.
+                      I have read and understood the consent form and give my
+                      consent.
                     </span>
                   </div>
 
                   {/* Signature Canvas */}
                   {consentGiven && (
                     <div className="mt-4">
-                      <h3 className="font-semibold text-lg">Patient Signature</h3>
-                      <SignatureStep onSaveSignature={(sig) => setSignature(sig)} />
+                      <h3 className="font-semibold text-lg">
+                        Patient Signature
+                      </h3>
+                      <SignatureStep onSaveSignature={handleSignatureSave} />
                     </div>
                   )}
+                  {uploadingSignature && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Uploading signature…
+                    </p>
+                  )}
 
+                  {/* Show thumbnail or link once uploaded */}
+                  {signature && typeof signature === "string" && (
+                    <div className="mt-3">
+                      <p className="text-xs text-green-700">
+                        Signature uploaded.
+                      </p>
+                      <img
+                        src={signature}
+                        alt="Signature"
+                        className="border border-gray-300 h-20 mt-1"
+                      />
+                    </div>
+                  )}
                   {/* API status */}
                   {(apiError || apiSuccess) && (
                     <div
                       className={`mt-3 text-sm rounded p-3 ${
-                        apiError ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"
+                        apiError
+                          ? "bg-red-50 text-red-700 border border-red-200"
+                          : "bg-green-50 text-green-700 border border-green-200"
                       }`}
                     >
                       {apiError || apiSuccess}
                     </div>
                   )}
 
-                  {apiResponse && (
-                    <pre className="text-xs bg-gray-50 p-3 rounded border overflow-auto max-h-48">
-                      {JSON.stringify(apiResponse, null, 2)}
-                    </pre>
-                  )}
+                
                 </div>
               )}
 
@@ -894,21 +1143,29 @@ const PatientRegistrationForm = () => {
                   </Button>
                 )}
                 <div className="ml-auto">
-                  {step < 5 && (
-                    <Button onClick={handleNext} className="bg-amber-600 hover:bg-amber-700">
+                  {step < 5 && step !== 4 && (
+                    <Button
+                      onClick={handleNext}
+                      className="bg-amber-600 hover:bg-amber-700"
+                      disabled={submitting}
+                    >
                       Next →
                     </Button>
                   )}
                   {step === 5 && (
                     <div className="flex flex-wrap gap-4 mt-4">
-                      <Button onClick={handlePrint} className="bg-yellow-500 hover:bg-yellow-600" disabled={submitting}>
+                      <Button
+                        onClick={handlePrint}
+                        className="bg-yellow-500 hover:bg-yellow-600"
+                        disabled={submitting}
+                      >
                         🖨 Print Form
                       </Button>
 
                       <Button
-                        onClick={submitRegistration}
+                        onClick={() => submitFinal()}
                         className="bg-green-600 hover:bg-green-700 disabled:opacity-60"
-                        disabled={submitting || !consentGiven}
+                        disabled={submitting || !consentGiven || !signature}
                       >
                         {submitting ? "Submitting…" : "➡ Forward to Doctor"}
                       </Button>
