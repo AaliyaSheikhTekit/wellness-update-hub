@@ -104,7 +104,7 @@ const LIFESTYLE_FIELDS: Record<
 
 const PatientRegistrationForm = () => {
   const navigate = useNavigate();
-   const { id } = useParams();
+  const { id } = useParams();
 
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
@@ -157,6 +157,7 @@ const PatientRegistrationForm = () => {
   // NEW: backend auth + patient progress state
   const [loggedIn, setLoggedIn] = useState(false);
   const [patientId, setPatientId] = useState<string | null>(null);
+  console.log(id,patientId,"iiidd")
   const [qr, setQr] = useState<{
     imageUrl?: string;
     upiId?: string;
@@ -217,26 +218,79 @@ const PatientRegistrationForm = () => {
     return payload;
   };
 
-  const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
-    const base: Record<string, any> = {
-      familyHistory: formData.familyHistory || undefined,
-      signature: signature || undefined,
-      bloodPressure: vitals["Blood Pressure"] || undefined,
-      pulse: vitals["Pulse"] ? Number(vitals["Pulse"]) : undefined,
-      weight: vitals["Weight"] ? Number(vitals["Weight"]) : undefined,
-      height: vitals["Height"] ? Number(vitals["Height"]) : undefined,
-      BMI: vitals["BMI"] ? Number(vitals["BMI"]) : undefined,
-      temperature: vitals["Temperature"]
-        ? Number(vitals["Temperature"])
-        : undefined,
-      paymentMethod: paymentMethod || undefined,
-      upiId: "9876543210@upi", // hardcoded for now
-      qrId: qr?.qrId || undefined,
-    };
-    if (opts.includeConsent) base.consent = !!consentGiven;
-    Object.keys(base).forEach((k) => base[k] === undefined && delete base[k]);
-    return base;
+ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
+  const payload: Record<string, any> = {
+    // Vitals & Anthropometrics
+    bloodPressure: vitals["Blood Pressure"] || undefined,
+    pulse: vitals["Pulse"] ? Number(vitals["Pulse"]) : undefined,
+    weightKg: vitals["Weight"] ? String(vitals["Weight"]) : undefined,
+    heightCm: vitals["Height"] ? String(vitals["Height"]) : undefined,
+    bmi: vitals["BMI"] ? String(vitals["BMI"]) : undefined,
+    temperatureF: vitals["Temperature"] ? String(vitals["Temperature"]) : undefined,
+    painScale: vitals["Pain Scale"] || undefined,
+    midUpperArmCircumferenceCm: vitals["Mid-Upper Arm Circumference"]
+      ? Number(vitals["Mid-Upper Arm Circumference"])
+      : undefined,
+    waistCircumferenceCm: vitals["Waist Circumference"]
+      ? Number(vitals["Waist Circumference"])
+      : undefined,
+    hipCircumferenceCm: vitals["Hip Circumference"]
+      ? Number(vitals["Hip Circumference"])
+      : undefined,
+    whr: vitals["Waist-Hip Ratio (WHR)"]
+      ? Number(vitals["Waist-Hip Ratio (WHR)"])
+      : undefined,
+    skinfoldTricepsMm: vitals["Skinfold Thickness (Triceps)"]
+      ? Number(vitals["Skinfold Thickness (Triceps)"])
+      : undefined,
+    skinfoldBicepsMm: vitals["Skinfold Thickness (Biceps)"]
+      ? Number(vitals["Skinfold Thickness (Biceps)"])
+      : undefined,
+    skinfoldSubscapularMm: vitals["Skinfold (Subscapular)"]
+      ? Number(vitals["Skinfold (Subscapular)"])
+      : undefined,
+    skinfoldSuprailiacMm: vitals["Skinfold (Suprailiac)"]
+      ? Number(vitals["Skinfold (Suprailiac)"])
+      : undefined,
+    bodyFatPercent: vitals["Body Fat %"] ? Number(vitals["Body Fat %"]) : undefined,
+
+    // Lifestyle
+    diet: lifestyle.diet?.[0] || undefined,
+    otherDiet: lifestyle.other_diet || undefined,
+    appetite: lifestyle.appetite?.[0] || undefined,
+    taste: lifestyle.taste?.[0] || undefined,
+    bowel: lifestyle.bowel?.[0] || undefined,
+    otherBowel: lifestyle.other_bowel || undefined,
+    bowelFrequency: lifestyle.frequency_bowel || undefined,
+    sleep: lifestyle.sleep?.[0] || undefined,
+    sleepWakeUpTime: lifestyle.wakeTime || undefined,
+    sleepTime: lifestyle.sleepTime || undefined,
+    addictions: lifestyle.addictions || undefined,
+    otherAddictions: lifestyle.other_addictions || undefined,
+    physicalActivity: lifestyle.physicalActivity || undefined,
+    otherPhysicalActivity: lifestyle.other_physicalActivity || undefined,
+    waterIntakeLiters: lifestyle.waterIntake ? Number(lifestyle.waterIntake) : undefined,
+    otherWaterIntake: lifestyle.other_waterIntake || undefined,
+    stress: lifestyle.stress?.[0] || undefined,
+    mentalState: lifestyle.mentalState?.[0] || undefined,
+
+    // Signature & consent
+    signature: signature || undefined,
+    consent: opts.includeConsent ? !!consentGiven : undefined,
+
+    // Payment/QR (if needed)
+    paymentMethod: paymentMethod || undefined,
+    upiId: qr?.upiId || undefined,
+    qrId: qr?.qrId || undefined,
+    familyHistory: formData.familyHistory || undefined,
   };
+
+  // Remove undefined values
+  Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+
+  return payload;
+};
+
 
   // Step advancement with API side-effects
   const handleNext = async () => {
@@ -282,10 +336,10 @@ const PatientRegistrationForm = () => {
       }
 
       // step 4 -> save payment method & QR refs
-      if (step === 4 && patientId) {
+      if (step === 4 && id) {
         setSubmitting(true);
         await updatePatient(
-          patientId,
+          id,
           buildUpdatePayload({ includeConsent: false })
         );
         setSubmitting(false);
@@ -299,48 +353,48 @@ const PatientRegistrationForm = () => {
     }
   };
   // 1) helper to turn dataURL -> File
- const dataUrlToFile = async (
-  dataUrl: string,
-  fileName = "signature.jpg"
-): Promise<File> => {
-  const blob = await (await fetch(dataUrl)).blob();
+  const dataUrlToFile = async (
+    dataUrl: string,
+    fileName = "signature.jpg"
+  ): Promise<File> => {
+    const blob = await (await fetch(dataUrl)).blob();
 
-  // compress to JPEG (~0.82 quality) to avoid timeouts
-  const bitmap = await createImageBitmap(blob);
-  const off = document.createElement("canvas");
-  off.width = bitmap.width;
-  off.height = bitmap.height;
-  const ctx = off.getContext("2d")!;
-  ctx.drawImage(bitmap, 0, 0);
-  const jpegBlob: Blob = await new Promise((resolve) =>
-    off.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.82)
-  );
-  return new File([jpegBlob], fileName, { type: "image/jpeg" });
-};
-// Accepts inputs like "120/80", "120-80", "120 80", "120:80", "  120  /  80 "
-const normalizeBloodPressure = (value: string): string | null => {
-  if (!value) return null;
-  const compact = String(value).trim().replace(/\s+/g, "");
-  // matches 2–3 digit / 2–3 digit with / - :
-  const m = compact.match(/^(\d{2,3})[\/\-\:](\d{2,3})$/);
-  if (m) return `${m[1]}/${m[2]}`;
+    // compress to JPEG (~0.82 quality) to avoid timeouts
+    const bitmap = await createImageBitmap(blob);
+    const off = document.createElement("canvas");
+    off.width = bitmap.width;
+    off.height = bitmap.height;
+    const ctx = off.getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0);
+    const jpegBlob: Blob = await new Promise((resolve) =>
+      off.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.82)
+    );
+    return new File([jpegBlob], fileName, { type: "image/jpeg" });
+  };
+  // Accepts inputs like "120/80", "120-80", "120 80", "120:80", "  120  /  80 "
+  const normalizeBloodPressure = (value: string): string | null => {
+    if (!value) return null;
+    const compact = String(value).trim().replace(/\s+/g, "");
+    // matches 2–3 digit / 2–3 digit with / - :
+    const m = compact.match(/^(\d{2,3})[\/\-\:](\d{2,3})$/);
+    if (m) return `${m[1]}/${m[2]}`;
 
-  // fallback: extract the first two 2–3 digit numbers
-  const nums = String(value).match(/\d{2,3}/g);
-  if (nums && nums.length >= 2) return `${nums[0]}/${nums[1]}`;
+    // fallback: extract the first two 2–3 digit numbers
+    const nums = String(value).match(/\d{2,3}/g);
+    if (nums && nums.length >= 2) return `${nums[0]}/${nums[1]}`;
 
-  return null;
-};
+    return null;
+  };
 
-// Optional: basic physiology guardrails to prevent obvious typos
-const isBloodPressureInPlausibleRange = (bp: string): boolean => {
-  const m = bp.match(/^(\d{2,3})\/(\d{2,3})$/);
-  if (!m) return false;
-  const sys = parseInt(m[1], 10);
-  const dia = parseInt(m[2], 10);
-  // tweak ranges if your clinic wants different thresholds
-  return sys >= 70 && sys <= 250 && dia >= 40 && dia <= 150 && sys > dia;
-};
+  // Optional: basic physiology guardrails to prevent obvious typos
+  const isBloodPressureInPlausibleRange = (bp: string): boolean => {
+    const m = bp.match(/^(\d{2,3})\/(\d{2,3})$/);
+    if (!m) return false;
+    const sys = parseInt(m[1], 10);
+    const dia = parseInt(m[2], 10);
+    // tweak ranges if your clinic wants different thresholds
+    return sys >= 70 && sys <= 250 && dia >= 40 && dia <= 150 && sys > dia;
+  };
 
   // 2) upload + auto-submit
   const handleSignatureSave = async (dataUrl: string) => {
@@ -349,7 +403,7 @@ const isBloodPressureInPlausibleRange = (bp: string): boolean => {
       setApiSuccess("");
       setUploadingSignature(true);
 
-      if (!patientId)
+      if (!id)
         throw new Error("No patient id. Please complete Step 1 first.");
       if (!consentGiven) throw new Error("Consent is required before signing.");
 
@@ -371,103 +425,109 @@ const isBloodPressureInPlausibleRange = (bp: string): boolean => {
     }
   };
 
- const submitFinal = async (signatureOverride?: string) => {
-  if (!patientId) return setApiError("No patient id. Please complete Step 1 again.");
-  if (!consentGiven) return setApiError("Consent is required.");
+  const submitFinal = async (signatureOverride?: string) => {
+    if (!patientId)
+      return setApiError("No patient id. Please complete Step 1 again.");
+    if (!consentGiven) return setApiError("Consent is required.");
 
-  // --- Blood Pressure normalize + validate ---
-  const bpInput = vitals["Blood Pressure"] || "";
-  const normalizedBP = normalizeBloodPressure(bpInput);
-  if (!normalizedBP) {
-    return setApiError('Please enter blood pressure like "120/80" (e.g., 118/76).');
-  }
-  if (!isBloodPressureInPlausibleRange(normalizedBP)) {
-    return setApiError('Blood pressure looks out of range. Enter something like "120/80".');
-  }
+    // --- Blood Pressure normalize + validate ---
+    const bpInput = vitals["Blood Pressure"] || "";
+    const normalizedBP = normalizeBloodPressure(bpInput);
+    if (!normalizedBP) {
+      return setApiError(
+        'Please enter blood pressure like "120/80" (e.g., 118/76).'
+      );
+    }
+    if (!isBloodPressureInPlausibleRange(normalizedBP)) {
+      return setApiError(
+        'Blood pressure looks out of range. Enter something like "120/80".'
+      );
+    }
 
-  const sigToSend = signatureOverride ?? signature;
-  if (!sigToSend) return setApiError("Signature is required. Please sign first.");
+    const sigToSend = signatureOverride ?? signature;
+    if (!sigToSend)
+      return setApiError("Signature is required. Please sign first.");
 
-  setSubmitting(true);
-  setApiError("");
-  setApiSuccess("");
-  try {
-    const payload = buildUpdatePayload({ includeConsent: true });
-
-    // Force the normalized BP into the payload key the backend expects
-    payload.bloodPressure = normalizedBP;
-    payload.signature = sigToSend;
-
-    const data = await updatePatient(patientId, payload);
-    setSignature(sigToSend);
-    setApiResponse(data);
-    setApiSuccess("Patient updated & forwarded successfully.");
-  } catch (err: any) {
-    setApiError(err?.message || "Something went wrong.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-// PatientRegistrationForm.tsx (same file)
-const mapPatientToFormState = (p: any) => ({
-  name: p.fullName || "",
-  age: p.age ?? "",
-  sex: p.sex || "",
-  fatherOrHusband: p.fatherHusbandName || "", // ✅ match backend key
-  address: p.address || "",
-  contactNumber: p.contactNumber || "",
-  maritalStatus: p.maritalStatus || "",
-  dateOfBirth: p.dateOfBirth || "",
-  bloodType: p.bloodType || "",
-  occupation: p.occupation || "",
-  reference: p.reference || "",
-  dateOfVisit: p.formDate || "", // if you want formDate
-});
-
-
-const mapPatientToVitals = (p: any) => ({
-  "Blood Pressure": p.bloodPressure || "",
-  Pulse: p.pulse ?? "",
-  Weight: p.weightKg ?? "",        // ✅ corrected
-  Height: p.heightCm ?? "",        // ✅ corrected
-  BMI: p.bmi ?? "",                // ✅ corrected
-  Temperature: p.temperatureF ?? "", // ✅ corrected
-});
-const mapPatientToLifestyle = (p: any) => ({
-  diet: p.diet ? p.diet.split(",") : [],
-  appetite: p.appetite ? p.appetite.split(",") : [],
-  taste: p.taste ? p.taste.split(",") : [],
-  bowel: p.bowel ? p.bowel.split(",") : [],
-  sleep: p.sleep ? p.sleep.split(",") : [],
-  addictions: p.addictions ? p.addictions.split(",") : [],
-  physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
-  waterIntake: p.waterIntakeLiters || "",
-  stress: p.stress ? p.stress.split(",") : [],
-  mentalState: p.mentalState ? p.mentalState.split(",") : [],
-  wakeTime: p.sleepWakeUpTime || "",
-  sleepTime: p.sleepTime || "",
-  otherDiet: p.otherDiet || "",
-  otherAddictions: p.otherAddictions || "",
-  otherBowel: p.otherBowel || "",
-  otherSleep: p.otherSleep || "",
-});
-
-useEffect(() => {
-  const load = async () => {
-    if (!id) return;
+    setSubmitting(true);
+    setApiError("");
+    setApiSuccess("");
     try {
-      const json = await getPatientById(id);
-      const data = json?.data ?? json;
-console.log("Loaded patient:", data);
-      setFormData(mapPatientToFormState(data[0]));
-      setLifestyle(mapPatientToLifestyle(data[0]));
-      setVitals(mapPatientToVitals(data));
-    } catch (e) {
-      console.error(e);
+      const payload = buildUpdatePayload({ includeConsent: true });
+
+      // Force the normalized BP into the payload key the backend expects
+      payload.bloodPressure = normalizedBP;
+      payload.signature = sigToSend;
+
+      const data = await updatePatient(id, payload);
+      setSignature(sigToSend);
+      setApiResponse(data);
+      setApiSuccess("Patient updated & forwarded successfully.");
+      navigate(`/patient/${id}`);
+    } catch (err: any) {
+      setApiError(err?.message || "Something went wrong.");
+    } finally {
+      setSubmitting(false);
     }
   };
-  load();
-}, [id]);
+  // PatientRegistrationForm.tsx (same file)
+  const mapPatientToFormState = (p: any) => ({
+    name: p.fullName || "",
+    age: p.age ?? "",
+    sex: p.sex || "",
+    fatherOrHusband: p.fatherHusbandName || "", // ✅ match backend key
+    address: p.address || "",
+    contactNumber: p.contactNumber || "",
+    maritalStatus: p.maritalStatus || "",
+    dateOfBirth: p.dateOfBirth || "",
+    bloodType: p.bloodType || "",
+    occupation: p.occupation || "",
+    reference: p.reference || "",
+    dateOfVisit: p.formDate || "", // if you want formDate
+  });
+
+  const mapPatientToVitals = (p: any) => ({
+    "Blood Pressure": p.bloodPressure || "",
+    Pulse: p.pulse ?? "",
+    Weight: p.weightKg ?? "", // ✅ corrected
+    Height: p.heightCm ?? "", // ✅ corrected
+    BMI: p.bmi ?? "", // ✅ corrected
+    Temperature: p.temperatureF ?? "", // ✅ corrected
+  });
+  const mapPatientToLifestyle = (p: any) => ({
+    diet: p.diet ? p.diet.split(",") : [],
+    appetite: p.appetite ? p.appetite.split(",") : [],
+    taste: p.taste ? p.taste.split(",") : [],
+    bowel: p.bowel ? p.bowel.split(",") : [],
+    sleep: p.sleep ? p.sleep.split(",") : [],
+    addictions: p.addictions ? p.addictions.split(",") : [],
+    physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
+    waterIntake: p.waterIntakeLiters || "",
+    stress: p.stress ? p.stress.split(",") : [],
+    mentalState: p.mentalState ? p.mentalState.split(",") : [],
+    wakeTime: p.sleepWakeUpTime || "",
+    sleepTime: p.sleepTime || "",
+    otherDiet: p.otherDiet || "",
+    otherAddictions: p.otherAddictions || "",
+    otherBowel: p.otherBowel || "",
+    otherSleep: p.otherSleep || "",
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) return;
+      try {
+        const json = await getPatientById(id);
+        const data = json?.data ?? json;
+        console.log("Loaded patient:", data);
+        setFormData(mapPatientToFormState(data[0]));
+        setLifestyle(mapPatientToLifestyle(data[0]));
+        setVitals(mapPatientToVitals(data));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [id]);
   // PRINT VIEW
   if (showPrint) {
     return (
@@ -794,14 +854,22 @@ console.log("Loaded patient:", data);
                       onChange={handleInputChange}
                       required
                     />
-                    <Input
-                      name="dateOfBirth"
-                      placeholder="Date of Birth"
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={handleInputChange}
-                      required
-                    />
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="dateOfBirth"
+                        className="text-sm text-gray-500"
+                      >
+                        Date of Birth
+                      </label>
+                      <Input
+                        name="dateOfBirth"
+                        placeholder="Date of Birth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                     <Input
                       name="bloodType"
                       placeholder="Blood Type"
@@ -823,14 +891,22 @@ console.log("Loaded patient:", data);
                       onChange={handleInputChange}
                       required
                     />
-                    <Input
-                      name="dateOfVisit"
-                      placeholder="Date of Visit"
-                      type="date"
-                      value={formData.dateOfVisit}
-                      onChange={handleInputChange}
-                      required
-                    />
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="dateOfVisit"
+                        className="text-sm text-gray-500"
+                      >
+                        Date of Visit
+                      </label>
+                      <Input
+                        name="dateOfVisit"
+                        placeholder="Date of Visit"
+                        type="date"
+                        value={formData.dateOfVisit}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                   </div>
                   <Textarea
                     name="address"
@@ -1187,8 +1263,6 @@ console.log("Loaded patient:", data);
                       {apiError || apiSuccess}
                     </div>
                   )}
-
-                
                 </div>
               )}
 
