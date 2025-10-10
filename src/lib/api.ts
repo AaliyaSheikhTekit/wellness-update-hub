@@ -306,3 +306,22 @@ export async function getPatientById(id: string) {
   }
   return res.json(); // assume { data: {...} }
 }
+export const getMedicines = async () => {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+
+  const res = await fetch(`${API_BASE_URL}/medicine/get`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch medicines: ${res.status} ${text}`);
+  }
+
+  return res.json(); // expect { data: [{ id, name, ... }] }
+};

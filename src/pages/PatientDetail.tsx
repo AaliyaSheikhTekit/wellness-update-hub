@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Scissors, Users, FileText,  } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getPatient } from "@/lib/api"; // <-- uses your Bearer token internally
+import { getMedicines, getPatient, postData } from "@/lib/api"; // <-- uses your Bearer token internally
 
 type ServerPatient = {
   id: string;
@@ -113,18 +113,7 @@ type ServerPatient = {
 };
 
 
-const naturopathyMedicines = [
-  "Aloe Vera Juice",
-  "Ashwagandha",
-  "Neem Capsules",
-  "Tulsi Drops",
-  "Triphala Powder",
-  "Brahmi",
-  "Giloy",
-  "Moringa",
-  "Shatavari",
-  "Turmeric Capsules",
-];
+
 
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString() : "—";
@@ -133,35 +122,16 @@ const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // --- Hooks must come first ---
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
-
   const [newPrescriptionOpen, setNewPrescriptionOpen] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      if (!id) return;
-      setLoading(true);
-      setErr("");
-      try {
-        const res = await getPatient(id);
-        // API returns { data: [ {...} ] } per your sample
-        const p: ServerPatient =
-          Array.isArray(res?.data) ? res.data[0] : res?.data || res;
-        if (mounted) setPatient(p || null);
-      } catch (e: any) {
-        if (mounted) setErr(e?.message || "Failed to fetch patient.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    run();
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
+  const [naturopathyMedicines, setNaturopathyMedicines] = useState<{id: string, name: string}[]>([]);
+  const [selectedMedicine, setSelectedMedicine] = useState("");
+  const [duration, setDuration] = useState("");
+  const [instructions, setInstructions] = useState("");
 
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
@@ -173,14 +143,43 @@ const PatientDetail = () => {
       .toUpperCase() || "PT";
   }, [patient]);
 
-  const handlePrescribeMedicine = () => {
-    toast({
-      title: "Prescription Sent",
-      description: "Prescription details sent to patient's WhatsApp",
-    });
-    setNewPrescriptionOpen(false);
-  };
+  // --- Effects ---
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      if (!id) return;
+      setLoading(true);
+      setErr("");
+      try {
+        const res = await getPatient(id);
+        const p: ServerPatient =
+          Array.isArray(res?.data) ? res.data[0] : res?.data || res;
+        if (mounted) setPatient(p || null);
+      } catch (e: any) {
+        if (mounted) setErr(e?.message || "Failed to fetch patient.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    run();
+    return () => { mounted = false };
+  }, [id]);
 
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const data = await getMedicines();
+        setNaturopathyMedicines(data.data || []);
+      } catch (error) {
+        console.error("Failed to load medicines:", error);
+      }
+    };
+    fetchMedicines();
+  }, []);
+
+ 
+
+ 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -207,6 +206,44 @@ const PatientDetail = () => {
     );
   }
 
+
+
+  const handlePrescribeMedicine = async () => {
+    if (!selectedMedicine) {
+      alert("Please select a medicine");
+      return;
+    }
+    if (!duration) {
+      alert("Please specify duration");
+      return;
+    }
+
+    try {
+      const payload = {
+        appointmentId: patient.appointment && patient.appointment.length > 0 ? patient.appointment[0].id : undefined,
+        medicineId: selectedMedicine, // use medicine ID
+        duration,
+        instructions,
+        quantity: 14, // you can make this dynamic
+      };
+
+      const result = await postData("/prescription/create", payload);
+      console.log("Prescription API result:", result);
+    toast({
+      title: "Prescription Sent",
+      description: "Prescription details sent to patient's WhatsApp",
+    });
+    setNewPrescriptionOpen(false);
+
+      // Reset form
+      setSelectedMedicine("");
+      setDuration("");
+      setInstructions("");
+    } catch (error: any) {
+      console.error("Error creating prescription:", error);
+      alert(error?.message || "Failed to send prescription");
+    }
+  };
   const VitalItem = ({ icon: Icon, label, value, unit = "", color = "blue" }) => (
     <div className="group relative bg-gradient-to-br from-white to-gray-50 hover:from-gray-50 hover:to-white border border-gray-200 rounded-xl p-4 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-gray-300">
       <div className="flex items-start justify-between mb-2">
@@ -241,55 +278,104 @@ const PatientDetail = () => {
     if (value < 30) return { status: "Overweight", color: "orange" };
     return { status: "Obese", color: "red" };
   };
- const MedicalItem = ({ icon: Icon, label, value, color = "blue", iconBg = "blue" }) => {
-    const hasValue = value && value !== "—";
-    
-    return (
-      <div className={`group relative bg-gradient-to-br from-white to-${color}-50 hover:from-${color}-50 hover:to-white border-2 border-${color}-100 hover:border-${color}-300 rounded-xl p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1`}>
-        {/* Icon Badge */}
-        <div className="flex items-start gap-4">
-          <div className={`flex-shrink-0 p-3 rounded-xl bg-gradient-to-br from-${iconBg}-500 to-${iconBg}-600 text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-            <Icon className="h-6 w-6" />
+  const colorMap = {
+  red: {
+    text: "text-red-900",
+    gradient: "from-red-500 to-red-600",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-700",
+    badgeBorder: "border-red-200",
+    cardBg: "from-white to-red-50 hover:from-red-50 hover:to-white border-red-100 hover:border-red-300",
+    corner: "from-red-100",
+  },
+  blue: {
+    text: "text-blue-900",
+    gradient: "from-blue-500 to-blue-600",
+    badgeBg: "bg-blue-100",
+    badgeText: "text-blue-700",
+    badgeBorder: "border-blue-200",
+    cardBg: "from-white to-blue-50 hover:from-blue-50 hover:to-white border-blue-100 hover:border-blue-300",
+    corner: "from-blue-100",
+  },
+  orange: {
+    text: "text-orange-900",
+    gradient: "from-orange-500 to-orange-600",
+    badgeBg: "bg-orange-100",
+    badgeText: "text-orange-700",
+    badgeBorder: "border-orange-200",
+    cardBg: "from-white to-orange-50 hover:from-orange-50 hover:to-white border-orange-100 hover:border-orange-300",
+    corner: "from-orange-100",
+  },
+  purple: {
+    text: "text-purple-900",
+    gradient: "from-purple-500 to-purple-600",
+    badgeBg: "bg-purple-100",
+    badgeText: "text-purple-700",
+    badgeBorder: "border-purple-200",
+    cardBg: "from-white to-purple-50 hover:from-purple-50 hover:to-white border-purple-100 hover:border-purple-300",
+    corner: "from-purple-100",
+  },
+};
+
+const MedicalItem = ({ icon: Icon, label, value, color = "blue", iconBg = "blue" }) => {
+  const hasValue = value && value !== "—";
+  const c = colorMap[color] || colorMap.blue;
+  const i = colorMap[iconBg] || colorMap.blue;
+
+  return (
+    <div
+      className={`group relative rounded-xl p-5 border-2 ${c.cardBg} transition-all duration-300 hover:shadow-xl hover:-translate-y-1`}
+    >
+      {/* Icon Badge */}
+      <div className="flex items-start gap-4">
+        <div
+          className={`flex-shrink-0 p-3 rounded-xl ${i.gradient} text-black shadow-lg group-hover:scale-110 transition-transform duration-300`}
+        >
+          <Icon className="h-6 w-6" />
+        </div>
+
+        {/* Label + Value */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <p className={`text-sm font-bold uppercase tracking-wide ${c.text}`}>{label}</p>
+            {hasValue && (
+              <Badge
+                variant="secondary"
+                className={`text-xs ${c.badgeBg} ${c.badgeText} ${c.badgeBorder}`}
+              >
+                Recorded
+              </Badge>
+            )}
           </div>
-          
-          <div className="flex-1 min-w-0">
-            {/* Label */}
-            <div className="flex items-center gap-2 mb-2">
-              <p className={`text-sm font-bold text-${color}-900 uppercase tracking-wide`}>
-                {label}
+
+          <div className={`text-gray-700 leading-relaxed ${!hasValue ? "italic text-gray-400" : ""}`}>
+            {hasValue ? (
+              <p className="text-base">{value}</p>
+            ) : (
+              <p className="text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                No data recorded
               </p>
-              {hasValue && (
-                <Badge variant="secondary" className={`text-xs bg-${color}-100 text-${color}-700 border-${color}-200`}>
-                  Recorded
-                </Badge>
-              )}
-            </div>
-            
-            {/* Value */}
-            <div className={`text-gray-700 leading-relaxed ${!hasValue ? 'italic text-gray-400' : ''}`}>
-              {hasValue ? (
-                <p className="text-base">{value}</p>
-              ) : (
-                <p className="text-sm flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-                  No data recorded
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
-        
-        {/* Decorative corner accent */}
-        <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-${color}-100 to-transparent rounded-bl-full opacity-30 group-hover:opacity-50 transition-opacity`}></div>
       </div>
-    );
-  };
+
+      {/* Decorative corner accent */}
+      <div
+        className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${c.corner} to-transparent rounded-bl-full opacity-30 group-hover:opacity-50 transition-opacity`}
+      ></div>
+    </div>
+  );
+};
 
   // Check if patient has any critical information
   const hasCriticalInfo = patient.allergies && patient.allergies !== "—";
   const hasChronicIllness = patient.chronicIllnesses && patient.chronicIllnesses !== "—";
 
   const bmiStatus = getBMIStatus(patient.bmi);
+   
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
@@ -311,58 +397,65 @@ const PatientDetail = () => {
 
             <div className="flex items-center space-x-3">
               {/* New Prescription */}
-              <Dialog open={newPrescriptionOpen} onOpenChange={setNewPrescriptionOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <Pill className="h-4 w-4" />
-                    <span>Prescribe Medicine</span>
-                  </Button>
-                </DialogTrigger>
+            <Dialog open={newPrescriptionOpen} onOpenChange={setNewPrescriptionOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="flex items-center space-x-2">
+          <Pill className="h-4 w-4" />
+          <span>Prescribe Medicine</span>
+        </Button>
+      </DialogTrigger>
 
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>New Prescription</DialogTitle>
-                  </DialogHeader>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New Prescription</DialogTitle>
+        </DialogHeader>
 
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="medicineSelect">Select Medicine</Label>
-                      <Select>
-                        <SelectTrigger id="medicineSelect" className="w-full mt-2">
-                          <SelectValue placeholder="Choose a medicine" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {naturopathyMedicines.map((med, idx) => (
-                            <SelectItem key={idx} value={med}>
-                              {med}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="medicineSelect">Select Medicine</Label>
+            <Select
+              onValueChange={setSelectedMedicine}
+              value={selectedMedicine}
+            >
+              <SelectTrigger id="medicineSelect" className="w-full mt-2">
+                <SelectValue placeholder="Choose a medicine" />
+              </SelectTrigger>
+              <SelectContent>
+                {naturopathyMedicines.map((med) => (
+                  <SelectItem key={med.id} value={med.id}>
+                    {med.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                    <div>
-                      <Label htmlFor="medicines">Medicines</Label>
-                      <Textarea id="medicines" placeholder="List medicines with dosage..." className="min-h-[100px]" />
-                    </div>
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input
+              id="duration"
+              placeholder="e.g., 7 days"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+            />
+          </div>
 
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input id="duration" placeholder="e.g., 30 days" />
-                    </div>
+          <div>
+            <Label htmlFor="instructions">Instructions</Label>
+            <Textarea
+              id="instructions"
+              placeholder="Usage instructions..."
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          </div>
 
-                    <div>
-                      <Label htmlFor="instructions">Instructions</Label>
-                      <Textarea id="instructions" placeholder="Usage instructions..." />
-                    </div>
-
-                    <Button onClick={handlePrescribeMedicine} className="w-full">
-                      <Send className="h-4 w-4 mr-2" />
-                      Send to WhatsApp
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+          <Button onClick={handlePrescribeMedicine} className="w-full">
+            <Send className="h-4 w-4 mr-2" /> Send to WhatsApp
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
             </div>
           </div>
         </div>
@@ -477,8 +570,8 @@ const PatientDetail = () => {
             icon={Heart}
             label="Primary Health Concern"
             value={patient.primaryHealthConcern}
-            color="rose"
-            iconBg="rose"
+            color="red"
+            iconBg="red"
           />
 
           {/* Chronic Illnesses */}
