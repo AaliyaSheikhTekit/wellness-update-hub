@@ -350,7 +350,7 @@ const Appointments = () => {
           note: appt.note,
           prescriptions: appt.prescriptions || [],
           consultationType: appt.consultationType,
-          phoneNo: appt.phoneNo || "",
+          phoneNo: appt.patient.contactNumber || "",
         })
       );
       setAppointments(mappedAppointments);
