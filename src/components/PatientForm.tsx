@@ -191,106 +191,87 @@ const PatientRegistrationForm = () => {
   const toISODate = (d: string) =>
     d ? new Date(d).toISOString().slice(0, 10) : "";
 
-  // Build payloads
-  const buildCreatePayload = () => {
-    const payload: Record<string, any> = {
-      fullName: formData.name?.trim(),
-      age: formData.age ? Number(formData.age) : undefined,
-      sex: formData.sex || undefined,
-      fatherOrHusbandName: formData.fatherOrHusband || undefined,
-      contactNumber: formData.contactNumber || undefined,
-      maritalStatus: formData.maritalStatus || undefined,
-      dateOfBirth: toISODate(formData.dateOfBirth) || undefined,
-      bloodType: formData.bloodType || undefined,
-      occupation: formData.occupation || undefined,
-      reference: formData.reference || undefined,
-      registrationDate: toISODate(formData.dateOfVisit) || undefined,
-      address: formData.address || undefined,
-      primaryHealthConcern: formData.primaryHealthConcern || undefined,
-      chronicIllnesses: formData.chronicIllnesses || undefined,
-      surgeriesOrInjuries: formData.surgeries || undefined,
-      allergies: formData.allergies || undefined,
-      familyHistory: formData.familyHistory || undefined,
-    };
-    Object.keys(payload).forEach(
-      (k) => payload[k] === undefined && delete payload[k]
-    );
-    return payload;
+const toNumberOrNull = (value: any) =>
+  value !== undefined && value !== "" ? Number(value) : null;
+
+const toStringOrNull = (value: any) =>
+  value !== undefined && value !== "" ? String(value) : null;
+
+const buildCreatePayload = () => {
+  return {
+    fullName: toStringOrNull(formData.name),
+    age: toNumberOrNull(formData.age),
+    sex: toStringOrNull(formData.sex),
+    fatherHusbandName: toStringOrNull(formData.fatherOrHusband),
+    contactNumber: toStringOrNull(formData.contactNumber),
+    maritalStatus: toStringOrNull(formData.maritalStatus),
+    dateOfBirth: formData.dateOfBirth ? toISODate(formData.dateOfBirth) : null,
+    bloodType: toStringOrNull(formData.bloodType),
+    occupation: toStringOrNull(formData.occupation),
+    reference: toStringOrNull(formData.reference),
+    formDate: formData.dateOfVisit ? toISODate(formData.dateOfVisit) : null,
+    address: toStringOrNull(formData.address),
+    primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
+    chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
+    surgeriesOrInjuries: toStringOrNull(formData.surgeries),
+    allergies: toStringOrNull(formData.allergies),
+    familyHistory: toStringOrNull(formData.familyHistory),
   };
-
- const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
-  const payload: Record<string, any> = {
-    // Vitals & Anthropometrics
-    bloodPressure: vitals["Blood Pressure"] || undefined,
-    pulse: vitals["Pulse"] ? Number(vitals["Pulse"]) : undefined,
-    weightKg: vitals["Weight"] ? String(vitals["Weight"]) : undefined,
-    heightCm: vitals["Height"] ? String(vitals["Height"]) : undefined,
-    bmi: vitals["BMI"] ? String(vitals["BMI"]) : undefined,
-    temperatureF: vitals["Temperature"] ? String(vitals["Temperature"]) : undefined,
-    painScale: vitals["Pain Scale"] || undefined,
-    midUpperArmCircumferenceCm: vitals["Mid-Upper Arm Circumference"]
-      ? Number(vitals["Mid-Upper Arm Circumference"])
-      : undefined,
-    waistCircumferenceCm: vitals["Waist Circumference"]
-      ? Number(vitals["Waist Circumference"])
-      : undefined,
-    hipCircumferenceCm: vitals["Hip Circumference"]
-      ? Number(vitals["Hip Circumference"])
-      : undefined,
-    whr: vitals["Waist-Hip Ratio (WHR)"]
-      ? Number(vitals["Waist-Hip Ratio (WHR)"])
-      : undefined,
-    skinfoldTricepsMm: vitals["Skinfold Thickness (Triceps)"]
-      ? Number(vitals["Skinfold Thickness (Triceps)"])
-      : undefined,
-    skinfoldBicepsMm: vitals["Skinfold Thickness (Biceps)"]
-      ? Number(vitals["Skinfold Thickness (Biceps)"])
-      : undefined,
-    skinfoldSubscapularMm: vitals["Skinfold (Subscapular)"]
-      ? Number(vitals["Skinfold (Subscapular)"])
-      : undefined,
-    skinfoldSuprailiacMm: vitals["Skinfold (Suprailiac)"]
-      ? Number(vitals["Skinfold (Suprailiac)"])
-      : undefined,
-    bodyFatPercent: vitals["Body Fat %"] ? Number(vitals["Body Fat %"]) : undefined,
-
-    // Lifestyle
-    diet: lifestyle.diet?.[0] || undefined,
-    otherDiet: lifestyle.other_diet || undefined,
-    appetite: lifestyle.appetite?.[0] || undefined,
-    taste: lifestyle.taste?.[0] || undefined,
-    bowel: lifestyle.bowel?.[0] || undefined,
-    otherBowel: lifestyle.other_bowel || undefined,
-    bowelFrequency: lifestyle.frequency_bowel || undefined,
-    sleep: lifestyle.sleep?.[0] || undefined,
-    sleepWakeUpTime: lifestyle.wakeTime || undefined,
-    sleepTime: lifestyle.sleepTime || undefined,
-    addictions: lifestyle.addictions || undefined,
-    otherAddictions: lifestyle.other_addictions || undefined,
-    physicalActivity: lifestyle.physicalActivity || undefined,
-    otherPhysicalActivity: lifestyle.other_physicalActivity || undefined,
-    waterIntakeLiters: lifestyle.waterIntake ? Number(lifestyle.waterIntake) : undefined,
-    otherWaterIntake: lifestyle.other_waterIntake || undefined,
-    stress: lifestyle.stress?.[0] || undefined,
-    mentalState: lifestyle.mentalState?.[0] || undefined,
-
-    // Signature & consent
-    signature: signature || undefined,
-    consent: opts.includeConsent ? !!consentGiven : undefined,
-
-    // Payment/QR (if needed)
-    paymentMethod: paymentMethod || undefined,
-    upiId: qr?.upiId || undefined,
-    qrId: qr?.qrId || undefined,
-    familyHistory: formData.familyHistory || undefined,
-  };
-
-  // Remove undefined values
-  Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
-
-  return payload;
 };
 
+const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
+  return {
+    // Vitals
+    bloodPressure: toStringOrNull(vitals["Blood Pressure"]),
+    pulse: toNumberOrNull(vitals["Pulse"]),
+    weightKg: toNumberOrNull(vitals["Weight"]),
+    heightCm: toNumberOrNull(vitals["Height"]),
+    bmi: toNumberOrNull(vitals["BMI"]),
+    temperatureF: toNumberOrNull(vitals["Temperature"]),
+    painScale: toStringOrNull(vitals["Pain Scale"]),
+    midUpperArmCircumferenceCm: toNumberOrNull(vitals["Mid-Upper Arm Circumference"]),
+    waistCircumferenceCm: toNumberOrNull(vitals["Waist Circumference"]),
+    hipCircumferenceCm: toNumberOrNull(vitals["Hip Circumference"]),
+    whr: toNumberOrNull(vitals["Waist-Hip Ratio (WHR)"]),
+    skinfoldTricepsMm: toNumberOrNull(vitals["Skinfold Thickness (Triceps)"]),
+    skinfoldBicepsMm: toNumberOrNull(vitals["Skinfold Thickness (Biceps)"]),
+    skinfoldSubscapularMm: toNumberOrNull(vitals["Skinfold (Subscapular)"]),
+    skinfoldSuprailiacMm: toNumberOrNull(vitals["Skinfold (Suprailiac)"]),
+    bodyFatPercent: toNumberOrNull(vitals["Body Fat %"]),
+
+    // Lifestyle
+    diet: lifestyle.diet.length ? lifestyle.diet[0] : null,
+    otherDiet: toStringOrNull(lifestyle.other_diet),
+    appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
+    taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
+    bowel: lifestyle.bowel.length ? lifestyle.bowel[0] : null,
+    otherBowel: toStringOrNull(lifestyle.other_bowel),
+    bowelFrequency: toStringOrNull(lifestyle.frequency_bowel),
+    sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
+    sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
+    sleepTime: toStringOrNull(lifestyle.sleepTime),
+    addictions: lifestyle.addictions.length ? lifestyle.addictions : [],
+    otherAddictions: toStringOrNull(lifestyle.other_addictions),
+    physicalActivity: lifestyle.physicalActivity.length ? lifestyle.physicalActivity : [],
+    otherPhysicalActivity: toStringOrNull(lifestyle.other_physicalActivity),
+    waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
+    otherWaterIntake: toStringOrNull(lifestyle.other_water_intake),
+    stress: lifestyle.stress.length ? lifestyle.stress[0] : null,
+    mentalState: lifestyle.mentalState.length ? lifestyle.mentalState[0] : null,
+
+    // Signature & consent
+    signature: toStringOrNull(signature),
+    consent: opts.includeConsent ? !!consentGiven : null,
+
+    // Payment
+    paymentMethod: toStringOrNull(paymentMethod),
+    upiId: qr?.upiId ? toStringOrNull(qr.upiId) : null,
+    qrId: qr?.qrId ? toStringOrNull(qr.qrId) : null,
+
+    // Additional
+    familyHistory: toStringOrNull(formData.familyHistory),
+  };
+};
 
   // Step advancement with API side-effects
   const handleNext = async () => {
