@@ -250,18 +250,18 @@ const SimpleCalendar = ({
 // --------------------------- Appointments ---------------------------
 const Appointments = () => {
   const { toast } = useToast();
-  const navigate=useNavigate();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
 
-  // Pagination states
+  // Pagination
   const [page, setPage] = useState(1);
-  const [limit] = useState(10); // ✅ ensure a default limit (avoid "undefined")
+  const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Tabs — default to "all" as requested
+  // Tabs
   const [activeTab, setActiveTab] = useState<
     "all" | "today" | "upcoming" | "calendar"
   >("all");
@@ -271,7 +271,7 @@ const Appointments = () => {
   const [editAppointmentOpen, setEditAppointmentOpen] = useState(false);
   const [viewAppointmentOpen, setViewAppointmentOpen] = useState(false);
 
-  // Selected event for editing / viewing
+  // Selected event
   const [selectedEvent, setSelectedEvent] = useState<Appointment | null>(null);
 
   // Form states
@@ -282,9 +282,13 @@ const Appointments = () => {
   const [doctor, setDoctors] = useState<Doctor[]>([]);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [doctorId, setDoctorId] = useState<string>("");
-  const [doctorDisplay, setDoctorDisplay] = useState<string>(""); // nice name in UI
+  const [doctorDisplay, setDoctorDisplay] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [patientNumber, setPatientNumber] = useState("");
+
+  // Error states
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -299,11 +303,11 @@ const Appointments = () => {
       ignore = true;
     };
   }, [doctorSearch]);
+
   // --------------------------- Data Fetch ---------------------------
   const fetchAppointments = async () => {
     try {
       const token = getBackendToken();
-      // API supports filter=all|today (based on your code). We use today for Today tab; all for others.
       const filter = activeTab === "today" ? "today" : "all";
       const res = await fetch(
         `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
@@ -311,12 +315,11 @@ const Appointments = () => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // <-- send token here
+            Authorization: `Bearer ${token}`,
           },
         }
       );
       const data = await res.json();
-
       const mappedAppointments: Appointment[] = (data?.data || []).map(
         (appt: any) => ({
           id: appt.id,
@@ -342,27 +345,124 @@ const Appointments = () => {
                 hour: "2-digit",
                 minute: "2-digit",
               })
-            : undefined,
-          status: appt.status || "pending",
-          note: appt.note || "No notes",
+            : "",
+          status: appt.status ?? "pending",
+          note: appt.note,
+          prescriptions: appt.prescriptions || [],
           consultationType: appt.consultationType,
-          phoneNo: appt.phoneNo ?? "",
+          phoneNo: appt.phoneNo || "",
         })
       );
-
       setAppointments(mappedAppointments);
-      setTotalPages(data?.meta?.totalPages || 1);
+      setTotalPages(Math.ceil((data?.total || 1) / limit));
     } catch (error) {
-      console.error("Failed to fetch appointments:", error);
-      toast({ title: "Error", description: "Failed to fetch appointments." });
+      console.error(error);
     }
   };
 
   useEffect(() => {
     fetchAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, page]);
+  }, [page, activeTab]);
 
+  // --------------------------- Validation ---------------------------
+  const validateAppointment = () => {
+    const newErrors: Record<string, string> = {};
+    if (!patientName) newErrors.patientName = "Patient name is required";
+    if (!patientNumber) newErrors.patientNumber = "Mobile number is required";
+    if (!date) newErrors.date = "Date is required";
+    if (!time) newErrors.time = "Time is required";
+    if (!type) newErrors.type = "Appointment type is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // --------------------------- Handlers ---------------------------
+  const handleBookAppointment = async () => {
+    if (!validateAppointment()) return;
+
+    const payload = {
+      date: new Date(`${date}T${time}`).toISOString(),
+      consultationType: type,
+      patient: patientName,
+      phoneNo: patientNumber,
+      doctor: doctorId,
+      type: "Consultation",
+      note: notes || "New appointment",
+    };
+
+    try {
+      const res = await appointmentPost("/appointment/create", payload);
+      if (res?.id) {
+        fetchAppointments();
+        setNewAppointmentOpen(false);
+        toast({
+          title: "Appointment booked",
+          description: "Successfully added.",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to book appointment." });
+    }
+  };
+const handleUpdateAppointment = async () => {
+    if (!selectedEvent || !validateAppointment()) return;
+
+    // Properly construct ISO date string
+    let iso: string | undefined;
+    
+
+    // Construct payload to match API expectations - only send fields that should be updated
+    const payload: any = {
+       date: new Date(`${date}T${time}`).toISOString(),
+      type: "Consultation", // Always include type as per API requirements
+    };
+    
+
+    if (type) payload.consultationType = type;
+    if (notes) payload.note = notes;
+
+    console.log("Update payload:", payload);
+
+    try {
+      const token = getBackendToken();
+      const response = await fetch(
+        `https://api.ikshanaturopathy.com/v1/appointment/update/${selectedEvent.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Update failed: ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("Update successful:", result);
+
+      // Refresh appointments from server to get latest data
+      await fetchAppointments();
+      
+      setEditAppointmentOpen(false);
+      toast({
+        title: "Appointment updated",
+        description: "Changes saved successfully.",
+      });
+    } catch (error) {
+      console.error("Update error:", error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to update appointment" 
+      });
+    }
+  }; 
   // --------------------------- Helpers ---------------------------
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -376,153 +476,38 @@ const Appointments = () => {
         return "bg-gray-400";
     }
   };
-
+  // --------------------------- Open Edit Dialog ---------------------------
+  const openEditDialog = (apt: Appointment) => {
+    setSelectedEvent(apt);
+    setPatientName(apt.patient?.fullName || "");
+    setPatientNumber(apt.phoneNo || "");
+    setDate(apt.date);
+    setTime(apt.time || "");
+    setType(apt.consultationType || "");
+    setNotes(apt.note || "");
+    setDoctorId(apt.doctor?.id || "");
+    setEditAppointmentOpen(true);
+  };
   const capitalize = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-
   // Derived lists
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
-
   const todaysAppointments = useMemo(
     () => appointments.filter((a) => a.date === todayISO),
     [appointments, todayISO]
   );
-
   const upcomingAppointments = useMemo(
     () => appointments.filter((a) => new Date(a.date) >= new Date(todayISO)),
     [appointments, todayISO]
   );
-
   const filteredBySelectedDate = useMemo(
     () => appointments.filter((a) => a.date === selectedDate),
     [appointments, selectedDate]
   );
-
-  // --------------------------- CRUD ---------------------------
-  const handleBookAppointment = async () => {
-    if (!patientName || !date || !time || !type) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required appointment details.",
-      });
-      return;
-    }
-
-    const payload = {
-      date: new Date(`${date}T${time}`).toISOString(),
-      consultationType: type,
-      patient: patientName,
-      phoneNo: patientNumber,
-      doctor: doctorId,
-      type: "Consultation",
-      note: notes || "New appointment",
-    };
-
-    toast({
-      title: "Scheduling...",
-      description: "Your appointment is being scheduled.",
-    });
-
-    try {
-      const result = await appointmentPost("/appointment/create", payload);
-
-      // locally append (optimistic)
-      const newAppt: Appointment = {
-        id: String(Date.now()),
-        patient: { id: "unknown", fullName: patientName }, // keep shape consistent locally
-        doctor: { id: doctorId, username: doctorDisplay },
-        phoneNo: patientNumber,
-        date,
-        time,
-        status: "confirmed",
-        note: notes || "New appointment",
-        consultationType: type,
-      };
-
-      setAppointments((prev) => [newAppt, ...prev]);
-      setNewAppointmentOpen(false);
-
-      // reset
-      setPatientName("");
-      setDate("");
-      setTime("");
-      setType("");
-      setDoctors([]);
-      setNotes("");
-      setPatientNumber("");
-      toast({
-        title: "Appointment Scheduled",
-        description: "Appointment created successfully.",
-      });
-      console.log("Appointment created:", result);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to schedule appointment. Please try again.",
-      });
-    }
-  };
-
-  const handleUpdateAppointment = async () => {
-    if (!selectedEvent) return;
-
-    const iso =
-      date && time ? new Date(`${date}T${time}`).toISOString() : undefined;
-
-    const payload: any = {
-      date: iso,
-      type: "Consultation",
-      patient: patientName || undefined,
-      doctor: doctorId || undefined, // <-- ID
-      consultationType: type || undefined,
-      phoneNo: patientNumber || undefined,
-      note: notes || undefined,
-      status: selectedEvent.status || undefined,
-    };
-    Object.keys(payload).forEach(
-      (k) => payload[k] === undefined && delete payload[k]
-    );
-
-    await updateAppointment(selectedEvent.id, payload);
-
-    const chosen = doctor.find((d) => d.id === doctorId);
-    setAppointments((prev) =>
-      prev.map(
-        (a): Appointment =>
-          a.id === selectedEvent.id
-            ? {
-                ...a,
-                patient: {
-                  ...(a.patient ?? { id: "unknown", fullName: "" }),
-                  fullName: patientName,
-                },
-                doctor: {
-                  ...(typeof a.doctor === "string"
-                    ? { id: "unknown", username: a.doctor }
-                    : a.doctor ?? { id: "unknown", username: "" }),
-                  id: doctorId || (a.doctor as any)?.id || "unknown",
-                  username:
-                    doctorDisplay ||
-                    chosen?.username ||
-                    (a.doctor as any)?.username ||
-                    "",
-                },
-                date,
-                time: time || undefined,
-                note: notes,
-                consultationType: type,
-              }
-            : a
-      )
-    );
-
-    setEditAppointmentOpen(false);
-    toast({
-      title: "Appointment updated",
-      description: "Changes saved successfully.",
-    });
-  };
-
+  function openView(appointment: Appointment): void {
+    setSelectedEvent(appointment);
+    setViewAppointmentOpen(true);
+  }
   const handleDeleteAppointment = () => {
     if (!selectedEvent) return;
     setAppointments((prev) =>
@@ -530,68 +515,6 @@ const Appointments = () => {
     );
     setEditAppointmentOpen(false);
   };
-
-  async function hydrateAndSet(appt: Appointment) {
-    try {
-      const fresh = await getAppointmentById(appt.id);
-      const a = fresh?.data ?? appt;
-
-      const normalized: Appointment = {
-        id: a.id,
-        patient: a.patient || {
-          id: "unknown",
-          fullName: a.patient?.fullName || a.patientName || "Unknown",
-        },
-        doctor: a.doctor || {
-          id: "unknown",
-          username: a.doctor?.username || a.doctor || "N/A",
-        },
-        date: (a.date || "").split("T")[0],
-        time: a.date
-          ? new Date(a.date).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "",
-        status: a.status || "pending",
-        note: a.note || a.notes || "",
-        consultationType: a.consultationType || a.type || "",
-        phoneNo: a.phoneNo ?? a.patient?.contactNumber ?? "", // ← include number
-        prescriptions: a.prescriptions || [],
-      };
-
-      setSelectedEvent(normalized);
-      setPatientName(normalized.patient?.fullName || "");
-      setDate(normalized.date || "");
-      setTime(normalized.time || "");
-      setType(normalized.consultationType || "");
-      setDoctors([]); // Reset to empty array or keep previous doctor list if needed
-      setNotes(normalized.note || "");
-      setPatientNumber(normalized.phoneNo || ""); // ← seed form input
-      return normalized;
-    } catch (e) {
-      // fallback seeds if API fails
-      setSelectedEvent(appt);
-      setPatientName(appt.patient?.fullName || "");
-      setDate(appt.date || "");
-      setTime(appt.time || "");
-      setType(appt.consultationType || (appt as any).service || "");
-      setNotes(appt.note || "");
-      setPatientNumber(appt.phoneNo || ""); // ← also here
-      return appt;
-    }
-  }
-
-  async function openEdit(appointment: Appointment) {
-    await hydrateAndSet(appointment);
-    setEditAppointmentOpen(true);
-  }
-
-  async function openView(appointment: Appointment) {
-    await hydrateAndSet(appointment);
-    setViewAppointmentOpen(true);
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -643,7 +566,7 @@ const Appointments = () => {
                   <Label htmlFor="patientNumber">Patient Mobile Number</Label>
                   <Input
                     id="patientNumber"
-                      type="tel"
+                    type="tel"
                     placeholder="Enter patient Mobile Number"
                     value={patientNumber}
                     onChange={(e) => setPatientNumber(e.target.value)}
@@ -811,14 +734,16 @@ const Appointments = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openEdit(appointment)}
+                        onClick={() => openEditDialog(appointment)}
                       >
                         Edit
                       </Button>
-                       <Button
+                      <Button
                         variant="outline"
                         size="sm"
- onClick={() => navigate(`/add-patient/${appointment.patient.id}`)}
+                        onClick={() =>
+                          navigate(`/add-patient/${appointment.patient.id}`)
+                        }
                       >
                         Add Detail
                       </Button>
@@ -913,14 +838,16 @@ const Appointments = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openEdit(appointment)}
+                        onClick={() => openEditDialog(appointment)}
                       >
                         Edit
                       </Button>
-                       <Button
+                      <Button
                         variant="outline"
                         size="sm"
- onClick={() => navigate(`/add-patient/${appointment.patient.id}`)}
+                        onClick={() =>
+                          navigate(`/add-patient/${appointment.patient.id}`)
+                        }
                       >
                         Add Detail
                       </Button>
@@ -1002,14 +929,16 @@ const Appointments = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openEdit(appointment)}
+                        onClick={() => openEditDialog(appointment)}
                       >
                         Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
- onClick={() => navigate(`/add-patient/${appointment.patient.id}`)}
+                        onClick={() =>
+                          navigate(`/add-patient/${appointment.patient.id}`)
+                        }
                       >
                         Add Detail
                       </Button>
@@ -1066,7 +995,7 @@ const Appointments = () => {
                 <Label htmlFor="patientNumber">Patient Mobile Number</Label>
                 <Input
                   id="patientNumber"
-                    type="tel"
+                  type="tel"
                   placeholder="Enter patient Mobile Number"
                   value={patientNumber}
                   onChange={(e) => setPatientNumber(e.target.value)}
@@ -1208,7 +1137,7 @@ const Appointments = () => {
                 <Button
                   onClick={() => {
                     setViewAppointmentOpen(false);
-                    openEdit(selectedEvent);
+                    openEditDialog(selectedEvent);
                   }}
                 >
                   Edit
