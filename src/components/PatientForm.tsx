@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import IkshaLogo from "../assets/iksha_logo.png";
 import SignatureStep from "./ConsentStep";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   uploadPatientSignature,
   createPatient,
   updatePatient,
   getPaymentQr,
+  getPatientById,
 } from "@/lib/api";
 
 // Define all Vitals & Anthropometric fields
@@ -103,6 +104,8 @@ const LIFESTYLE_FIELDS: Record<
 
 const PatientRegistrationForm = () => {
   const navigate = useNavigate();
+   const { id } = useParams();
+
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
   const printRef = useRef<HTMLDivElement | null>(null);
@@ -268,7 +271,7 @@ const PatientRegistrationForm = () => {
           const qrRes = await getPaymentQr();
           setQr({
             imageUrl: qrRes?.data?.qrCodeUrl || qrRes?.qrCodeUrl,
-            upiId: qrRes?.data?.upiId || qrRes?.upiId,
+            upiId: qrRes?.data?.upi || qrRes?.upi,
             qrId: qrRes?.data?.qrId || qrRes?.qrId,
           });
           console.log(qrRes?.data?.qrCodeUrl);
@@ -405,8 +408,66 @@ const isBloodPressureInPlausibleRange = (bp: string): boolean => {
     setSubmitting(false);
   }
 };
+// PatientRegistrationForm.tsx (same file)
+const mapPatientToFormState = (p: any) => ({
+  name: p.fullName || "",
+  age: p.age ?? "",
+  sex: p.sex || "",
+  fatherOrHusband: p.fatherHusbandName || "", // ✅ match backend key
+  address: p.address || "",
+  contactNumber: p.contactNumber || "",
+  maritalStatus: p.maritalStatus || "",
+  dateOfBirth: p.dateOfBirth || "",
+  bloodType: p.bloodType || "",
+  occupation: p.occupation || "",
+  reference: p.reference || "",
+  dateOfVisit: p.formDate || "", // if you want formDate
+});
 
 
+const mapPatientToVitals = (p: any) => ({
+  "Blood Pressure": p.bloodPressure || "",
+  Pulse: p.pulse ?? "",
+  Weight: p.weightKg ?? "",        // ✅ corrected
+  Height: p.heightCm ?? "",        // ✅ corrected
+  BMI: p.bmi ?? "",                // ✅ corrected
+  Temperature: p.temperatureF ?? "", // ✅ corrected
+});
+const mapPatientToLifestyle = (p: any) => ({
+  diet: p.diet ? p.diet.split(",") : [],
+  appetite: p.appetite ? p.appetite.split(",") : [],
+  taste: p.taste ? p.taste.split(",") : [],
+  bowel: p.bowel ? p.bowel.split(",") : [],
+  sleep: p.sleep ? p.sleep.split(",") : [],
+  addictions: p.addictions ? p.addictions.split(",") : [],
+  physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
+  waterIntake: p.waterIntakeLiters || "",
+  stress: p.stress ? p.stress.split(",") : [],
+  mentalState: p.mentalState ? p.mentalState.split(",") : [],
+  wakeTime: p.sleepWakeUpTime || "",
+  sleepTime: p.sleepTime || "",
+  otherDiet: p.otherDiet || "",
+  otherAddictions: p.otherAddictions || "",
+  otherBowel: p.otherBowel || "",
+  otherSleep: p.otherSleep || "",
+});
+
+useEffect(() => {
+  const load = async () => {
+    if (!id) return;
+    try {
+      const json = await getPatientById(id);
+      const data = json?.data ?? json;
+console.log("Loaded patient:", data);
+      setFormData(mapPatientToFormState(data[0]));
+      setLifestyle(mapPatientToLifestyle(data[0]));
+      setVitals(mapPatientToVitals(data));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  load();
+}, [id]);
   // PRINT VIEW
   if (showPrint) {
     return (

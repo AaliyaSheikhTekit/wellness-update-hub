@@ -13,6 +13,7 @@ import awsconfig from "./aws-exports";
 import TermsAndConditions from "./pages/terms-and-conditions";
 import PrivacyPolicy from "./pages/privacy-policy";
 import DoctorForm from "./components/DoctoreForm";
+import PatientRegistrationForm from "./components/PatientForm";
 
 Amplify.configure(awsconfig);
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patient/:id" element={<PatientDetail />} />
+           <Route path="/add-patient/:id" element={<PatientRegistrationForm />} />
            <Route path="/doctor" element={<DoctorForm />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />

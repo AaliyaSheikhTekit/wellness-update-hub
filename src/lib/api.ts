@@ -4,7 +4,7 @@ export const API_BASE_URL = "https://api.ikshanaturopathy.com/v1";
 export const loginWithCognitoToken = async (username: string, role: string) => {
   const cognitoToken =
     localStorage.getItem(
-      "CognitoIdentityServiceProvider.5il0mmtqno8kn2rpatfobnfb6.20ec79fc-d0a1-7077-7b09-c6c9358a7f65.accessToken"
+      "CognitoAccessToken"
     ) || "";
 
   if (!cognitoToken) throw new Error("No Cognito token found");
@@ -39,14 +39,14 @@ export const getBackendToken = (): string | null =>
   localStorage.getItem("BackendAccessToken");
 // Generic POST with token
 export const postData = async (endpoint: string, payload: any) => {
-  const token = getBackendToken();
+  const backendToken = getBackendToken();
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token && { Authorization: token }),
+        ...(backendToken && { Authorization: `Bearer ${backendToken}` }),
       },
       body: JSON.stringify(payload),
     });
@@ -61,14 +61,14 @@ export const postData = async (endpoint: string, payload: any) => {
 
 // Appointment POST (same logic)
 export const appointmentPost = async (endpoint: string, payload: any) => {
-  const token = getBackendToken();
+  const backendToken = getBackendToken();
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token && { Authorization: token }),
+        ...(backendToken && { Authorization: `Bearer ${backendToken}` }),
       },
       body: JSON.stringify(payload),
     });
@@ -231,3 +231,78 @@ export const getPatients = async (search:any) => {
   if (!response.ok) throw new Error(`QR fetch failed: ${response.status}`);
   return await response.json();
 };
+export const getAppointmentById = async (id: string) => {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+
+  const res = await fetch(`${API_BASE_URL}/appointment/get/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Get appointment failed: ${res.status}`);
+  return res.json(); // expect { data: { ...appt } }
+};
+// --- Appointments: update ---
+export const updateAppointment = async (
+  id: string,
+  payload: {
+    date?: string;                // ISO string
+    consultationType?: string;    // "consultation" | ...
+    patientName?: string;
+    doctor?: string;              // username or id (match your backend)
+    note?: string;
+    status?: "pending" | "confirmed" | "cancelled";
+  }
+) => {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+
+  const res = await fetch(`${API_BASE_URL}/appointment/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`Update appointment failed: ${res.status} ${txt || ""}`.trim());
+  }
+  return res.json(); // expect { data: { ...updated } }
+};
+// lib/api.ts
+export const getDoctors = async (search = "") => {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+  const res = await fetch(
+    `${API_BASE_URL}/users/doctors?search=${encodeURIComponent(search)}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) throw new Error(`Failed to fetch doctors: ${res.status}`);
+  return res.json(); // expect { data: [{ id, username, ...}] }
+};
+export async function getPatientById(id: string) {
+  const token = getBackendToken();
+  const res = await fetch(`${API_BASE_URL}/patient/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,   // <-- Bearer token (not base_url)
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch patient: ${res.status} ${text}`);
+  }
+  return res.json(); // assume { data: {...} }
+}

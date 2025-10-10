@@ -49,7 +49,7 @@ const determineRole = (username: string): string => {
 
   if (nameLower.includes("superadmin")) return "admin";
   if (nameLower.includes("doctor")) return "doctor";
-  if (nameLower.includes("receptionist")) return "receptionist";
+  if (nameLower.includes("recptionist")) return "receptionist";
 
   // fallback
   return "user";
@@ -70,15 +70,17 @@ const determineRole = (username: string): string => {
       const payload = session.tokens?.idToken?.payload || {};
       const preferredUsername = payload["preferred_username"] || payload.username || "User";
       const email = payload["email"] || formData.email;
-
+ const accessToken = session.tokens?.accessToken?.toString() ?? "";
       // Save user info
       localStorage.setItem("userName", String(preferredUsername));
       localStorage.setItem("userEmail", String(email));
+      localStorage.setItem("CognitoAccessToken", accessToken);
 // Determine role dynamically
       const role = determineRole(preferredUsername as any);
+      console.log(role)
       // --- NEW: Call backend login with Cognito token ---
       try {
-        await loginWithCognitoToken(String(preferredUsername), "admin"); // adjust role if needed
+        await loginWithCognitoToken(String(preferredUsername), role); // adjust role if needed
         console.log("Backend token acquired and saved");
       } catch (err) {
         console.error("Backend login failed:", err);

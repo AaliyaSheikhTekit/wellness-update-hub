@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import DoctorForm from "@/components/DoctoreForm";
 import NewTreatmentForm from "@/pages/NewTreatmentForm";
+import DoctorDashboard from "@/components/DoctorDashboard";
 
 // Mock patient data
 const mockPatients = [
@@ -96,7 +97,7 @@ const Dashboard = () => {
       ]
     : [
         { key: "overview", name: "Overview", icon: Users },
-        { key: "add-patient", name: "Add Patient", icon: Plus },
+        // { key: "add-patient", name: "Add Patient", icon: Plus },
         { key: "appointments", name: "Appointments", icon: Calendar },
         { key: "invoices", name: "Invoices", icon: FileText },
       ];
@@ -113,12 +114,12 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  const renderMainContent = () => {
+ const renderMainContent = () => {
+  // If we're NOT on "overview", route by tab normally
+  if (activeTab !== "overview") {
     switch (activeTab) {
-      case "overview":
-        return <ReceptionDashboard />;
-      case "add-patient":
-        return <PatientForm />;
+      // case "add-patient":
+      //   return <PatientForm />;
       case "appointments":
         return <Appointments />;
       case "prescriptions":
@@ -143,12 +144,33 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
           </Card>
         );
-        case "upload-qr":
+      case "upload-qr":
         return <QrUpload />;
       default:
         return null;
     }
-  };
+  }
+
+  // === activeTab === "overview" ===
+  if (userRole === "superAdmin") {
+    // use your role toggle
+    if (activeRole === "doctor") return <DoctorDashboard />;
+    if (activeRole === "reception") return <ReceptionDashboard />;
+
+    // optionally show BOTH when "super_admin" is selected
+    return (
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <DoctorDashboard />
+        <ReceptionDashboard />
+      </div>
+    );
+  }
+
+  if (userRole === "Naturopathy Doctor") return <DoctorDashboard />;
+  // receptionist
+  return <ReceptionDashboard />;
+};
+
 const [open, setOpen] = useState(false);
 
   // close on ESC
@@ -163,6 +185,14 @@ const [open, setOpen] = useState(false);
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
   }, [open]);
+  // below existing state
+const [activeRole, setActiveRole] = useState<
+  "super_admin" | "doctor" | "reception"
+>(() => {
+  if (userRole === "superAdmin") return "super_admin";
+  if (userRole === "Naturopathy Doctor") return "doctor";
+  return "reception";
+});
   return (
    <div className="min-h-screen bg-background">
       {/* Sidebar */}
@@ -185,7 +215,7 @@ const [open, setOpen] = useState(false);
       {/* Desktop sidebar */}
       <aside className="hidden md:block fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30">
         <div className="mb-6 mt-8 h-12 flex items-center justify-center">
-          <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-16 w-auto object-contain" />
+          <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-36 w-auto object-contain" />
         </div>
 
         <nav className="p-4 space-y-2">
@@ -283,19 +313,47 @@ const [open, setOpen] = useState(false);
 
       {/* Main Content */}
       <div className="lg:ml-64 p-6">
-        <header className="bg-white border-b border-border/50 p-4 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">
-            {userRole === "superAdmin"
-              ? "Admin Dashboard"
-              : userRole === "Naturopathy Doctor"
-              ? "Doctor Dashboard"
-              : "Receptionist Dashboard"}
-          </h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" /> Logout
-          </Button>
-        </header>
+       <header className="bg-white border-b border-border/50 p-4 flex flex-wrap gap-3 justify-between items-center">
+  <h1 className="text-3xl font-bold text-foreground">
+    {activeRole === "super_admin"
+      ? "Admin Dashboard"
+      : activeRole === "doctor"
+      ? "Doctor Dashboard"
+      : "Receptionist Dashboard"}
+  </h1>
 
+  <div className="flex items-center gap-3">
+    {userRole === "superAdmin" && (
+      <div className="flex gap-2">
+        <Button
+          variant={activeRole === "super_admin" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveRole("super_admin")}
+        >
+          Super Admin
+        </Button>
+        <Button
+          variant={activeRole === "doctor" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveRole("doctor")}
+        >
+          Doctor
+        </Button>
+        <Button
+          variant={activeRole === "reception" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveRole("reception")}
+        >
+          Reception
+        </Button>
+      </div>
+    )}
+
+    <Button variant="outline" onClick={handleLogout}>
+      <LogOut className="h-4 w-4 mr-2" /> Logout
+    </Button>
+  </div>
+</header>
         {renderMainContent()}
       </div>
     </div>
