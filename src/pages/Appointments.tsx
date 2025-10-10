@@ -450,11 +450,12 @@ const handleUpdateAppointment = async () => {
       // Refresh appointments from server to get latest data
       await fetchAppointments();
       
-      setEditAppointmentOpen(false);
+      
       toast({
         title: "Appointment updated",
         description: "Changes saved successfully.",
       });
+      setEditAppointmentOpen(false);
     } catch (error) {
       console.error("Update error:", error);
       toast({ 
