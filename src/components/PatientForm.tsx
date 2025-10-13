@@ -1045,11 +1045,11 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     />
     <Input
       placeholder="Other Water Intake"
-      value={lifestyle.other_waterIntake || ""}
+      value={lifestyle.otherWaterIntake || ""}
       onChange={(e) =>
         setLifestyle({
           ...lifestyle,
-          other_waterIntake: e.target.value,
+          otherWaterIntake: e.target.value,
         })
       }
       className="mb-2"
