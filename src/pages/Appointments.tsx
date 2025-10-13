@@ -395,7 +395,7 @@ const Appointments = () => {
       const res = await appointmentPost("/appointment/create", payload);
       if (res?.id) {
         fetchAppointments();
-        setNewAppointmentOpen(false);
+       
         toast({
           title: "Appointment booked",
           description: "Successfully added.",
@@ -404,7 +404,9 @@ const Appointments = () => {
     } catch (error) {
       console.error(error);
       toast({ title: "Error", description: "Failed to book appointment." });
-    }
+    }finally {
+    setNewAppointmentOpen(false); // closes modal in all cases
+  }
   };
 const handleUpdateAppointment = async () => {
     if (!selectedEvent || !validateAppointment()) return;

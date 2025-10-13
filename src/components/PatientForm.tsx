@@ -197,27 +197,24 @@ const toNumberOrNull = (value: any) =>
 const toStringOrNull = (value: any) =>
   value !== undefined && value !== null ? String(value) : "";
 
-const buildCreatePayload = () => {
-  return {
-    fullName: toStringOrNull(formData.name),
-    age: toNumberOrNull(formData.age),
-    sex: toStringOrNull(formData.sex),
-    fatherOrHusbandName: toStringOrNull(formData.fatherOrHusbandName),
-    contactNumber: toStringOrNull(formData.contactNumber),
-    maritalStatus: toStringOrNull(formData.maritalStatus),
-    dateOfBirth: formData.dateOfBirth ? toISODate(formData.dateOfBirth) : null,
-    bloodType: toStringOrNull(formData.bloodType),
-    occupation: toStringOrNull(formData.occupation),
-    reference: toStringOrNull(formData.reference),
-    // formDate: formData.dateOfVisit ? toISODate(formData.dateOfVisit) : null,
-    address: toStringOrNull(formData.address),
-    primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
-    chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
-    surgeriesOrInjuries: toStringOrNull(formData.surgeriesOrInjuries),
-    allergies: toStringOrNull(formData.allergies),
-    familyHistory: toStringOrNull(formData.familyHistory),
-  };
-};
+const buildCreatePayload = () => ({
+ fullName: toStringOrNull(formData.name),
+  age: formData.age || 0,
+  sex: formData.sex || "",
+  fatherOrHusbandName: formData.fatherOrHusbandName || "",
+  contactNumber: toStringOrNull(formData.contactNumber),
+  maritalStatus: formData.maritalStatus || "",
+  dateOfBirth: formData.dateOfBirth || "",
+  bloodType: formData.bloodType || "",
+  occupation: formData.occupation || "",
+  reference: formData.reference || "",
+  address: formData.address || "",
+  primaryHealthConcern: formData.primaryHealthConcern || "",
+  chronicIllnesses: formData.chronicIllnesses || "",
+  surgeriesOrInjuries: formData.surgeriesOrInjuries || "",
+  allergies: formData.allergies || "",
+  familyHistory: formData.familyHistory || "",
+});
 
 const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
   return {
@@ -272,8 +269,6 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     upiId: qr?.upiId ? toStringOrNull(qr.upiId) : null,
     qrId: qr?.id ? qr.id : "",
 
-    // Additional
-    familyHistory: toStringOrNull(formData.familyHistory),
   };
 };
 
