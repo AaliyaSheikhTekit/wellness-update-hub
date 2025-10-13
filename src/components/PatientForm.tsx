@@ -111,7 +111,7 @@ const PatientRegistrationForm = () => {
   const printRef = useRef<HTMLDivElement | null>(null);
 
   const [lifestyle, setLifestyle] = useState<Record<string, any>>({
-    diet:"",
+    diet: "",
     appetite: [],
     taste: [],
     bowel: [],
@@ -158,7 +158,7 @@ const PatientRegistrationForm = () => {
   // NEW: backend auth + patient progress state
   const [loggedIn, setLoggedIn] = useState(false);
   const [patientId, setPatientId] = useState<string | null>(null);
-  console.log(id,patientId,"iiidd")
+  console.log(id, patientId, "iiidd");
   const [qr, setQr] = useState<{
     imageUrl?: string;
     upiId?: string;
@@ -192,85 +192,90 @@ const PatientRegistrationForm = () => {
   const toISODate = (d: string) =>
     d ? new Date(d).toISOString().slice(0, 10) : "";
 
-const toNumberOrNull = (value: any) =>
-  value !== undefined && value !== "" ? Number(value) : null;
-const toStringOrNull = (value: any) =>
-  value !== undefined && value !== null ? String(value) : "";
+  const toNumberOrNull = (value: any) =>
+    value !== undefined && value !== "" ? Number(value) : null;
+  const toStringOrNull = (value: any) =>
+    value !== undefined && value !== null ? String(value) : "";
 
-const buildCreatePayload = () => ({
- fullName: toStringOrNull(formData.name),
-  age: formData.age || 0,
-  sex: formData.sex || "",
-  fatherOrHusbandName: formData.fatherOrHusbandName || "",
-  contactNumber: toStringOrNull(formData.contactNumber),
-  maritalStatus: formData.maritalStatus || "",
-  dateOfBirth: formData.dateOfBirth || "",
-  bloodType: formData.bloodType || "",
-  occupation: formData.occupation || "",
-  reference: formData.reference || "",
-  address: formData.address || "",
-  primaryHealthConcern: formData.primaryHealthConcern || "",
-  chronicIllnesses: formData.chronicIllnesses || "",
-  surgeriesOrInjuries: formData.surgeriesOrInjuries || "",
-  allergies: formData.allergies || "",
-  familyHistory: formData.familyHistory || "",
-});
+  const buildCreatePayload = () => ({
+    fullName: toStringOrNull(formData.name),
+    age: toNumberOrNull(formData.age),
+    sex: toStringOrNull(formData.sex),
+    fatherOrHusbandName: toStringOrNull(formData.fatherOrHusbandName),
+    contactNumber: toStringOrNull(formData.contactNumber),
+    maritalStatus: toStringOrNull(formData.maritalStatus),
+    dateOfBirth: formData.dateOfBirth ? toISODate(formData.dateOfBirth) : null,
+    bloodType: toStringOrNull(formData.bloodType),
+    occupation: toStringOrNull(formData.occupation),
+    reference: toStringOrNull(formData.reference),
+    address: toStringOrNull(formData.address),
+    primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
+    chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
+    surgeriesOrInjuries: toStringOrNull(formData.surgeriesOrInjuries),
+    allergies: toStringOrNull(formData.allergies),
+    familyHistory: formData.familyHistory,
+  });
 
-const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
-  return {
-    // Vitals
-    bloodPressure: toStringOrNull(vitals["Blood Pressure"]),
-    pulse: toNumberOrNull(vitals["Pulse"]),
-    weightKg: toNumberOrNull(vitals["Weight"]),
-    heightCm: toNumberOrNull(vitals["Height"]),
-    bmi: toNumberOrNull(vitals["BMI"]),
-    temperatureF: toNumberOrNull(vitals["Temperature"]),
-    painScale: toStringOrNull(vitals["Pain Scale"]),
-    midUpperArmCircumferenceCm: toNumberOrNull(vitals["Mid-Upper Arm Circumference"]),
-    waistCircumferenceCm: toNumberOrNull(vitals["Waist Circumference"]),
-    hipCircumferenceCm: toNumberOrNull(vitals["Hip Circumference"]),
-    whr: toNumberOrNull(vitals["Waist-Hip Ratio (WHR)"]),
-    skinfoldTricepsMm: toNumberOrNull(vitals["Skinfold Thickness (Triceps)"]),
-    skinfoldBicepsMm: toNumberOrNull(vitals["Skinfold Thickness (Biceps)"]),
-    skinfoldSubscapularMm: toNumberOrNull(vitals["Skinfold (Subscapular)"]),
-    skinfoldSuprailiacMm: toNumberOrNull(vitals["Skinfold (Suprailiac)"]),
-    bodyFatPercent: toNumberOrNull(vitals["Body Fat %"]),
+  const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
+    return {
+      // Vitals
+      bloodPressure: toStringOrNull(vitals["Blood Pressure"]),
+      pulse: toNumberOrNull(vitals["Pulse"]),
+      weightKg: toNumberOrNull(vitals["Weight"]),
+      heightCm: toNumberOrNull(vitals["Height"]),
+      bmi: toNumberOrNull(vitals["BMI"]),
+      temperatureF: toNumberOrNull(vitals["Temperature"]),
+      painScale: toStringOrNull(vitals["Pain Scale"]),
+      midUpperArmCircumferenceCm: toNumberOrNull(
+        vitals["Mid-Upper Arm Circumference"]
+      ),
+      waistCircumferenceCm: toNumberOrNull(vitals["Waist Circumference"]),
+      hipCircumferenceCm: toNumberOrNull(vitals["Hip Circumference"]),
+      whr: toNumberOrNull(vitals["Waist-Hip Ratio (WHR)"]),
+      skinfoldTricepsMm: toNumberOrNull(vitals["Skinfold Thickness (Triceps)"]),
+      skinfoldBicepsMm: toNumberOrNull(vitals["Skinfold Thickness (Biceps)"]),
+      skinfoldSubscapularMm: toNumberOrNull(vitals["Skinfold (Subscapular)"]),
+      skinfoldSuprailiacMm: toNumberOrNull(vitals["Skinfold (Suprailiac)"]),
+      bodyFatPercent: toNumberOrNull(vitals["Body Fat %"]),
 
-    // Lifestyle
-   diet: lifestyle.other_diet?.trim()
-  ? lifestyle.other_diet
-  : lifestyle.diet.length
-  ? lifestyle.diet[0]
-  : "",
-    otherDiet: toStringOrNull(lifestyle.other_diet),
-    appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
-    taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
-    bowel: lifestyle.bowel.length ? lifestyle.bowel[0] : null,
-    otherBowel: toStringOrNull(lifestyle.other_bowel),
-    bowelFrequency: toStringOrNull(lifestyle.frequency_bowel),
-    sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
-    sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
-    sleepTime: toStringOrNull(lifestyle.sleepTime),
-    addictions: lifestyle.addictions.length ? lifestyle.addictions : [],
-    otherAddictions: toStringOrNull(lifestyle.other_addictions),
-    physicalActivity: lifestyle.physicalActivity.length ? lifestyle.physicalActivity : [],
-    otherPhysicalActivity: toStringOrNull(lifestyle.other_physicalActivity),
-    waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
-    otherWaterIntake: lifestyle.other_water_intake || "test",
-    stress: lifestyle.stress.length ? lifestyle.stress[0] : null,
-    mentalState: lifestyle.mentalState.length ? lifestyle.mentalState[0] : null,
+      // Lifestyle
+      diet: lifestyle.other_diet?.trim()
+        ? lifestyle.other_diet
+        : lifestyle.diet.length
+        ? lifestyle.diet[0]
+        : "",
+      otherDiet: toStringOrNull(lifestyle.other_diet),
+      appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
+      taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
+      bowel: lifestyle.bowel.length ? lifestyle.bowel[0] : null,
+      otherBowel: toStringOrNull(lifestyle.other_bowel),
+      bowelFrequency: toStringOrNull(lifestyle.frequency_bowel),
+      sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
+      sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
+      sleepTime: toStringOrNull(lifestyle.sleepTime),
+      addictions: lifestyle.addictions.length ? lifestyle.addictions : [],
+      otherAddictions: toStringOrNull(lifestyle.other_addictions),
+      physicalActivity: lifestyle.physicalActivity.length
+        ? lifestyle.physicalActivity
+        : [],
+      otherPhysicalActivity: toStringOrNull(lifestyle.other_physicalActivity),
+      waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
+      otherWaterIntake: lifestyle.other_water_intake || "test",
+      stress: lifestyle.stress.length ? lifestyle.stress[0] : null,
+      mentalState: lifestyle.mentalState.length
+        ? lifestyle.mentalState[0]
+        : null,
 
-    // Signature & consent
-    signature: toStringOrNull(signature),
-    consent: opts.includeConsent ? !!consentGiven : null,
+      // Signature & consent
+      signature: toStringOrNull(signature),
+      consent: opts.includeConsent ? !!consentGiven : null,
 
-    // Payment
-    paymentMethod: toStringOrNull(paymentMethod),
-    upiId: qr?.upiId ? toStringOrNull(qr.upiId) : null,
-    qrId: qr?.id ? qr.id : "",
-
+      // Payment
+      paymentMethod: toStringOrNull(paymentMethod),
+      upiId: qr?.upiId ? toStringOrNull(qr.upiId) : null,
+      qrId: qr?.id ? qr.id : "",
+    };
   };
-};
 
   // Step advancement with API side-effects
   const handleNext = async () => {
@@ -318,10 +323,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
       // step 4 -> save payment method & QR refs
       if (step === 4 && id) {
         setSubmitting(true);
-        await updatePatient(
-          id,
-          buildUpdatePayload({ includeConsent: false })
-        );
+        await updatePatient(id, buildUpdatePayload({ includeConsent: false }));
         setSubmitting(false);
       }
 
@@ -383,8 +385,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
       setApiSuccess("");
       setUploadingSignature(true);
 
-      if (!id)
-        throw new Error("No patient id. Please complete Step 1 first.");
+      if (!id) throw new Error("No patient id. Please complete Step 1 first.");
       if (!consentGiven) throw new Error("Consent is required before signing.");
 
       const file = await dataUrlToFile(dataUrl, "signature.png");
@@ -474,7 +475,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     Temperature: p.temperatureF ?? "", // ✅ corrected
   });
   const mapPatientToLifestyle = (p: any) => ({
-    diet: p.diet ||"",
+    diet: p.diet || "",
     appetite: p.appetite ? p.appetite.split(",") : [],
     taste: p.taste ? p.taste.split(",") : [],
     bowel: p.bowel ? p.bowel.split(",") : [],
@@ -482,7 +483,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     addictions: p.addictions ? p.addictions.split(",") : [],
     physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
     waterIntake: p.waterIntakeLiters || "",
-    otherWaterIntake:p.otherWaterIntake || "",
+    otherWaterIntake: p.otherWaterIntake || "",
     stress: p.stress ? p.stress.split(",") : [],
     mentalState: p.mentalState ? p.mentalState.split(",") : [],
     wakeTime: p.sleepWakeUpTime || "",
@@ -904,14 +905,15 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                     required
                     rows={3}
                   />
-<Textarea
+                  <Textarea
                     name="surgeriesOrInjuries"
                     placeholder="Surgeries Or Injuries *"
                     value={formData.surgeriesOrInjuries}
                     onChange={handleInputChange}
                     required
                     rows={3}
-                  /><Textarea
+                  />
+                  <Textarea
                     name="allergies"
                     placeholder="Allergies *"
                     value={formData.allergies}
@@ -919,8 +921,8 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                     required
                     rows={3}
                   />
-             
-                   <Textarea
+
+                  <Textarea
                     name="familyHistory"
                     placeholder="Family History *"
                     value={formData.familyHistory}
@@ -1029,33 +1031,32 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                         </div>
                       )}
 
-                   {key === "waterIntake" && (
-  <>
-    <Input
-      placeholder="Water Intake (Liters)"
-      value={lifestyle.waterIntake}
-      onChange={(e) =>
-        setLifestyle({
-          ...lifestyle,
-          waterIntake: e.target.value,
-        })
-      }
-      className="mb-2"
-    />
-    <Input
-      placeholder="Other Water Intake"
-      value={lifestyle.otherWaterIntake || ""}
-      onChange={(e) =>
-        setLifestyle({
-          ...lifestyle,
-          otherWaterIntake: e.target.value,
-        })
-      }
-      className="mb-2"
-    />
-  </>
-)}
-
+                      {key === "waterIntake" && (
+                        <>
+                          <Input
+                            placeholder="Water Intake (Liters)"
+                            value={lifestyle.waterIntake}
+                            onChange={(e) =>
+                              setLifestyle({
+                                ...lifestyle,
+                                waterIntake: e.target.value,
+                              })
+                            }
+                            className="mb-2"
+                          />
+                          <Input
+                            placeholder="Other Water Intake"
+                            value={lifestyle.otherWaterIntake || ""}
+                            onChange={(e) =>
+                              setLifestyle({
+                                ...lifestyle,
+                                otherWaterIntake: e.target.value,
+                              })
+                            }
+                            className="mb-2"
+                          />
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -305,60 +305,60 @@ const Appointments = () => {
   }, [doctorSearch]);
 
   // --------------------------- Data Fetch ---------------------------
-  const fetchAppointments = async () => {
-    try {
-      const token = getBackendToken();
-      const filter = activeTab === "today" ? "today" : "all";
-      const res = await fetch(
-        `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+const fetchAppointments = async () => {
+  try {
+    const token = getBackendToken();
+    const filter = activeTab === "today" ? "today" : "all";
+    const res = await fetch(
+      `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const result = await res.json();
+
+    const mappedAppointments: Appointment[] = (result.data || []).map((appt: any) => ({
+      id: appt.id,
+      patient: appt.patient
+        ? {
+            id: appt.patient.id || "unknown",
+            fullName: appt.patient.fullName || appt.patientName || "Unknown",
+            contactNumber: appt.patient.contactNumber || "",
+          }
+        : { id: "unknown", fullName: appt.patientName || "Unknown", contactNumber: "" },
+      doctor: appt.doctor
+        ? {
+            id: appt.doctor.id || "unknown",
+            username: appt.doctor.username || "N/A",
+          }
+        : {
+            id: "unknown",
+            username: typeof appt.doctor === "string" ? appt.doctor : "N/A",
           },
-        }
-      );
-      const data = await res.json();
-      const mappedAppointments: Appointment[] = (data?.data || []).map(
-        (appt: any) => ({
-          id: appt.id,
-          patient: appt.patient
-            ? {
-                id: appt.patient.id || "unknown",
-                fullName:
-                  appt.patient.fullName || appt.patientName || "Unknown",
-              }
-            : { id: "unknown", fullName: appt.patientName || "Unknown" },
-          doctor: appt.doctor
-            ? {
-                id: appt.doctor.id || "unknown",
-                username: appt.doctor.username || "N/A",
-              }
-            : {
-                id: "unknown",
-                username: typeof appt.doctor === "string" ? appt.doctor : "N/A",
-              },
-          date: (appt.date || "").split("T")[0],
-          time: appt.date
-            ? new Date(appt.date).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "",
-          status: appt.status ?? "pending",
-          note: appt.note,
-          prescriptions: appt.prescriptions || [],
-          consultationType: appt.consultationType,
-          phoneNo: appt.patient.contactNumber || "",
-        })
-      );
-      setAppointments(mappedAppointments);
-      setTotalPages(Math.ceil((data?.total || 1) / limit));
-    } catch (error) {
-      console.error(error);
-    }
-  };
+      date: appt.date ? appt.date.split("T")[0] : "",
+      time: appt.date
+        ? new Date(appt.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "",
+      status: appt.status ?? "pending",
+      note: appt.note,
+      prescriptions: appt.prescriptions || [],
+      consultationType: appt.consultationType,
+      paymentMethod: appt.paymentMethod,
+      signature: appt.signature || null,
+    }));
+
+    setAppointments(mappedAppointments);
+    setTotalPages(result.meta?.totalPages || 1);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 
   useEffect(() => {
     fetchAppointments();
