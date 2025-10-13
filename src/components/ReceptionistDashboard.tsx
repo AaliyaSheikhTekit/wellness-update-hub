@@ -565,6 +565,13 @@ const ReceptionDashboard = () => {
                                     </span>{" "}
                                     {p.contactNumber || "—"}
                                   </div>
+                                   <div>
+                                    <span className="font-medium text-foreground">
+                                      Reference:
+                                    </span>{" "}
+                                    {p.reference || "—"}
+                                  </div>
+                                  
                                   <div>
                                     <span className="font-medium text-foreground">
                                       DOB:

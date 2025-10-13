@@ -137,6 +137,13 @@ type ServerPatient = {
     signature?: string | null;
     createdAt?: string;
     updatedAt?: string;
+    prescriptions?: {
+    id?: string;
+    duration?: string;
+    instructions?: string;
+    quantity?: number;
+    medicine?: { name?: string };
+  }[];
   }>;
 };
 
@@ -146,7 +153,6 @@ const fmtDate = (d?: string | null) =>
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
   // --- Hooks must come first ---
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -481,6 +487,11 @@ const PatientDetail = () => {
     patient.chronicIllnesses && patient.chronicIllnesses !== "—";
 
   const bmiStatus = getBMIStatus(patient.bmi);
+  const consentGiven =
+    patient.consent ?? patient.appointment?.[0]?.consent ?? false;
+  const signature =
+    patient.signature ?? patient.appointment?.[0]?.signature ?? null;
+  const prescriptions = patient.appointment?.[0]?.prescriptions ?? [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -647,6 +658,7 @@ const PatientDetail = () => {
             <TabsTrigger value="consent">Consent & Signature</TabsTrigger>
             <TabsTrigger value="payments">UPI / Payments</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
+             <TabsTrigger value="prescription">Prescription</TabsTrigger>
           </TabsList>
 
           {/* Medical History */}
@@ -1188,8 +1200,8 @@ const PatientDetail = () => {
                 <CardContent className="p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">Consent Status</p>
-                    <Badge variant={patient.consent ? "default" : "secondary"}>
-                      {patient.consent ? "Given" : "Not Given"}
+                    <Badge variant={consentGiven ? "default" : "secondary"}>
+                      {consentGiven ? "Given" : "Not Given"}
                     </Badge>
                   </div>
                 </CardContent>
@@ -1204,9 +1216,9 @@ const PatientDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 text-sm">
-                  {patient.signature ? (
+                  {signature ? (
                     <img
-                      src={patient.signature}
+                      src={signature}
                       alt="Signature"
                       className="h-32 w-full object-contain border rounded bg-white"
                     />
@@ -1324,6 +1336,58 @@ const PatientDetail = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+           <TabsContent value="prescription">
+            <h3 className="font-semibold text-gray-700 mb-3">Prescribed Medicines</h3>
+
+            {prescriptions.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="border-b p-3 text-left font-medium">#</th>
+                      <th className="border-b p-3 text-left font-medium">Medicine</th>
+                      <th className="border-b p-3 text-left font-medium">Qty</th>
+                      <th className="border-b p-3 text-left font-medium">Duration</th>
+                      <th className="border-b p-3 text-left font-medium">Instructions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prescriptions.map((p: any, i: number) => (
+                      <tr
+                        key={i}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="border-b p-3">{i + 1}</td>
+                        <td className="border-b p-3">{p.medicine?.name || "—"}</td>
+                        <td className="border-b p-3">{p.quantity || "—"}</td>
+                        <td className="border-b p-3">{p.duration ? `${p.duration} days` : "—"}</td>
+                        <td className="border-b p-3">{p.instructions || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No prescriptions available.</p>
+            )}
+
+            {patient?.appointment?.[0]?.signature && (
+              <div className="text-center mt-6">
+                <img
+                  src={patient?.appointment?.[0].signature}
+                  alt="Signature"
+                  className="h-12 object-contain mx-auto"
+                />
+                <p className="text-xs text-gray-500">Doctor’s Signature</p>
+              </div>
+            )}
+
+            <div className="text-center mt-6">
+              <Button variant="outline" onClick={() => window.print()}>
+                Print Prescription
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -144,7 +144,7 @@ const PatientRegistrationForm = () => {
     bloodType: "",
     primaryHealthConcern: "",
     chronicIllnesses: "",
-    surgeries: "",
+    surgeriesOrInjuries: "",
     allergies: "",
     familyHistory: "",
   });
@@ -213,7 +213,7 @@ const buildCreatePayload = () => {
     address: toStringOrNull(formData.address),
     primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
     chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
-    surgeriesOrInjuries: toStringOrNull(formData.surgeries),
+    surgeriesOrInjuries: toStringOrNull(formData.surgeriesOrInjuries),
     allergies: toStringOrNull(formData.allergies),
     familyHistory: toStringOrNull(formData.familyHistory),
   };
@@ -613,10 +613,10 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
               {formData.chronicIllnesses}
             </div>
           )}
-          {formData.surgeries && (
+          {formData.surgeriesOrInjuries && (
             <div>
               <span className="font-semibold">Surgeries:</span>{" "}
-              {formData.surgeries}
+              {formData.surgeriesOrInjuries}
             </div>
           )}
           {formData.allergies && (
@@ -904,7 +904,30 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                     required
                     rows={3}
                   />
-
+<Textarea
+                    name="surgeriesOrInjuries"
+                    placeholder="Surgeries Or Injuries *"
+                    value={formData.surgeriesOrInjuries}
+                    onChange={handleInputChange}
+                    required
+                    rows={3}
+                  /><Textarea
+                    name="allergies"
+                    placeholder="Allergies *"
+                    value={formData.allergies}
+                    onChange={handleInputChange}
+                    required
+                    rows={3}
+                  />
+             
+                   <Textarea
+                    name="familyHistory"
+                    placeholder="Family History *"
+                    value={formData.familyHistory}
+                    onChange={handleInputChange}
+                    required
+                    rows={3}
+                  />
                   <h4 className="font-semibold text-amber-700 mt-4">
                     Your primary health concern and please specify how long you
                     have had this condition.
