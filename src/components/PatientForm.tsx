@@ -127,17 +127,18 @@ const PatientRegistrationForm = () => {
     otherAddictions: "",
     otherBowel: "",
     otherSleep: "",
+    otherWaterIntake: "",
   });
 
   const [formData, setFormData] = useState<Record<string, any>>({
     name: "",
     age: "",
     sex: "",
-    fatherOrHusband: "",
+    fatherOrHusbandName: "",
     address: "",
     contactNumber: "",
     maritalStatus: "",
-    dateOfVisit: "",
+    // dateOfVisit: "",
     occupation: "",
     reference: "",
     dateOfBirth: "",
@@ -193,23 +194,22 @@ const PatientRegistrationForm = () => {
 
 const toNumberOrNull = (value: any) =>
   value !== undefined && value !== "" ? Number(value) : null;
-
 const toStringOrNull = (value: any) =>
-  value !== undefined && value !== "" ? String(value) : null;
+  value !== undefined && value !== null ? String(value) : "";
 
 const buildCreatePayload = () => {
   return {
     fullName: toStringOrNull(formData.name),
     age: toNumberOrNull(formData.age),
     sex: toStringOrNull(formData.sex),
-    fatherHusbandName: toStringOrNull(formData.fatherOrHusband),
+    fatherOrHusbandName: toStringOrNull(formData.fatherOrHusbandName),
     contactNumber: toStringOrNull(formData.contactNumber),
     maritalStatus: toStringOrNull(formData.maritalStatus),
     dateOfBirth: formData.dateOfBirth ? toISODate(formData.dateOfBirth) : null,
     bloodType: toStringOrNull(formData.bloodType),
     occupation: toStringOrNull(formData.occupation),
     reference: toStringOrNull(formData.reference),
-    formDate: formData.dateOfVisit ? toISODate(formData.dateOfVisit) : null,
+    // formDate: formData.dateOfVisit ? toISODate(formData.dateOfVisit) : null,
     address: toStringOrNull(formData.address),
     primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
     chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
@@ -455,7 +455,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     name: p.fullName || "",
     age: p.age ?? "",
     sex: p.sex || "",
-    fatherOrHusband: p.fatherHusbandName || "", // ✅ match backend key
+    fatherOrHusbandName: p.fatherOrHusbandName || "", // ✅ match backend key
     address: p.address || "",
     contactNumber: p.contactNumber || "",
     maritalStatus: p.maritalStatus || "",
@@ -463,7 +463,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     bloodType: p.bloodType || "",
     occupation: p.occupation || "",
     reference: p.reference || "",
-    dateOfVisit: p.formDate || "", // if you want formDate
+    // dateOfVisit: p.formDate || "", // if you want formDate
   });
 
   const mapPatientToVitals = (p: any) => ({
@@ -483,6 +483,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     addictions: p.addictions ? p.addictions.split(",") : [],
     physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
     waterIntake: p.waterIntakeLiters || "",
+    otherWaterIntake:p.otherWaterIntake || "",
     stress: p.stress ? p.stress.split(",") : [],
     mentalState: p.mentalState ? p.mentalState.split(",") : [],
     wakeTime: p.sleepWakeUpTime || "",
@@ -564,7 +565,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
           </div>
           <div>
             <span className="font-semibold">Father/Husband:</span>{" "}
-            {formData.fatherOrHusband}
+            {formData.fatherOrHusbandName}
           </div>
           <div>
             <span className="font-semibold">DOB:</span> {formData.dateOfBirth}
@@ -588,10 +589,10 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
             <span className="font-semibold">Reference:</span>{" "}
             {formData.reference}
           </div>
-          <div className="col-span-2">
+          {/* <div className="col-span-2">
             <span className="font-semibold">Date of Visit:</span>{" "}
             {formData.dateOfVisit}
-          </div>
+          </div> */}
         </div>
 
         {/* Primary Health Concern */}
@@ -815,9 +816,9 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                       required
                     />
                     <Input
-                      name="fatherOrHusband"
+                      name="fatherOrHusbandName"
                       placeholder="Father/Husband Name"
-                      value={formData.fatherOrHusband}
+                      value={formData.fatherOrHusbandName}
                       onChange={handleInputChange}
                       required
                     />
@@ -872,7 +873,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                       onChange={handleInputChange}
                       required
                     />
-                    <div className="flex flex-col">
+                    {/* <div className="flex flex-col">
                       <label
                         htmlFor="dateOfVisit"
                         className="text-sm text-gray-500"
@@ -887,7 +888,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                         onChange={handleInputChange}
                         required
                       />
-                    </div>
+                    </div> */}
                   </div>
                   <Textarea
                     name="address"
@@ -1029,19 +1030,33 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
                         </div>
                       )}
 
-                      {key === "waterIntake" && (
-                        <Input
-                          placeholder="Water Intake (Liters)"
-                          value={lifestyle.waterIntake}
-                          onChange={(e) =>
-                            setLifestyle({
-                              ...lifestyle,
-                              waterIntake: e.target.value,
-                            })
-                          }
-                          className="mb-2"
-                        />
-                      )}
+                   {key === "waterIntake" && (
+  <>
+    <Input
+      placeholder="Water Intake (Liters)"
+      value={lifestyle.waterIntake}
+      onChange={(e) =>
+        setLifestyle({
+          ...lifestyle,
+          waterIntake: e.target.value,
+        })
+      }
+      className="mb-2"
+    />
+    <Input
+      placeholder="Other Water Intake"
+      value={lifestyle.other_waterIntake || ""}
+      onChange={(e) =>
+        setLifestyle({
+          ...lifestyle,
+          other_waterIntake: e.target.value,
+        })
+      }
+      className="mb-2"
+    />
+  </>
+)}
+
                     </div>
                   ))}
                 </div>
