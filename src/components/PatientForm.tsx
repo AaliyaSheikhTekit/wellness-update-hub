@@ -111,7 +111,7 @@ const PatientRegistrationForm = () => {
   const printRef = useRef<HTMLDivElement | null>(null);
 
   const [lifestyle, setLifestyle] = useState<Record<string, any>>({
-    diet: [],
+    diet:"",
     appetite: [],
     taste: [],
     bowel: [],
@@ -162,7 +162,7 @@ const PatientRegistrationForm = () => {
   const [qr, setQr] = useState<{
     imageUrl?: string;
     upiId?: string;
-    qrId?: string;
+    id?: string;
   } | null>(null);
 
   // 📡 API submission state
@@ -240,7 +240,11 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     bodyFatPercent: toNumberOrNull(vitals["Body Fat %"]),
 
     // Lifestyle
-    diet: lifestyle.diet.length ? lifestyle.diet[0] : null,
+   diet: lifestyle.other_diet?.trim()
+  ? lifestyle.other_diet
+  : lifestyle.diet.length
+  ? lifestyle.diet[0]
+  : "",
     otherDiet: toStringOrNull(lifestyle.other_diet),
     appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
     taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
@@ -255,7 +259,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     physicalActivity: lifestyle.physicalActivity.length ? lifestyle.physicalActivity : [],
     otherPhysicalActivity: toStringOrNull(lifestyle.other_physicalActivity),
     waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
-    otherWaterIntake: toStringOrNull(lifestyle.other_water_intake),
+    otherWaterIntake: lifestyle.other_water_intake || "test",
     stress: lifestyle.stress.length ? lifestyle.stress[0] : null,
     mentalState: lifestyle.mentalState.length ? lifestyle.mentalState[0] : null,
 
@@ -266,7 +270,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     // Payment
     paymentMethod: toStringOrNull(paymentMethod),
     upiId: qr?.upiId ? toStringOrNull(qr.upiId) : null,
-    qrId: qr?.qrId ? toStringOrNull(qr.qrId) : null,
+    qrId: qr?.id ? qr.id : "",
 
     // Additional
     familyHistory: toStringOrNull(formData.familyHistory),
@@ -307,7 +311,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
           setQr({
             imageUrl: qrRes?.data?.qrCodeUrl || qrRes?.qrCodeUrl,
             upiId: qrRes?.data?.upi || qrRes?.upi,
-            qrId: qrRes?.data?.qrId || qrRes?.qrId,
+            id: qrRes?.data?.id || qrRes?.id,
           });
           console.log(qrRes?.data?.qrCodeUrl);
         } catch (e) {
@@ -475,7 +479,7 @@ const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     Temperature: p.temperatureF ?? "", // ✅ corrected
   });
   const mapPatientToLifestyle = (p: any) => ({
-    diet: p.diet ? p.diet.split(",") : [],
+    diet: p.diet ||"",
     appetite: p.appetite ? p.appetite.split(",") : [],
     taste: p.taste ? p.taste.split(",") : [],
     bowel: p.bowel ? p.bowel.split(",") : [],
