@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, User, Bell, CheckCircle2, Stethoscope, Search } from "lucide-react";
+import { Calendar, Clock, User, Bell, CheckCircle2, Stethoscope, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { getBackendToken, getPatients } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "./ui/input";
-
+import { io } from "socket.io-client"; 
+import { c } from "node_modules/framer-motion/dist/types.d-Cjd591yU";
 interface Appointment {
   id: string;
   patient_name: string;
@@ -25,12 +26,11 @@ const DoctorDashboard = () => {
 const [appointments, setAppointments] = useState<any[]>([]); // below existing useState declarations
   const [patients, setPatients] = useState<any[]>([]);
   const [patientLoading, setPatientLoading] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+const DOCTOR_ID = localStorage.getItem("doctor_id") || "doctor123"; // Replace with actual doctor ID
+  const SOCKET_URL = "https://api.ikshanaturopathy.com"; // Replace with your actual socket server URL
 const [searchTerm, setSearchTerm] = useState("");
-  const markAsRead = (appointmentId: string) => {
-    setAppointments(appointments.map(apt => 
-      apt.id === appointmentId ? { ...apt, is_read: true } : apt
-    ));
-  };
+
     const [loadingAppointments, setLoadingAppointments] = useState(false);
    // ===== Fetch appointments (same API style as Reception) =====
   useEffect(() => {
@@ -86,8 +86,52 @@ const [searchTerm, setSearchTerm] = useState("");
 
     fetchAppointments();
   }, [toast]);
+ const markAsRead = (appointmentId: string) => {
+    setAppointments((prev) =>
+      prev.map((apt) => (apt.id === appointmentId ? { ...apt, is_read: true } : apt))
+    );
+  };
 
-  const unreadCount = appointments.filter(apt => !apt.is_read).length;
+  // Socket setup
+  useEffect(() => {
+    const socket = io(SOCKET_URL);
+
+    socket.on("connect", () => {
+      console.log("✅ Connected with id:", socket.id);
+      socket.emit("registerDoctor", DOCTOR_ID);
+    });
+
+    socket.on("newAppointment", (data) => {
+      console.log("📅 New appointment received:", data);
+      // Append new appointment to state
+      const iso = data.date || "";
+      const newAppointment: Appointment = {
+        id: data.id,
+        patient_name: data.patientName || "Unknown",
+        patient_phone: data.patientPhone || "—",
+        appointment_date: iso.split("T")[0] || "",
+        appointment_time: iso
+          ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "",
+        status: data.status || "pending",
+        notes: data.note || null,
+        is_read: false,
+      };
+      setAppointments((prev) => [newAppointment, ...prev]);
+      setShowNotifications(true);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from socket");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const unreadAppointments = appointments.filter((apt) => !apt.is_read);
+
 
   return (
     <div className="space-y-6">
@@ -103,13 +147,17 @@ const [searchTerm, setSearchTerm] = useState("");
               Manage your appointments & patients
             </p>
           </div>
-        </div>
-        {unreadCount > 0 && (
-          <Badge className="flex items-center gap-1 bg-red-400 text-white shadow-lg animate-pulse">
+           {unreadAppointments.length > 0 && (
+          <Badge
+            className="flex items-center gap-1 bg-red-400 text-white shadow-lg animate-pulse cursor-pointer"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
             <Bell className="h-4 w-4" />
-            {unreadCount} New
+            {unreadAppointments.length} New
           </Badge>
         )}
+        </div>
+        
       </div>
 
       {/* Search patients */}
@@ -230,7 +278,74 @@ const [searchTerm, setSearchTerm] = useState("");
               ))}
           </CardContent>
         </Card>
+   
       </div>
+       {showNotifications && unreadAppointments.length > 0 && (
+        <div className="fixed top-20 right-6 w-96 max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-primary to-info p-4 text-white">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 animate-pulse" />
+                <h2 className="font-bold text-lg">New Appointments</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+                className="hover:bg-white/20 text-white"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <p className="text-xs text-white/80 mt-1">
+              {unreadAppointments.length} unread appointment{unreadAppointments.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="overflow-y-auto max-h-[400px] p-4 space-y-3 bg-gray-50">
+            {unreadAppointments.map((apt) => (
+              <div
+                key={apt.id}
+                className="bg-white p-4 border border-primary/20 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/40"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-800 block">{apt.patient_name}</span>
+                      <span className="text-xs text-gray-500">{apt.patient_phone}</span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => markAsRead(apt.id)}
+                    className="hover:bg-success/10 text-success -mt-1"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm bg-primary/5 p-2 rounded-md">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-gray-700">{apt.appointment_date}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm bg-info/5 p-2 rounded-md">
+                    <Clock className="h-4 w-4 text-info" />
+                    <span className="font-medium text-gray-700">{apt.appointment_time}</span>
+                  </div>
+                  {apt.notes && (
+                    <div className="bg-amber-50 border border-amber-200 p-2 rounded-md">
+                      <p className="text-xs text-amber-900 leading-relaxed">{apt.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       </div>
   );
 };

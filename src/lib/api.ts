@@ -28,6 +28,7 @@ export const loginWithCognitoToken = async (username: string, role: string) => {
 
     // Save backend token for later API calls
     localStorage.setItem("BackendAccessToken", backendToken);
+     localStorage.setItem("doctor_id", data?.data?.user?.id);
     console.log("Backend token saved");
     return backendToken;
   } catch (error) {

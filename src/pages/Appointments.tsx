@@ -761,9 +761,7 @@ const handleUpdateAppointment = async () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-
-            {/* Pagination */}
+            </div>            {/* Pagination */}
             <div className="flex justify-center gap-4 mt-4">
               <Button
                 variant="outline"
