@@ -450,3 +450,70 @@ export const createWeeklyDietPlan = async (
 
   return await Promise.all(promises);
 };
+// api/diet.ts
+
+
+type GetDietParams = {
+  search?: string;     // optional server-side search
+  page?: number;       // if your API supports pagination
+  limit?: number;      // if your API supports pagination
+  signal?: AbortSignal; // optional cancellation
+};
+
+// Raw API shapes (adjust if your API differs)
+export type DietApiItem = {
+  id: string;
+  name: string;
+  subForm?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+};
+
+export type DietApiSubcategory = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  items?: DietApiItem[];
+};
+
+export type DietApiCategory = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  subCategories?: DietApiSubcategory[];
+};
+
+export type DietApiResponse = {
+  data: DietApiCategory[];
+};
+
+export const getDiet = async (params: GetDietParams = {}): Promise<DietApiResponse> => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (typeof params.page === "number") qs.set("page", String(params.page));
+  if (typeof params.limit === "number") qs.set("limit", String(params.limit));
+
+  const url = `${API_BASE_URL}/diet/${qs.toString() ? `?${qs}` : ""}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    signal: params.signal,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Diet fetch failed: ${response.status} ${response.statusText}${text ? ` – ${text}` : ""}`);
+  }
+
+  return response.json();
+};

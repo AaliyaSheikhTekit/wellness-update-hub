@@ -42,30 +42,50 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { 
-  getDietItems, 
+  getDiet,
   createWeeklyDietPlan, 
-  getDietPlan 
+  getDietPlan, 
+  getBackendToken
 } from "@/lib/api";
 
 interface MealPlan {
   [date: string]: {
     [mealTime: string]: {
       text: string;
-      itemIds: string[]; // Store diet item IDs
+      itemIds: string[];
     };
   };
 }
 
 interface DietTableViewProps {
-  patientId: string; // Changed from number to string for API
+  patientId: string;
   patientName: string;
 }
 
 interface DietItem {
   id: string;
   name: string;
-  category?: string;
-  shortForm?: string;
+  subForm?: string;
+  category?: {
+    id: string;
+    name: string;
+  };
+  subCategory?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface DietCategory {
+  id: string;
+  name: string;
+  subCategories: DietSubCategory[];
+}
+
+interface DietSubCategory {
+  id: string;
+  name: string;
+  items: DietItem[];
 }
 
 const mealTimings = [
@@ -85,7 +105,7 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
   const [mealPlans, setMealPlans] = useState<MealPlan>({});
   const [copiedDay, setCopiedDay] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ date: string; time: string } | null>(null);
-  const [dietItems, setDietItems] = useState<DietItem[]>([]);
+  const [dietItems, setDietItems] = useState<DietCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -96,8 +116,16 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
   useEffect(() => {
     const loadDietItems = async () => {
       try {
-        const response = await getDietItems();
-        setDietItems(response.data || []);
+        const response = await getDiet({ limit: 1000 });
+        setDietItems(
+          (response.data || []).map((cat: any) => ({
+            ...cat,
+            subCategories: (cat.subCategories || []).map((sub: any) => ({
+              ...sub,
+              items: sub.items ?? [],
+            })),
+          }))
+        );
       } catch (error) {
         console.error("Error loading diet items:", error);
         toast({
@@ -122,7 +150,6 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
         
         const response = await getDietPlan(patientId, startDate, endDate);
         
-        // Transform API response to local state format
         if (response.data) {
           const transformed: MealPlan = {};
           response.data.forEach((plan: any) => {
@@ -182,7 +209,6 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       const currentText = currentMeal?.text || "";
       const currentIds = currentMeal?.itemIds || [];
       
-      // Avoid duplicates
       if (currentIds.includes(itemId)) return prev;
       
       const newText = currentText ? `${currentText}, ${itemName}` : itemName;
@@ -239,8 +265,7 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
   const saveWeeklyPlan = async () => {
     setSaving(true);
     try {
-      // Transform local state to API format
-      const planItems: { date: string; time: string; dietItemIds: string[] }[] = [];
+      const planItems: any[] = [];
       
       weekDays.forEach((date) => {
         const dateKey = getDateKey(date);
@@ -249,20 +274,27 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
         if (dayPlan) {
           Object.entries(dayPlan).forEach(([time, meal]) => {
             if (meal.itemIds && meal.itemIds.length > 0) {
-              // Convert date to ISO format with time
               const isoDate = new Date(date);
-              const [hours, minutes] = time.split("-")[0].split(":")[0].split("M")[0].trim().split(":");
-              const isPM = time.includes("PM");
-              let hour = parseInt(hours);
-              if (isPM && hour !== 12) hour += 12;
-              if (!isPM && hour === 12) hour = 0;
+              const timeMatch = time.match(/(\d{1,2}):(\d{2})(AM|PM)/);
               
-              isoDate.setHours(hour, parseInt(minutes) || 0, 0, 0);
+              if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const minutes = parseInt(timeMatch[2]);
+                const period = timeMatch[3];
+                
+                if (period === 'PM' && hours !== 12) hours += 12;
+                if (period === 'AM' && hours === 12) hours = 0;
+                
+                isoDate.setHours(hours, minutes, 0, 0);
+              }
               
               planItems.push({
                 date: isoDate.toISOString(),
-                time: time,
-                dietItemIds: meal.itemIds,
+                patientId: patientId,
+                dietPlanItem: {
+                  time: time,
+                  dietItem: meal.itemIds,
+                }
               });
             }
           });
@@ -278,17 +310,31 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
         return;
       }
 
-      await createWeeklyDietPlan(patientId, planItems);
+const backendToken = getBackendToken();      
+      for (const planItem of planItems) {
+        const response = await fetch('https://api.ikshanaturopathy.com/v1/diet-plan/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${backendToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(planItem),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to save diet plan for ${planItem.date}`);
+        }
+      }
       
       toast({
         title: "Success",
-        description: "Weekly diet plan saved successfully!",
+        description: `Successfully saved ${planItems.length} diet plan entries!`,
       });
     } catch (error) {
       console.error("Error saving diet plan:", error);
       toast({
         title: "Error",
-        description: "Failed to save diet plan. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save diet plan.",
         variant: "destructive",
       });
     } finally {
@@ -302,11 +348,77 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
 
   const QuickAddDialog = ({ date, time }: { date: Date; time: string }) => {
     const [open, setOpen] = useState(false);
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
     
-    const addItem = (itemId: string, itemName: string) => {
-      addDietItemToMeal(date, time, itemId, itemName);
+    // Flatten items for filtering
+    const allItems: (DietItem & { categoryName: string; subCategoryName: string })[] = [];
+    dietItems.forEach(category => {
+      category.subCategories.forEach(subCategory => {
+        subCategory.items.forEach(item => {
+          allItems.push({
+            ...item,
+            categoryName: category.name,
+            subCategoryName: subCategory.name,
+          });
+        });
+      });
+    });
+
+    const filteredItems = allItems.filter(item => 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.subForm?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.subCategoryName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const toggleItem = (itemId: string) => {
+      setSelectedItems(prev => 
+        prev.includes(itemId) 
+          ? prev.filter(id => id !== itemId)
+          : [...prev, itemId]
+      );
+    };
+
+    const addSelectedItems = () => {
+      selectedItems.forEach(itemId => {
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+          addDietItemToMeal(date, time, item.id, item.subForm || item.name);
+        }
+      });
+      setSelectedItems([]);
+      setSearchQuery("");
       setOpen(false);
     };
+
+    // Group by category and subcategory
+    const groupedByCategory: Record<string, Record<string, typeof allItems>> = {};
+    
+    if (searchQuery) {
+      // When searching, show flat filtered results grouped by category
+      filteredItems.forEach(item => {
+        if (!groupedByCategory[item.categoryName]) {
+          groupedByCategory[item.categoryName] = {};
+        }
+        if (!groupedByCategory[item.categoryName][item.subCategoryName]) {
+          groupedByCategory[item.categoryName][item.subCategoryName] = [];
+        }
+        groupedByCategory[item.categoryName][item.subCategoryName].push(item);
+      });
+    } else {
+      // When not searching, show all items grouped properly
+      dietItems.forEach(category => {
+        groupedByCategory[category.name] = {};
+        category.subCategories.forEach(subCategory => {
+          groupedByCategory[category.name][subCategory.name] = subCategory.items.map(item => ({
+            ...item,
+            categoryName: category.name,
+            subCategoryName: subCategory.name,
+          }));
+        });
+      });
+    }
 
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -315,43 +427,111 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
             <Plus className="h-3 w-3" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Quick Add Food Items</DialogTitle>
+            <DialogTitle>Add Food Items to {format(date, "MMM d")} - {time}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {/* Group diet items by category if available */}
-              {["Medicated Waters", "Fruits", "Vegetables", "Grains", "Juices"].map((category) => {
-                const items = dietItems.filter(item => 
-                  item.category === category || 
-                  (category === "Medicated Waters" && medicatedWaters.some(w => w.name === item.name))
-                );
-                
-                if (items.length === 0) return null;
-                
-                return (
-                  <div key={category}>
-                    <h4 className="font-semibold mb-2 text-sm">{category}</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      {items.map((item) => (
-                        <Button 
-                          key={item.id} 
-                          variant="outline" 
-                          size="sm"
-                          className="justify-start text-xs h-auto py-2"
-                          onClick={() => addItem(item.id, item.shortForm || item.name)}
-                        >
-                          {item.shortForm || item.name}
-                        </Button>
+          
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Search by item name, short form, category, or subcategory..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            {selectedItems.length > 0 && (
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 p-3 rounded-md">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
+                </span>
+                <Button size="sm" onClick={addSelectedItems} className="bg-blue-600 hover:bg-blue-700">
+                  Add Selected Items
+                </Button>
+              </div>
+            )}
+
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-6">
+                {Object.entries(groupedByCategory).map(([categoryName, subCategories]) => (
+                  <div key={categoryName} className="border rounded-lg p-4 bg-gray-50">
+                    <h3 className="font-bold text-base text-gray-800 mb-4 flex items-center gap-2">
+                      📂 {categoryName}
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {Object.entries(subCategories).map(([subCategoryName, items]) => (
+                        <div key={subCategoryName} className="ml-2">
+                          <h4 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                            <span className="text-blue-600">└─</span> {subCategoryName} 
+                            <span className="text-xs text-gray-500 font-normal">({items.length} items)</span>
+                          </h4>
+                          
+                          <div className="grid grid-cols-2 gap-2 ml-4">
+                            {items.map((item) => (
+                              <div
+                                key={item.id}
+                                onClick={() => toggleItem(item.id)}
+                                className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                  selectedItems.includes(item.id) 
+                                    ? 'bg-blue-50 border-blue-400 shadow-sm' 
+                                    : 'bg-white hover:bg-gray-50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedItems.includes(item.id)}
+                                  onChange={() => toggleItem(item.id)}
+                                  className="w-4 h-4 mt-0.5 text-blue-600 rounded cursor-pointer flex-shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm text-gray-900 truncate">
+                                    {item.name}
+                                  </div>
+                                  {item.subForm && (
+                                    <div className="text-xs text-blue-600 font-medium mt-1">
+                                      {item.subForm}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <Separator className="mt-4" />
                   </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+                ))}
+                
+                {Object.keys(groupedByCategory).length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-4xl mb-2">🔍</div>
+                    <div className="font-medium">No diet items found</div>
+                    <div className="text-sm mt-1">Try adjusting your search</div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="flex justify-between items-center pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setOpen(false);
+              setSelectedItems([]);
+              setSearchQuery("");
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={addSelectedItems}
+              disabled={selectedItems.length === 0}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Add {selectedItems.length > 0 && `(${selectedItems.length})`} Items
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     );
@@ -364,56 +544,56 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       </div>
     );
   }
-const printTableWithHeaderFooter = (tableId: string) => {
-  const table = document.getElementById(tableId);
-  if (!table) return;
 
-  const newWindow = window.open("", "_blank", "width=1000,height=800");
-  newWindow!.document.write(`
-    <html>
-      <head>
-        <title>Print</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          .header, .footer { width: 100%; text-align: center; margin: 10px 0; }
-          .footer { font-size: 10px; color: #555; }
-          img { max-height: 80px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
-            <div>
-              <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
-              <p style="font-size:12px; color:#555;">Integrated Natural Healing system for a comprehensive</p>
-            </div>
-            <div style="text-align:right; font-size:12px;">
-              <p>📞 +91 9343922950</p>
-              <p>📧 admin@ikshanaturopathy.com</p>
-              <p>📍 Bhopal, Madhya Pradesh</p>
+  const printTableWithHeaderFooter = (tableId: string) => {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    const newWindow = window.open("", "_blank", "width=1000,height=800");
+    newWindow!.document.write(`
+      <html>
+        <head>
+          <title>Print</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            .header, .footer { width: 100%; text-align: center; margin: 10px 0; }
+            .footer { font-size: 10px; color: #555; }
+            img { max-height: 80px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
+              <div>
+                <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
+                <p style="font-size:12px; color:#555;">Integrated Natural Healing system for a comprehensive</p>
+              </div>
+              <div style="text-align:right; font-size:12px;">
+                <p>📞 +91 9343922950</p>
+                <p>📧 admin@ikshanaturopathy.com</p>
+                <p>📍 Bhopal, Madhya Pradesh</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        ${table.outerHTML}
+          ${table.outerHTML}
 
-        <div class="footer">
-          <p>Integrated Natural Healing system for a comprehensive</p>
-          <p>📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
-          <p>© ${new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
-        </div>
-      </body>
-    </html>
-  `);
-  newWindow!.document.close();
-  newWindow!.print();
-};
+          <div class="footer">
+            <p>Integrated Natural Healing system for a comprehensive</p>
+            <p>📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
+            <p>© ${new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
+          </div>
+        </body>
+      </html>
+    `);
+    newWindow!.document.close();
+    newWindow!.print();
+  };
 
   return (
     <div className="space-y-4">
-      {/* Header with Week Navigation */}
       <Card id='diet-table' className="wellness-card wellness-shadow-soft">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -447,7 +627,6 @@ const printTableWithHeaderFooter = (tableId: string) => {
         </CardHeader>
       </Card>
 
-      {/* Diet Table */}
       <div className="border rounded-lg bg-white dark:bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[1400px]">
@@ -551,12 +730,11 @@ const printTableWithHeaderFooter = (tableId: string) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <Card className="wellness-card-gradient wellness-shadow-soft">
         <CardContent className="p-4">
           <div className="flex gap-3 flex-wrap">
             <Button 
-              variant="wellness" 
+
               className="flex items-center gap-2"
               onClick={saveWeeklyPlan}
               disabled={saving}
@@ -576,13 +754,13 @@ const printTableWithHeaderFooter = (tableId: string) => {
               <Send className="w-4 h-4" />
               Send to Patient
             </Button>
-          <Button
-  variant="outline"
-  onClick={() => printTableWithHeaderFooter("diet-table")}
-  className="flex items-center gap-2"
->
-  <Printer className="w-4 h-4" /> Print Plan
-</Button>
+            <Button
+              variant="outline"
+              onClick={() => printTableWithHeaderFooter("diet-table")}
+              className="flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Print Plan
+            </Button>
           </div>
         </CardContent>
       </Card>
