@@ -78,7 +78,7 @@ const Dashboard = () => {
         { key: "add-patient", name: "Add Patient", icon: Plus },
         { key: "appointments", name: "Appointments", icon: Calendar },
         { key: "prescriptions", name: "Prescriptions", icon: Pill },
-        { key: "dietitians", name: "Dietitians", icon: ChartArea },
+
         { key: "invoices", name: "Invoices", icon: FileText },
         { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
         { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
@@ -89,8 +89,8 @@ const Dashboard = () => {
     ? [
         { key: "overview", name: "Overview", icon: Users },
         { key: "prescriptions", name: "Prescriptions", icon: Pill },
-        { key: "dietitians", name: "Dietitians", icon: ChartArea },
-        { key: "doctor", name: "Doctor", icon: FileText },
+      
+
         { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
         { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
         { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
@@ -124,8 +124,7 @@ const Dashboard = () => {
         return <Appointments />;
       case "prescriptions":
         return <Prescriptions />;
-      case "dietitians":
-        return <Dietitians />;
+     
       case "invoices":
         return <Invoices />;
       case "doctor":

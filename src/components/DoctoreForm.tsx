@@ -1,12 +1,45 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-
+import TreatmentPlanTable from "./TreatmentPlanTable";
+import DietTableView from "./Dietician/DietTableView";
+import { useParams } from "react-router-dom";
+import { getPatient, getPatientById } from "@/lib/api";
 export default function DoctorForm() {
+  const { id } = useParams();
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
+  const [patient, setPatient] = useState<any>(null);
+const [loading, setLoading] = useState(false);
+const [err, setErr] = useState("");
+  console.log("Patient ID from params:", patient,id);
+
+useEffect(() => {
+  if (!id) return;
+  setLoading(true);
+  setErr("");
+
+  const fetchPatient = async () => {
+    try {
+      const res = await getPatientById(id);
+      console.log("Fetched patient response:", res);
+      const p = Array.isArray(res?.data) ? res.data[0] : res?.data || res;
+      setPatient(p || null);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to fetch patient.");
+      console.error("Error fetching patient:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchPatient();
+}, [id]);
+
+
+
   const printRef = useRef(null);
   const [doctorData, setDoctorData] = useState({
     pastMedicalHistory: {
@@ -54,13 +87,7 @@ export default function DoctorForm() {
     doctorName: "",
   });
 
-  // Mock patient data - in real app this would come from props/route
-  const patientData = {
-    name: "John Doe",
-    age: "45",
-    sex: "Male",
-    contactNumber: "+91 9876543210",
-  };
+
 
   const handleMedicineChange = (index, field, value) => {
     const updated = [...doctorData.medicineChart];
@@ -101,21 +128,21 @@ export default function DoctorForm() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
                     <span className="font-semibold text-gray-700">Name:</span>
-                    <p className="text-gray-900">{patientData.name}</p>
+                    <p className="text-gray-900">{patient?.fullName}</p>
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Age:</span>
-                    <p className="text-gray-900">{patientData.age}</p>
+                    <p className="text-gray-900">{patient?.age}</p>
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Sex:</span>
-                    <p className="text-gray-900">{patientData.sex}</p>
+                    <p className="text-gray-900">{patient?.sex}</p>
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">
                       Contact:
                     </span>
-                    <p className="text-gray-900">{patientData.contactNumber}</p>
+                    <p className="text-gray-900">{patient?.contactNumber}</p>
                   </div>
                 </div>
               </div>
@@ -554,33 +581,19 @@ export default function DoctorForm() {
                       <label className="font-semibold text-gray-700 block mb-2">
                         Treatment Plan
                       </label>
-                      <Textarea
-                        placeholder="Enter detailed treatment plan..."
-                        value={doctorData.treatmentPlan}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            treatmentPlan: e.target.value,
-                          })
-                        }
-                        rows={5}
-                      />
+                     
+                      <TreatmentPlanTable/>
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
                         Diet Chart
                       </label>
-                      <Textarea
-                        placeholder="Enter diet recommendations..."
-                        value={doctorData.dietChart}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            dietChart: e.target.value,
-                          })
-                        }
-                        rows={4}
-                      />
+       {patient && (
+  <DietTableView
+    patientId={patient.id}
+    patientName={patient.fullName}
+  />
+)}
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">

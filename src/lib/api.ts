@@ -151,7 +151,39 @@ export const getPatient = async (patientId: string) => {
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
   return await response.json();
 };
+export const getPatientAll = async () => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
+  const response = await fetch(
+    `${API_BASE_URL}/patient/get`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+
+export const getTreatmentAll = async () => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/treatment/get`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
 /** 💳 Get payment QR (GET /qr) */
 export const getPaymentQr = async () => {
  const backendToken = getBackendToken();
@@ -325,4 +357,96 @@ export const getMedicines = async () => {
   }
 
   return res.json(); // expect { data: [{ id, name, ... }] }
+};
+
+
+// Get all diet items (food items available)
+export const getDietItems = async () => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/diet-item`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+  
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+
+// Create diet plan for a specific date and time
+export const createDietPlan = async (
+  date: string, // ISO format: "2025-11-28T06:30:00.000Z"
+  patientId: string,
+  time: string, // e.g., "04:30AM-05:00AM"
+  dietItemIds: string[] // Array of diet item IDs
+) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/diet-plan/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+    body: JSON.stringify({
+      date,
+      patientId,
+      dietPlanItem: {
+        time,
+        dietItem: dietItemIds,
+      },
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`Failed to create diet plan: ${response.status} - ${errorData}`);
+  }
+  
+  return await response.json();
+};
+
+// Get diet plan for a patient
+export const getDietPlan = async (patientId: string, startDate?: string, endDate?: string) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  let url = `${API_BASE_URL}/diet-plan?patientId=${patientId}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+  
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+
+// Batch create diet plans for the entire week
+export const createWeeklyDietPlan = async (
+  patientId: string,
+  weeklyPlan: {
+    date: string;
+    time: string;
+    dietItemIds: string[];
+  }[]
+) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const promises = weeklyPlan.map((plan) =>
+    createDietPlan(plan.date, patientId, plan.time, plan.dietItemIds)
+  );
+
+  return await Promise.all(promises);
 };

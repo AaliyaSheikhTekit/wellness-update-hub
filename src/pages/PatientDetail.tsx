@@ -512,80 +512,6 @@ const PatientDetail = () => {
               <h1 className="text-3xl font-bold">Patient Details</h1>
             </div>
 
-            <div className="flex items-center space-x-3">
-              {/* New Prescription */}
-              <Dialog
-                open={newPrescriptionOpen}
-                onOpenChange={setNewPrescriptionOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <Pill className="h-4 w-4" />
-                    <span>Prescribe Medicine</span>
-                  </Button>
-                </DialogTrigger>
-
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>New Prescription</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="medicineSelect">Select Medicine</Label>
-                      <Select
-                        onValueChange={setSelectedMedicine}
-                        value={selectedMedicine}
-                      >
-                        <SelectTrigger
-                          id="medicineSelect"
-                          className="w-full mt-2"
-                        >
-                          <SelectValue placeholder="Choose a medicine" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {naturopathyMedicines.map((med) => (
-                            <SelectItem key={med.id} value={med.id}>
-                              {med.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input
-                        id="duration"
-                        placeholder="e.g., 7 days"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="instructions">Instructions</Label>
-                      <Textarea
-                        id="instructions"
-                        placeholder="Usage instructions..."
-                        value={instructions}
-                        onChange={(e) => setInstructions(e.target.value)}
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handlePrescribeMedicine}
-                      className="w-full"
-                    >
-                      <Send className="h-4 w-4 mr-2" /> Send to WhatsApp
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
           </div>
         </div>
       </div>
@@ -620,6 +546,19 @@ const PatientDetail = () => {
                           {patient.contactNumber || "—"}
                         </span>
                       </div>
+                        {/* Conditionally render button */}
+    {["Naturopathy Doctor", "SuperAdmin"].includes(localStorage.getItem("userName") || "") && (
+<Button
+          size="sm"
+          variant="outline"
+          onClick={() => navigate(`/patient-form/${patient.id}`)}
+          className="ml-2"
+        >
+          Give Consultancy
+        </Button>
+)}
+        
+      
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {patient.address || "—"}
@@ -1326,6 +1265,81 @@ const PatientDetail = () => {
                         >
                           {a.status || "—"}
                         </Badge>
+                        
+            <div className="flex items-center space-x-3">
+              {/* New Prescription */}
+              <Dialog
+                open={newPrescriptionOpen}
+                onOpenChange={setNewPrescriptionOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <Pill className="h-4 w-4" />
+                    <span>Prescribe Medicine</span>
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>New Prescription</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="medicineSelect">Select Medicine</Label>
+                      <Select
+                        onValueChange={setSelectedMedicine}
+                        value={selectedMedicine}
+                      >
+                        <SelectTrigger
+                          id="medicineSelect"
+                          className="w-full mt-2"
+                        >
+                          <SelectValue placeholder="Choose a medicine" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {naturopathyMedicines.map((med) => (
+                            <SelectItem key={med.id} value={med.id}>
+                              {med.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="duration">Duration</Label>
+                      <Input
+                        id="duration"
+                        placeholder="e.g., 7 days"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="instructions">Instructions</Label>
+                      <Textarea
+                        id="instructions"
+                        placeholder="Usage instructions..."
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handlePrescribeMedicine}
+                      className="w-full"
+                    >
+                      <Send className="h-4 w-4 mr-2" /> Send to WhatsApp
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
                       </div>
                     </div>
                   ))

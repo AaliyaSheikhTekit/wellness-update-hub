@@ -30,7 +30,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patient/:id" element={<PatientDetail />} />
            <Route path="/add-patient/:id" element={<PatientRegistrationForm />} />
-           <Route path="/doctor" element={<DoctorForm />} />
+           <Route path="/patient-form/:id" element={<DoctorForm />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import IkshaLogo from "../../assets/iksha_logo.png";
 import { 
   medicatedWaters, 
   quathAndTeas, 
@@ -25,7 +27,9 @@ import {
   Download,
   Send,
   Plus,
-  Trash2
+  Trash2,
+  Loader2,
+  Printer
 } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import {
@@ -37,16 +41,31 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { 
+  getDietItems, 
+  createWeeklyDietPlan, 
+  getDietPlan 
+} from "@/lib/api";
 
 interface MealPlan {
   [date: string]: {
-    [mealTime: string]: string;
+    [mealTime: string]: {
+      text: string;
+      itemIds: string[]; // Store diet item IDs
+    };
   };
 }
 
 interface DietTableViewProps {
-  patientId: number;
+  patientId: string; // Changed from number to string for API
   patientName: string;
+}
+
+interface DietItem {
+  id: string;
+  name: string;
+  category?: string;
+  shortForm?: string;
 }
 
 const mealTimings = [
@@ -61,13 +80,86 @@ const mealTimings = [
 ];
 
 const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
+  const { toast } = useToast();
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [mealPlans, setMealPlans] = useState<MealPlan>({});
   const [copiedDay, setCopiedDay] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ date: string; time: string } | null>(null);
+  const [dietItems, setDietItems] = useState<DietItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   const getDateKey = (date: Date) => format(date, "yyyy-MM-dd");
+
+  // Load diet items from API
+  useEffect(() => {
+    const loadDietItems = async () => {
+      try {
+        const response = await getDietItems();
+        setDietItems(response.data || []);
+      } catch (error) {
+        console.error("Error loading diet items:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load diet items",
+          variant: "destructive",
+        });
+      }
+    };
+    loadDietItems();
+  }, [toast]);
+
+  // Load existing diet plan for the week
+  useEffect(() => {
+    const loadWeeklyPlan = async () => {
+      if (!patientId) return;
+      
+      setLoading(true);
+      try {
+        const startDate = format(currentWeekStart, "yyyy-MM-dd");
+        const endDate = format(addDays(currentWeekStart, 6), "yyyy-MM-dd");
+        
+        const response = await getDietPlan(patientId, startDate, endDate);
+        
+        // Transform API response to local state format
+        if (response.data) {
+          const transformed: MealPlan = {};
+          response.data.forEach((plan: any) => {
+            const dateKey = format(new Date(plan.date), "yyyy-MM-dd");
+            if (!transformed[dateKey]) {
+              transformed[dateKey] = {};
+            }
+            
+            if (plan.dietPlanItem) {
+              const itemNames = plan.dietPlanItem.dietItem
+                .map((item: any) => item.name || item.shortForm)
+                .join(", ");
+              
+              const itemIds = plan.dietPlanItem.dietItem.map((item: any) => item.id);
+              
+              transformed[dateKey][plan.dietPlanItem.time] = {
+                text: itemNames,
+                itemIds: itemIds,
+              };
+            }
+          });
+          setMealPlans(transformed);
+        }
+      } catch (error) {
+        console.error("Error loading diet plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load existing diet plan",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWeeklyPlan();
+  }, [patientId, currentWeekStart, toast]);
 
   const updateMealPlan = (date: Date, mealTime: string, content: string) => {
     const dateKey = getDateKey(date);
@@ -75,14 +167,46 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       ...prev,
       [dateKey]: {
         ...prev[dateKey],
-        [mealTime]: content
+        [mealTime]: {
+          text: content,
+          itemIds: prev[dateKey]?.[mealTime]?.itemIds || [],
+        }
       }
     }));
+  };
+
+  const addDietItemToMeal = (date: Date, mealTime: string, itemId: string, itemName: string) => {
+    const dateKey = getDateKey(date);
+    setMealPlans(prev => {
+      const currentMeal = prev[dateKey]?.[mealTime];
+      const currentText = currentMeal?.text || "";
+      const currentIds = currentMeal?.itemIds || [];
+      
+      // Avoid duplicates
+      if (currentIds.includes(itemId)) return prev;
+      
+      const newText = currentText ? `${currentText}, ${itemName}` : itemName;
+      
+      return {
+        ...prev,
+        [dateKey]: {
+          ...prev[dateKey],
+          [mealTime]: {
+            text: newText,
+            itemIds: [...currentIds, itemId],
+          }
+        }
+      };
+    });
   };
 
   const copyDayPlan = (date: Date) => {
     const dateKey = getDateKey(date);
     setCopiedDay(dateKey);
+    toast({
+      title: "Copied",
+      description: `Diet plan for ${format(date, "MMM d")} copied`,
+    });
   };
 
   const pasteDayPlan = (targetDate: Date) => {
@@ -93,6 +217,10 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       ...prev,
       [targetKey]: { ...prev[copiedDay] }
     }));
+    toast({
+      title: "Pasted",
+      description: `Diet plan pasted to ${format(targetDate, "MMM d")}`,
+    });
   };
 
   const clearDayPlan = (date: Date) => {
@@ -102,6 +230,70 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       delete updated[dateKey];
       return updated;
     });
+    toast({
+      title: "Cleared",
+      description: `Diet plan for ${format(date, "MMM d")} cleared`,
+    });
+  };
+
+  const saveWeeklyPlan = async () => {
+    setSaving(true);
+    try {
+      // Transform local state to API format
+      const planItems: { date: string; time: string; dietItemIds: string[] }[] = [];
+      
+      weekDays.forEach((date) => {
+        const dateKey = getDateKey(date);
+        const dayPlan = mealPlans[dateKey];
+        
+        if (dayPlan) {
+          Object.entries(dayPlan).forEach(([time, meal]) => {
+            if (meal.itemIds && meal.itemIds.length > 0) {
+              // Convert date to ISO format with time
+              const isoDate = new Date(date);
+              const [hours, minutes] = time.split("-")[0].split(":")[0].split("M")[0].trim().split(":");
+              const isPM = time.includes("PM");
+              let hour = parseInt(hours);
+              if (isPM && hour !== 12) hour += 12;
+              if (!isPM && hour === 12) hour = 0;
+              
+              isoDate.setHours(hour, parseInt(minutes) || 0, 0, 0);
+              
+              planItems.push({
+                date: isoDate.toISOString(),
+                time: time,
+                dietItemIds: meal.itemIds,
+              });
+            }
+          });
+        }
+      });
+
+      if (planItems.length === 0) {
+        toast({
+          title: "No Changes",
+          description: "No diet items to save",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createWeeklyDietPlan(patientId, planItems);
+      
+      toast({
+        title: "Success",
+        description: "Weekly diet plan saved successfully!",
+      });
+    } catch (error) {
+      console.error("Error saving diet plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save diet plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const goToPreviousWeek = () => setCurrentWeekStart(prev => subWeeks(prev, 1));
@@ -111,11 +303,8 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
   const QuickAddDialog = ({ date, time }: { date: Date; time: string }) => {
     const [open, setOpen] = useState(false);
     
-    const addItem = (item: string) => {
-      const dateKey = getDateKey(date);
-      const currentContent = mealPlans[dateKey]?.[time] || "";
-      const newContent = currentContent ? `${currentContent}, ${item}` : item;
-      updateMealPlan(date, time, newContent);
+    const addItem = (itemId: string, itemName: string) => {
+      addDietItemToMeal(date, time, itemId, itemName);
       setOpen(false);
     };
 
@@ -132,98 +321,35 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Medicated Waters</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {medicatedWaters.map((water) => (
-                    <Button 
-                      key={water.name} 
-                      variant="outline" 
-                      size="sm"
-                      className="justify-start text-xs h-auto py-2"
-                      onClick={() => addItem(water.shortForm)}
-                    >
-                      {water.shortForm}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Fruits</h4>
-                <div className="grid grid-cols-4 gap-2">
-                  {fruits.map((fruit) => (
-                    <Button 
-                      key={fruit} 
-                      variant="outline" 
-                      size="sm"
-                      className="justify-start text-xs h-auto py-1"
-                      onClick={() => addItem(fruit)}
-                    >
-                      {fruit}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Vegetables</h4>
-                <div className="grid grid-cols-4 gap-2">
-                  {vegetables.map((veg) => (
-                    <Button 
-                      key={veg} 
-                      variant="outline" 
-                      size="sm"
-                      className="justify-start text-xs h-auto py-1"
-                      onClick={() => addItem(veg)}
-                    >
-                      {veg}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Grains & Rotis</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {rotis.map((roti) => (
-                    <Button 
-                      key={roti} 
-                      variant="outline" 
-                      size="sm"
-                      className="justify-start text-xs h-auto py-1"
-                      onClick={() => addItem(roti)}
-                    >
-                      {roti}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Juices</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {juices.map((juice) => (
-                    <Button 
-                      key={juice.name} 
-                      variant="outline" 
-                      size="sm"
-                      className="justify-start text-xs h-auto py-2"
-                      onClick={() => addItem(juice.shortForm)}
-                    >
-                      {juice.shortForm}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              {/* Group diet items by category if available */}
+              {["Medicated Waters", "Fruits", "Vegetables", "Grains", "Juices"].map((category) => {
+                const items = dietItems.filter(item => 
+                  item.category === category || 
+                  (category === "Medicated Waters" && medicatedWaters.some(w => w.name === item.name))
+                );
+                
+                if (items.length === 0) return null;
+                
+                return (
+                  <div key={category}>
+                    <h4 className="font-semibold mb-2 text-sm">{category}</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {items.map((item) => (
+                        <Button 
+                          key={item.id} 
+                          variant="outline" 
+                          size="sm"
+                          className="justify-start text-xs h-auto py-2"
+                          onClick={() => addItem(item.id, item.shortForm || item.name)}
+                        >
+                          {item.shortForm || item.name}
+                        </Button>
+                      ))}
+                    </div>
+                    <Separator className="mt-4" />
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
         </DialogContent>
@@ -231,10 +357,64 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+const printTableWithHeaderFooter = (tableId: string) => {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  const newWindow = window.open("", "_blank", "width=1000,height=800");
+  newWindow!.document.write(`
+    <html>
+      <head>
+        <title>Print</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .header, .footer { width: 100%; text-align: center; margin: 10px 0; }
+          .footer { font-size: 10px; color: #555; }
+          img { max-height: 80px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
+            <div>
+              <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
+              <p style="font-size:12px; color:#555;">Integrated Natural Healing system for a comprehensive</p>
+            </div>
+            <div style="text-align:right; font-size:12px;">
+              <p>📞 +91 9343922950</p>
+              <p>📧 admin@ikshanaturopathy.com</p>
+              <p>📍 Bhopal, Madhya Pradesh</p>
+            </div>
+          </div>
+        </div>
+
+        ${table.outerHTML}
+
+        <div class="footer">
+          <p>Integrated Natural Healing system for a comprehensive</p>
+          <p>📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
+          <p>© ${new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `);
+  newWindow!.document.close();
+  newWindow!.print();
+};
+
   return (
     <div className="space-y-4">
       {/* Header with Week Navigation */}
-      <Card className="wellness-card wellness-shadow-soft">
+      <Card id='diet-table' className="wellness-card wellness-shadow-soft">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
@@ -342,7 +522,7 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
                       </div>
                     </td>
                     {mealTimings.map((meal, mealIdx) => {
-                      const content = mealPlans[dateKey]?.[meal.time] || "";
+                      const content = mealPlans[dateKey]?.[meal.time]?.text || "";
                       
                       return (
                         <td 
@@ -375,9 +555,18 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
       <Card className="wellness-card-gradient wellness-shadow-soft">
         <CardContent className="p-4">
           <div className="flex gap-3 flex-wrap">
-            <Button variant="wellness" className="flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              Save Weekly Plan
+            <Button 
+              variant="wellness" 
+              className="flex items-center gap-2"
+              onClick={saveWeeklyPlan}
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {saving ? "Saving..." : "Save Weekly Plan"}
             </Button>
             <Button variant="wellnessOutline" className="flex items-center gap-2">
               <Download className="w-4 h-4" />
@@ -387,9 +576,13 @@ const DietTableView = ({ patientId, patientName }: DietTableViewProps) => {
               <Send className="w-4 h-4" />
               Send to Patient
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              Print Plan
-            </Button>
+          <Button
+  variant="outline"
+  onClick={() => printTableWithHeaderFooter("diet-table")}
+  className="flex items-center gap-2"
+>
+  <Printer className="w-4 h-4" /> Print Plan
+</Button>
           </div>
         </CardContent>
       </Card>
