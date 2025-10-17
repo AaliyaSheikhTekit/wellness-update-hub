@@ -27,12 +27,13 @@ import {
   Users,
   Plus,
   Stethoscope,
-  QrCode ,
+  QrCode,
   ChartArea,
 } from "lucide-react";
 import DoctorForm from "@/components/DoctoreForm";
 import NewTreatmentForm from "@/pages/NewTreatmentForm";
 import DoctorDashboard from "@/components/DoctorDashboard";
+import DietManager from "@/components/DietManager";
 
 // Mock patient data
 const mockPatients = [
@@ -69,38 +70,55 @@ const Dashboard = () => {
   const userName = localStorage.getItem("userName") || "";
   let userRole = "Naturopathy Doctor"; // default
   if (userName.includes("superAdmin")) userRole = "superAdmin";
-  else if (userName.includes("Naturopathy Recptionist")) userRole = "Naturopathy Recptionist";
+  else if (userName.includes("Naturopathy Recptionist"))
+    userRole = "Naturopathy Recptionist";
 
   // Sidebar items with keys
-  const sidebarItems = userRole === "superAdmin"
-    ? [
-        { key: "overview", name: "Overview", icon: Users },
-        { key: "add-patient", name: "Add Patient", icon: Plus },
-        { key: "appointments", name: "Appointments", icon: Calendar },
-        { key: "prescriptions", name: "Prescriptions", icon: Pill },
-
-        { key: "invoices", name: "Invoices", icon: FileText },
-        { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
-        { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
-        { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
-     { key: "upload-qr", name: "Upload QR Code", icon: QrCode }, 
-      ]
-    : userRole === "Naturopathy Doctor"
-    ? [
-        { key: "overview", name: "Overview", icon: Users },
-        { key: "prescriptions", name: "Prescriptions", icon: Pill },
-      
-
-        { key: "add-new-treatment", name: "Add New Treatment", icon: FileText },
-        { key: "add-post-treatment", name: "Add Post-Treatment", icon: Stethoscope },
-        { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
-      ]
-    : [
-        { key: "overview", name: "Overview", icon: Users },
-        // { key: "add-patient", name: "Add Patient", icon: Plus },
-        { key: "appointments", name: "Appointments", icon: Calendar },
-        { key: "invoices", name: "Invoices", icon: FileText },
-      ];
+  const sidebarItems =
+    userRole === "superAdmin"
+      ? [
+          { key: "overview", name: "Overview", icon: Users },
+          { key: "add-patient", name: "Add Patient", icon: Plus },
+          { key: "appointments", name: "Appointments", icon: Calendar },
+          { key: "prescriptions", name: "Prescriptions", icon: Pill },
+          { key: "add-new-diet", name: "Add New Diet", icon: ChartArea },
+          { key: "invoices", name: "Invoices", icon: FileText },
+          {
+            key: "add-new-treatment",
+            name: "Add New Treatment",
+            icon: FileText,
+          },
+          {
+            key: "add-post-treatment",
+            name: "Add Post-Treatment",
+            icon: Stethoscope,
+          },
+          { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+          { key: "upload-qr", name: "Upload QR Code", icon: QrCode },
+        ]
+      : userRole === "Naturopathy Doctor"
+      ? [
+          { key: "overview", name: "Overview", icon: Users },
+          { key: "prescriptions", name: "Prescriptions", icon: Pill },
+ { key: "add-new-diet", name: "Add New Diet", icon: ChartArea },
+          {
+            key: "add-new-treatment",
+            name: "Add New Treatment",
+            icon: FileText,
+          },
+          {
+            key: "add-post-treatment",
+            name: "Add Post-Treatment",
+            icon: Stethoscope,
+          },
+          { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+        ]
+      : [
+          { key: "overview", name: "Overview", icon: Users },
+          // { key: "add-patient", name: "Add Patient", icon: Plus },
+          { key: "appointments", name: "Appointments", icon: Calendar },
+          { key: "invoices", name: "Invoices", icon: FileText },
+        ];
 
   // Load patients
   useEffect(() => {
@@ -114,63 +132,64 @@ const Dashboard = () => {
     navigate("/login");
   };
 
- const renderMainContent = () => {
-  // If we're NOT on "overview", route by tab normally
-  if (activeTab !== "overview") {
-    switch (activeTab) {
-      // case "add-patient":
-      //   return <PatientForm />;
-      case "appointments":
-        return <Appointments />;
-      case "prescriptions":
-        return <Prescriptions />;
-     
-      case "invoices":
-        return <Invoices />;
-      case "doctor":
-        return <DoctorForm />;
-      case "add-new-treatment":
-        return <NewTreatmentForm />;
-      case "add-post-treatment":
-        return (
-          <Card className="bg-white shadow-soft rounded-xl p-6">
-            <h2 className="text-xl font-bold mb-4">Add Post-Treatment</h2>
-          </Card>
-        );
-      case "add-medicine-post":
-        return (
-          <Card className="bg-white shadow-soft rounded-xl p-6">
-            <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
-          </Card>
-        );
-      case "upload-qr":
-        return <QrUpload />;
-      default:
-        return null;
+  const renderMainContent = () => {
+    // If we're NOT on "overview", route by tab normally
+    if (activeTab !== "overview") {
+      switch (activeTab) {
+        // case "add-patient":
+        //   return <PatientForm />;
+        case "appointments":
+          return <Appointments />;
+        case "prescriptions":
+          return <Prescriptions />;
+   case "add-new-diet":
+          return <DietManager />;
+        case "invoices":
+          return <Invoices />;
+        case "doctor":
+          return <DoctorForm />;
+        case "add-new-treatment":
+          return <NewTreatmentForm />;
+        case "add-post-treatment":
+          return (
+            <Card className="bg-white shadow-soft rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4">Add Post-Treatment</h2>
+            </Card>
+          );
+        case "add-medicine-post":
+          return (
+            <Card className="bg-white shadow-soft rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4">Add Medicine Post</h2>
+            </Card>
+          );
+        case "upload-qr":
+          return <QrUpload />;
+        default:
+          return null;
+      }
     }
-  }
 
-  // === activeTab === "overview" ===
-  if (userRole === "superAdmin") {
-    // use your role toggle
-    if (activeRole === "doctor") return <DoctorDashboard />;
-    if (activeRole === "reception") return <ReceptionDashboard />;
+    // === activeTab === "overview" ===
+    if (userRole === "superAdmin") {
+      // use your role toggle
+      if (activeRole === "doctor") return <DoctorDashboard />;
+      if (activeRole === "reception") return <ReceptionDashboard />;
 
-    // optionally show BOTH when "super_admin" is selected
-    return (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <DoctorDashboard />
-        <ReceptionDashboard />
-      </div>
-    );
-  }
+      // optionally show BOTH when "super_admin" is selected
+      return (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <DoctorDashboard />
+          <ReceptionDashboard />
+        </div>
+      );
+    }
 
-  if (userRole === "Naturopathy Doctor") return <DoctorDashboard />;
-  // receptionist
-  return <ReceptionDashboard />;
-};
+    if (userRole === "Naturopathy Doctor") return <DoctorDashboard />;
+    // receptionist
+    return <ReceptionDashboard />;
+  };
 
-const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   // close on ESC
   useEffect(() => {
@@ -185,17 +204,17 @@ const [open, setOpen] = useState(false);
     else document.body.style.overflow = "";
   }, [open]);
   // below existing state
-const [activeRole, setActiveRole] = useState<
-  "super_admin" | "doctor" | "reception"
->(() => {
-  if (userRole === "superAdmin") return "super_admin";
-  if (userRole === "Naturopathy Doctor") return "doctor";
-  return "reception";
-});
+  const [activeRole, setActiveRole] = useState<
+    "super_admin" | "doctor" | "reception"
+  >(() => {
+    if (userRole === "superAdmin") return "super_admin";
+    if (userRole === "Naturopathy Doctor") return "doctor";
+    return "reception";
+  });
   return (
-   <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {/* Sidebar */}
-        <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
+      <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur border-b">
         <div className="h-14 px-3 flex items-center justify-between">
           <button
             aria-label="Open menu"
@@ -205,7 +224,11 @@ const [activeRole, setActiveRole] = useState<
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex items-center gap-2">
-            <img src={IkshaLogo} alt="Iksha Naturopathy" className="h-8 w-auto" />
+            <img
+              src={IkshaLogo}
+              alt="Iksha Naturopathy"
+              className="h-8 w-auto"
+            />
           </div>
           <div className="w-10" /> {/* spacer */}
         </div>
@@ -214,7 +237,11 @@ const [activeRole, setActiveRole] = useState<
       {/* Desktop sidebar */}
       <aside className="hidden md:block fixed left-0 top-0 h-full w-64 bg-white border-r border-border/50 z-30">
         <div className="mb-6 mt-8 h-12 flex items-center justify-center">
-          <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-36 w-auto object-contain" />
+          <img
+            src={IkshaLogo}
+            alt="Iksha Naturopathy Logo"
+            className="h-36 w-auto object-contain"
+          />
         </div>
 
         <nav className="p-4 space-y-2">
@@ -249,7 +276,9 @@ const [activeRole, setActiveRole] = useState<
       {/* Overlay */}
       <div
         className={`md:hidden fixed inset-0 z-40 bg-black/40 transition-opacity ${
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setOpen(false)}
         aria-hidden={!open}
@@ -258,14 +287,20 @@ const [activeRole, setActiveRole] = useState<
       {/* Drawer */}
       <aside
         className={`md:hidden fixed left-0 top-0 h-full w-72 max-w-[85vw] bg-white border-r border-border/50 z-50
-        transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`}
+        transition-transform duration-300 ease-in-out ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
       >
         <div className="flex items-center justify-between px-4 h-14 border-b">
           <div className="flex items-center gap-2">
-            <img src={IkshaLogo} alt="Iksha Naturopathy Logo" className="h-8 w-auto" />
+            <img
+              src={IkshaLogo}
+              alt="Iksha Naturopathy Logo"
+              className="h-8 w-auto"
+            />
           </div>
           <button
             aria-label="Close menu"
@@ -312,47 +347,47 @@ const [activeRole, setActiveRole] = useState<
 
       {/* Main Content */}
       <div className="lg:ml-64 p-6">
-       <header className="bg-white border-b border-border/50 p-4 flex flex-wrap gap-3 justify-between items-center">
-  <h1 className="text-3xl font-bold text-foreground">
-    {activeRole === "super_admin"
-      ? "Admin Dashboard"
-      : activeRole === "doctor"
-      ? "Doctor Dashboard"
-      : "Receptionist Dashboard"}
-  </h1>
+        <header className="bg-white border-b border-border/50 p-4 flex flex-wrap gap-3 justify-between items-center">
+          <h1 className="text-3xl font-bold text-foreground">
+            {activeRole === "super_admin"
+              ? "Admin Dashboard"
+              : activeRole === "doctor"
+              ? "Doctor Dashboard"
+              : "Receptionist Dashboard"}
+          </h1>
 
-  <div className="flex items-center gap-3">
-    {userRole === "superAdmin" && (
-      <div className="flex gap-2">
-        <Button
-          variant={activeRole === "super_admin" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveRole("super_admin")}
-        >
-          Super Admin
-        </Button>
-        <Button
-          variant={activeRole === "doctor" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveRole("doctor")}
-        >
-          Doctor
-        </Button>
-        <Button
-          variant={activeRole === "reception" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveRole("reception")}
-        >
-          Reception
-        </Button>
-      </div>
-    )}
+          <div className="flex items-center gap-3">
+            {userRole === "superAdmin" && (
+              <div className="flex gap-2">
+                <Button
+                  variant={activeRole === "super_admin" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveRole("super_admin")}
+                >
+                  Super Admin
+                </Button>
+                <Button
+                  variant={activeRole === "doctor" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveRole("doctor")}
+                >
+                  Doctor
+                </Button>
+                <Button
+                  variant={activeRole === "reception" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveRole("reception")}
+                >
+                  Reception
+                </Button>
+              </div>
+            )}
 
-    <Button variant="outline" onClick={handleLogout}>
-      <LogOut className="h-4 w-4 mr-2" /> Logout
-    </Button>
-  </div>
-</header>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" /> Logout
+            </Button>
+          </div>
+        </header>
         {renderMainContent()}
       </div>
     </div>

@@ -129,11 +129,11 @@ const DietCalendarView = ({ patientId, patientName }: DietCalendarViewProps) => 
               <CalendarIcon className="w-5 h-5" />
               Weekly Diet Plan - {patientName}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ">
               <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button variant="wellness" size="sm" onClick={goToToday}>
+              <Button style={{color:'black'}} size="sm" onClick={goToToday}>
                 Today
               </Button>
               <Button variant="outline" size="sm" onClick={goToNextWeek}>

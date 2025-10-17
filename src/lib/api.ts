@@ -517,3 +517,59 @@ export const getDiet = async (params: GetDietParams = {}): Promise<DietApiRespon
 
   return response.json();
 };
+export const createDiet = async (payload: any) => {
+const backendToken = getBackendToken();
+if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+
+const response = await fetch(`${API_BASE_URL}/diet`, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+Authorization: `Bearer ${backendToken}`,
+},
+body: JSON.stringify(payload),
+});
+
+
+if (!response.ok) throw new Error(`Create failed ${response.status}`);
+return response.json();
+};
+
+
+export const updateDiet = async (id: string, payload: Partial<any>) => {
+const backendToken = getBackendToken();
+if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+
+const response = await fetch(`${API_BASE_URL}/diet/${id}`, {
+method: "PUT",
+headers: {
+"Content-Type": "application/json",
+Authorization: `Bearer ${backendToken}`,
+},
+body: JSON.stringify(payload),
+});
+
+
+if (!response.ok) throw new Error(`Update failed ${response.status}`);
+return response.json();
+};
+
+
+export const deleteDiet = async (id: string) => {
+const backendToken = getBackendToken();
+if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+
+const response = await fetch(`${API_BASE_URL}/diet/${id}`, {
+method: "DELETE",
+headers: {
+"Content-Type": "application/json",
+Authorization: `Bearer ${backendToken}`,
+},
+});
+
+
+if (!response.ok) throw new Error(`Delete failed ${response.status}`);
+};
