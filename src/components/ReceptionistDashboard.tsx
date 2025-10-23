@@ -25,8 +25,7 @@ import { getBackendToken, getPatients } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
 const ReceptionDashboard = () => {
-  const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
-  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
+ 
   const { toast } = useToast();
   const navigate=useNavigate(); // <-- add this
   const [searchTerm, setSearchTerm] = useState("");
@@ -89,9 +88,7 @@ const ReceptionDashboard = () => {
     );
   });
 
-  const pendingAppointments = appointments.filter(
-    (apt) => apt.status === "pending"
-  );
+ 
   // below existing useState declarations
   const [patients, setPatients] = useState<any[]>([]);
   const [patientLoading, setPatientLoading] = useState(false);
@@ -117,23 +114,8 @@ const ReceptionDashboard = () => {
     loadPatients();
   }, [searchTerm]); // refetch when the header search changes
 
-  const handleAddPatient = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Patient Added Successfully",
-      description: "New patient has been registered in the system.",
-    });
-    setIsPatientDialogOpen(false);
-  };
+ 
 
-  const handleAddAppointment = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Appointment Scheduled",
-      description: "New appointment has been added to the calendar.",
-    });
-    setIsAppointmentDialogOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-100 via-pink-50 to-yellow-50">
@@ -170,107 +152,7 @@ const ReceptionDashboard = () => {
           <h2 className="text-xl font-semibold mb-4 text-gray-800">
             Quick Actions
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Schedule Appointment Card */}
-            <Dialog
-              open={isAppointmentDialogOpen}
-              onOpenChange={setIsAppointmentDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <motion.div
-                  className="cursor-pointer rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 bg-gradient-to-r from-green-400 to-blue-400 text-white"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="flex items-center space-x-4">
-                    <Calendar className="w-10 h-10" />
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        Schedule Appointment
-                      </h3>
-                      <p className="text-sm">
-                        Book a new appointment for a patient
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              </DialogTrigger>
-
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">
-                    Schedule Appointment
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleAddAppointment} className="space-y-4">
-                  <div>
-                    <Label htmlFor="patientName">Patient Name</Label>
-                    <Input
-                      id="patientName"
-                      placeholder="Search or enter patient name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="appointmentDate">Date</Label>
-                    <Input id="appointmentDate" type="date" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="appointmentTime">Time</Label>
-                    <Input id="appointmentTime" type="time" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="doctor">Doctor</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a doctor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="dr-smith">
-                          Dr. Smith - General Medicine
-                        </SelectItem>
-                        <SelectItem value="dr-johnson">
-                          Dr. Johnson - Cardiology
-                        </SelectItem>
-                        <SelectItem value="dr-williams">
-                          Dr. Williams - Pediatrics
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="appointmentType">Appointment Type</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select appointment type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="consultation">
-                          Consultation
-                        </SelectItem>
-                        <SelectItem value="checkup">Regular Checkup</SelectItem>
-                        <SelectItem value="followup">Follow-up</SelectItem>
-                        <SelectItem value="emergency">Emergency</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="appointmentNotes">Notes (Optional)</Label>
-                    <Textarea
-                      id="appointmentNotes"
-                      placeholder="Appointment details..."
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Appointment
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+        
         </section>
 
         {/* Dashboard Stats */}

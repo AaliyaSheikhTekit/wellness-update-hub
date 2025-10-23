@@ -592,12 +592,12 @@ const PatientDetail = () => {
         {/* Tabs */}
         <Tabs defaultValue="history" className="space-y-6">
           <TabsList className="flex flex-wrap gap-2">
-            <TabsTrigger value="history">Medical History</TabsTrigger>
-            <TabsTrigger value="vitals">Vitals</TabsTrigger>
+            <TabsTrigger value="history">Personal and lifestyle history</TabsTrigger>
+            <TabsTrigger value="vitals">Vitals and antropometric measurment</TabsTrigger>
             <TabsTrigger value="consent">Consent & Signature</TabsTrigger>
             <TabsTrigger value="payments">UPI / Payments</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
-             <TabsTrigger value="prescription">Prescription</TabsTrigger>
+             {/* <TabsTrigger value="prescription">Prescription</TabsTrigger> */}
           </TabsList>
 
           {/* Medical History */}

@@ -57,16 +57,12 @@ const printTableWithHeaderFooter = (tableId: string) => {
       </head>
       <body>
         <div class="header">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-center; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
             <div>
               <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
-              <p style="font-size:12px; color:#555;">Integrated Natural Healing system for a comprehensive</p>
+             
             </div>
-            <div style="text-align:right; font-size:12px;">
-              <p>📞 +91 9343922950</p>
-              <p>📧 admin@ikshanaturopathy.com</p>
-              <p>📍 Bhopal, Madhya Pradesh</p>
-            </div>
+           
           </div>
         </div>
 
@@ -180,7 +176,7 @@ const printTableWithHeaderFooter = (tableId: string) => {
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">{opt.days}</span>
-                  <span className="font-semibold text-sm text-blue-600">₹{opt.price}</span>
+                  {/* <span className="font-semibold text-sm text-blue-600">₹{opt.price}</span> */}
                 </div>
               </div>
             </div>

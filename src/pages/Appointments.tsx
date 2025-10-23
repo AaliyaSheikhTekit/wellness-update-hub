@@ -246,12 +246,51 @@ const SimpleCalendar = ({
     </div>
   );
 };
+type AppointmentStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "completed"
+  | "rescheduled"
+  | "no_show";
 
+const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "completed", label: "Completed" },
+  { value: "rescheduled", label: "Rescheduled" },
+  { value: "no_show", label: "No Show" },
+];
+
+const statusClasses: Record<AppointmentStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  confirmed: "bg-green-100 text-green-800 border border-green-300",
+  cancelled: "bg-red-100 text-red-800 border border-red-300",
+  completed: "bg-emerald-100 text-emerald-800 border border-emerald-300",
+  rescheduled: "bg-violet-100 text-violet-800 border border-violet-300",
+  no_show: "bg-orange-100 text-orange-800 border border-orange-300",
+};
+
+const StatusBadge = ({ value }: { value: string }) => {
+  const v = (value as AppointmentStatus) || "pending";
+  return (
+    <Badge className={`${statusClasses[v] ?? "bg-gray-100 text-gray-800 border"} capitalize`}>
+      {v.replace("_", " ")}
+    </Badge>
+  );
+};
 // --------------------------- Appointments ---------------------------
 const Appointments = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // replace:
+
+
+// with:
+const [appointmentsPage, setAppointmentsPage] = useState<Appointment[]>([]);
+const [appointmentsAll, setAppointmentsAll] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -305,63 +344,28 @@ const Appointments = () => {
   }, [doctorSearch]);
 
   // --------------------------- Data Fetch ---------------------------
-const fetchAppointments = async () => {
+const fetchAppointmentsPage = async () => {
   try {
     const token = getBackendToken();
-    const filter = activeTab === "today" ? "today" : "all";
+    const filter = activeTab === "today" ? "today" : "all"; // server filter stays fine
     const res = await fetch(
       `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
     );
-
     const result = await res.json();
 
-    const mappedAppointments: Appointment[] = (result.data || []).map((appt: any) => ({
-      id: appt.id,
-      patient: appt.patient
-        ? {
-            id: appt.patient.id || "unknown",
-            fullName: appt.patient.fullName || appt.patientName || "Unknown",
-            contactNumber: appt.patient.contactNumber || "",
-          }
-        : { id: "unknown", fullName: appt.patientName || "Unknown", contactNumber: "" },
-      doctor: appt.doctor
-        ? {
-            id: appt.doctor.id || "unknown",
-            username: appt.doctor.username || "N/A",
-          }
-        : {
-            id: "unknown",
-            username: typeof appt.doctor === "string" ? appt.doctor : "N/A",
-          },
-      date: appt.date ? appt.date.split("T")[0] : "",
-      time: appt.date
-        ? new Date(appt.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : "",
-      status: appt.status ?? "pending",
-      note: appt.note,
-      prescriptions: appt.prescriptions || [],
-      consultationType: appt.consultationType,
-      paymentMethod: appt.paymentMethod,
-      signature: appt.signature || null,
-    }));
-
-    setAppointments(mappedAppointments);
+    const mapped = (result.data || []).map(mapApiAppointment);
+    setAppointmentsPage(mapped);
     setTotalPages(result.meta?.totalPages || 1);
-  } catch (error) {
-    console.error(error);
+  } catch (e) {
+    console.error(e);
   }
 };
 
 
+
   useEffect(() => {
-    fetchAppointments();
+    fetchAppointmentsAll();
   }, [page, activeTab]);
 
   // --------------------------- Validation ---------------------------
@@ -376,6 +380,18 @@ const fetchAppointments = async () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+const refetchForActiveTab = async () => {
+  if (activeTab === "all") {
+    await fetchAppointmentsPage();
+    await fetchAppointmentsAll("all"); // keep calendar/upcoming fresh too
+  } else if (activeTab === "today") {
+    await fetchAppointmentsAll("today");
+    await fetchAppointmentsPage(); // optional, to keep All in sync
+  } else {
+    await fetchAppointmentsAll("all");
+    await fetchAppointmentsPage(); // optional
+  }
+};
 
   // --------------------------- Handlers ---------------------------
   const handleBookAppointment = async () => {
@@ -393,14 +409,12 @@ const fetchAppointments = async () => {
 
     try {
       const res = await appointmentPost("/appointment/create", payload);
-      if (res?.id) {
-        fetchAppointments();
-       
-        toast({
-          title: "Appointment booked",
-          description: "Successfully added.",
-        });
-      }
+     if (res?.id) {
+  await refetchForActiveTab();
+  toast({ title: "Appointment booked", description: "Successfully added." });
+}
+
+
     } catch (error) {
       console.error(error);
       toast({ title: "Error", description: "Failed to book appointment." });
@@ -408,6 +422,18 @@ const fetchAppointments = async () => {
     setNewAppointmentOpen(false); // closes modal in all cases
   }
   };
+  useEffect(() => {
+  if (activeTab === "all") {
+    fetchAppointmentsPage();
+  } else if (activeTab === "today") {
+    // get ALL of today across pages
+    fetchAppointmentsAll("today");
+  } else {
+    // upcoming + calendar need the full future set; if your API has an "upcoming" filter, use it.
+    fetchAppointmentsAll("all");
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [page, activeTab]);
 const handleUpdateAppointment = async () => {
     if (!selectedEvent || !validateAppointment()) return;
 
@@ -449,14 +475,9 @@ const handleUpdateAppointment = async () => {
       const result = await response.json();
       console.log("Update successful:", result);
 
-      // Refresh appointments from server to get latest data
-      await fetchAppointments();
-      
-      
-      toast({
-        title: "Appointment updated",
-        description: "Changes saved successfully.",
-      });
+      // after successful update
+await refetchForActiveTab();
+toast({ title: "Appointment updated", description: "Changes saved successfully." });
       setEditAppointmentOpen(false);
     } catch (error) {
       console.error("Update error:", error);
@@ -467,18 +488,17 @@ const handleUpdateAppointment = async () => {
     }
   }; 
   // --------------------------- Helpers ---------------------------
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return "bg-green-500";
-      case "pending":
-        return "bg-yellow-500";
-      case "cancelled":
-        return "bg-red-500";
-      default:
-        return "bg-gray-400";
-    }
-  };
+ const getStatusDot = (status: string) => {
+  switch (status) {
+    case "confirmed": return "bg-green-500";
+    case "pending": return "bg-yellow-500";
+    case "cancelled": return "bg-red-500";
+    case "completed": return "bg-emerald-500";
+    case "rescheduled": return "bg-violet-500";
+    case "no_show": return "bg-orange-500";
+    default: return "bg-gray-400";
+  }
+};
   // --------------------------- Open Edit Dialog ---------------------------
   const openEditDialog = (apt: Appointment) => {
     setSelectedEvent(apt);
@@ -494,15 +514,17 @@ const handleUpdateAppointment = async () => {
   const capitalize = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
   // Derived lists
-  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
-  const todaysAppointments = useMemo(
-    () => appointments.filter((a) => a.date === todayISO),
-    [appointments, todayISO]
-  );
-  const upcomingAppointments = useMemo(
-    () => appointments.filter((a) => new Date(a.date) >= new Date(todayISO)),
-    [appointments, todayISO]
-  );
+ const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+const todaysAppointments = useMemo(
+  () => appointmentsAll.filter(a => a.date === todayISO),
+  [appointmentsAll, todayISO]
+);
+
+// UPCOMING (>= today)
+const upcomingAppointments = useMemo(
+  () => appointmentsAll.filter(a => new Date(a.date) >= new Date(todayISO)),
+  [appointmentsAll, todayISO]
+);
   const filteredBySelectedDate = useMemo(
     () => appointments.filter((a) => a.date === selectedDate),
     [appointments, selectedDate]
@@ -518,6 +540,74 @@ const handleUpdateAppointment = async () => {
     );
     setEditAppointmentOpen(false);
   };
+  const mapApiAppointment = (appt: any): Appointment => ({
+  id: appt.id,
+  patient: appt.patient
+    ? {
+        id: appt.patient.id || "unknown",
+        fullName: appt.patient.fullName || appt.patientName || "Unknown",
+        contactNumber: appt.patient.contactNumber || "",
+      }
+    : { id: "unknown", fullName: appt.patientName || "Unknown", contactNumber: "" },
+  doctor: appt.doctor
+    ? {
+        id: appt.doctor.id || "unknown",
+        username: appt.doctor.username || "N/A",
+      }
+    : {
+        id: "unknown",
+        username: typeof appt.doctor === "string" ? appt.doctor : "N/A",
+      },
+  date: appt.date ? appt.date.split("T")[0] : "",
+  time: appt.date
+    ? new Date(appt.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "",
+  status: appt.status ?? "pending",
+  note: appt.note,
+  prescriptions: appt.prescriptions || [],
+  consultationType: appt.consultationType,
+  phoneNo: appt.phoneNo,
+});
+const fetchAppointmentsAll = async (filter: "all" | "today" = "all") => {
+  try {
+    const token = getBackendToken();
+
+    // first call to know totalPages
+    const firstRes = await fetch(
+      `https://api.ikshanaturopathy.com/v1/appointment/get?page=1&limit=${limit}&filter=${filter}`,
+      { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+    );
+    const firstJson = await firstRes.json();
+    const total = firstJson.meta?.totalPages || 1;
+
+    let all: Appointment[] = (firstJson.data || []).map(mapApiAppointment);
+
+    // fetch remaining pages in parallel if any
+    if (total > 1) {
+      const promises = [];
+      for (let p = 2; p <= total; p++) {
+        promises.push(
+          fetch(
+            `https://api.ikshanaturopathy.com/v1/appointment/get?page=${p}&limit=${limit}&filter=${filter}`,
+            { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+          ).then(r => r.json())
+        );
+      }
+      const pages = await Promise.all(promises);
+      for (const pg of pages) {
+        all = all.concat((pg.data || []).map(mapApiAppointment));
+      }
+    }
+
+    // de-duplicate by id (in case of overlaps)
+    const dedup = Array.from(new Map(all.map(a => [a.id, a])).values());
+    setAppointmentsAll(dedup);
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -691,7 +781,7 @@ const handleUpdateAppointment = async () => {
             </div>
 
             <div className="grid gap-4">
-              {appointments.map((appointment) => (
+              {appointmentsPage.map((appointment) => (
                 <Card key={appointment.id} className="shadow-sm">
                   <CardContent className="p-6 flex justify-between">
                     <div className="flex-1">
@@ -702,13 +792,7 @@ const handleUpdateAppointment = async () => {
                             {appointment.patient?.fullName}
                           </h3>
                         </div>
-                        <Badge
-                          className={`${getStatusColor(
-                            appointment.status
-                          )} text-white`}
-                        >
-                          {capitalize(appointment.status)}
-                        </Badge>
+                        <StatusBadge value={appointment.status} />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -803,13 +887,7 @@ const handleUpdateAppointment = async () => {
                             {appointment.patient?.fullName || "Unknown Patient"}
                           </h3>
                         </div>
-                        <Badge
-                          className={`${getStatusColor(
-                            appointment.status
-                          )} text-white`}
-                        >
-                          {capitalize(appointment.status)}
-                        </Badge>
+                       <StatusBadge value={appointment.status} />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -884,13 +962,7 @@ const handleUpdateAppointment = async () => {
                             {appointment.patient?.fullName || "Unknown Patient"}
                           </h3>
                         </div>
-                        <Badge
-                          className={`${getStatusColor(
-                            appointment.status
-                          )} text-white`}
-                        >
-                          {capitalize(appointment.status)}
-                        </Badge>
+                       <StatusBadge value={appointment.status} />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -966,11 +1038,11 @@ const handleUpdateAppointment = async () => {
             </div>
 
             <SimpleCalendar
-              appointments={appointments}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              onEventClick={(apt) => openView(apt)}
-            />
+  appointments={appointmentsAll}
+  selectedDate={selectedDate}
+  setSelectedDate={setSelectedDate}
+  onEventClick={(apt) => openView(apt)}
+/>
           </TabsContent>
         </Tabs>
 
@@ -1105,13 +1177,7 @@ const handleUpdateAppointment = async () => {
                 </div>
                 <div>
                   <span className="font-medium">Status:</span>{" "}
-                  <Badge
-                    className={`${getStatusColor(
-                      selectedEvent.status
-                    )} text-white ml-2`}
-                  >
-                    {capitalize(selectedEvent.status)}
-                  </Badge>
+                <StatusBadge value={selectedEvent.status} />
                 </div>
                 {selectedEvent.consultationType && (
                   <div>

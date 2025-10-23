@@ -279,6 +279,14 @@ export const getAppointmentById = async (id: string) => {
   return res.json(); // expect { data: { ...appt } }
 };
 // --- Appointments: update ---
+export type AppointmentStatusApi =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "completed"
+  | "rescheduled"
+  | "no_show";
+
 export const updateAppointment = async (
   id: string,
   payload: {
@@ -287,7 +295,7 @@ export const updateAppointment = async (
     patientName?: string;
     doctor?: string;              // username or id (match your backend)
     note?: string;
-    status?: "pending" | "confirmed" | "cancelled";
+    status?: AppointmentStatusApi;
   }
 ) => {
   const token = getBackendToken();
@@ -572,4 +580,17 @@ Authorization: `Bearer ${backendToken}`,
 
 
 if (!response.ok) throw new Error(`Delete failed ${response.status}`);
+};
+export const createPatientConsult = async (payload: any) => {
+ const backendToken = getBackendToken();
+  const response = await fetch(`${API_BASE_URL}/consultation/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Create failed: ${response.status}`);
+  return await response.json();
 };

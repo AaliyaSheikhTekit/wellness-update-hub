@@ -4,15 +4,26 @@ import { Award, Users, Leaf, Heart } from "lucide-react";
 import consultationImage from "@/assets/consultation-room.jpg";
 import { Skeleton } from "./ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
-import doctor from "@/assets/images/doctor.jpg";
-import esha from "@/assets/images/Esha.jpg";
+import doctor from "@/assets/images/doctor.jpeg";
+import esha from "@/assets/images/Esha.jpeg";
+import infrastructure1 from "@/assets/images/infrastructure1.jpg";
+import infrastructure2 from "@/assets/images/infrastructure2.jpg";
+import infrastructure3 from "@/assets/images/infrastructure3.jpg";
+import infrastructure4 from "@/assets/images/infrastructure4.jpg";
+import infrastructure5 from "@/assets/images/infrastructure5.jpg";
+import infrastructure6 from "@/assets/images/infrastructure6.jpg";
+import infrastructure7 from "@/assets/images/infrastructure7.jpg";
+import infrastructure8 from "@/assets/images/infrastructure8.jpg";
+import infrastructure9 from "@/assets/images/infrastructure9.jpg";
+import teamPhoto from "@/assets/images/team.jpg";
+
 const About = () => {
   const team = [
     {
       name: "Esha Agrawal",
       role: "Founder, Naturopathy Consultant",
-      bio: `Esha’s journey into natural healing began with her own recovery from a chronic condition through holistic practices. With a Master's in Luxury Brand Management (London) and a Diploma in Naturopathy and Yoga, she transitioned her career to focus on wellness. She believes that any problematic conditions have natural cures without invasive treatments. Driven by her passion, she founded Ikshā Naturopathy to help others find health renewal.`,
-      image: esha, // replace with real image path
+      bio: `Esha's journey into natural healing began with her own recovery from a chronic condition through holistic practices. With a Master's in Luxury Brand Management (London) and a Diploma in Naturopathy and Yoga, she transitioned her career to focus on wellness. She believes that any problematic conditions have natural cures without invasive treatments. Driven by her passion, she founded Ikshā Naturopathy to help others find health renewal.`,
+      image: esha,
     },
     {
       name: "Dr. Mohit Patidar",
@@ -57,7 +68,7 @@ const About = () => {
                   and true healing happens when they are in balance.
                 </p>
                 <p>
-                  Our vision is to educate and inspire others about the body’s
+                  Our vision is to educate and inspire others about the body's
                   self-healing mechanisms, showing that with the right tools,
                   lifestyle, and mindset, each person can become their own
                   doctor.
@@ -89,6 +100,8 @@ const About = () => {
             </div>
           </div>
         </div>
+
+        {/* Team Section */}
         <section className="py-20 text-foreground" id="team">
           <div className="max-w-6xl mx-auto px-6 text-center">
             <motion.h2
@@ -131,11 +144,87 @@ const About = () => {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* Infrastructure & Team Showcase */}
+        <section className="py-20" id="facilities">
+          <div className="max-w-7xl mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-12"
+            >
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-wellness-sage-light/20 border border-wellness-sage/30 mb-6">
+                <Heart className="w-4 h-4 text-wellness-sage mr-2" />
+                <span className="text-sm font-medium text-wellness-sage">
+                  Our Space
+                </span>
+              </div>
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
+                Where Healing Happens
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                A glimpse into our serene healing environment and the dedicated team behind your wellness journey.
+              </p>
+            </motion.div>
+
+            {/* Infrastructure Gallery */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {[
+                { src: infrastructure1, alt: "Iksha Naturopathy reception area with pink wall and modern design" },
+                { src: infrastructure2, alt: "Natural therapy treatment setup with herbal compress" },
+                { src: infrastructure3, alt: "Peaceful massage treatment room" },
+                { src: infrastructure4, alt: "Prithvi element therapy room" },
+                { src: infrastructure5, alt: "Hydrotherapy bath treatment facility" },
+                { src: infrastructure6, alt: "Dual water therapy treatment beds" },
+                { src: infrastructure7, alt: "Relaxation lounge with modern seating" },
+                { src: infrastructure8, alt: "Meditation and yoga hall with chakra display" },
+                { src: infrastructure9, alt: "Bird's eye view of reception area" },
+              ].map((image, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  className="relative group overflow-hidden rounded-xl wellness-shadow hover:shadow-2xl transition-all duration-300"
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Team Photo */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="relative group overflow-hidden rounded-2xl wellness-shadow"
+            >
+              <img
+                src={teamPhoto}
+                alt="Iksha Naturopathy team"
+                className="w-full h-[500px] object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-8">
+                <div>
+                  <h3 className="text-white text-3xl font-semibold mb-3">
+                    Our Dedicated Team
+                  </h3>
+                  <p className="text-white/90 text-base max-w-2xl">
+                    A passionate group of naturopathy professionals committed to guiding you on your path to optimal health and natural wellness
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
       </div>
     </section>
   );
 };
 
 export default About;
-//
