@@ -35,6 +35,7 @@ import {
   createWeeklyDietPlan,
   getDietPlan,
   getBackendToken,
+  appointmentPost,
 } from "@/lib/api";
 
 // NEW: shadcn Select for dropdowns in timing headers
@@ -45,6 +46,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { c } from "node_modules/framer-motion/dist/types.d-Cjd591yU";
 
 interface MealPlan {
   [date: string]: {
@@ -63,6 +65,8 @@ interface DietTableViewProps {
   patientAge?: string | number;
   patientPhone?: string;
   patientCO?: string; // "C/O"
+  latestAppointmentId?: string;
+  consultationId?: string;
 }
 
 interface DietItem {
@@ -140,7 +144,10 @@ const DietTableView = ({
   patientAge,
   patientPhone,
   patientCO,
+  latestAppointmentId: appointmentId,
+  consultationId,
 }: DietTableViewProps) => {
+  console.log("DietTableView rendered with appointmentId:", appointmentId,consultationId);
   const { toast } = useToast();
   const [currentWeekStart, setCurrentWeekStart] = useState(
     startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -355,50 +362,66 @@ const DietTableView = ({
     });
   };
 
-  const saveWeeklyPlan = async () => {
-    setSaving(true);
-    try {
-      const weeklyPlan = weekDays.flatMap((date) => {
-        const dateKey = getDateKey(date);
-        const dayPlan = mealPlans[dateKey];
-        if (!dayPlan) return [];
+const saveWeeklyPlan = async () => {
+  setSaving(true);
+  try {
+    const weeklyPlan = weekDays.flatMap((date) => {
+      const dateKey = getDateKey(date);
+      const dayPlan = mealPlans[dateKey];
+      if (!dayPlan) return [];
 
-        return Object.entries(dayPlan)
-          .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
-          .map(([time, meal]) => ({
-            date: new Date(date).toISOString(),
-            time,
-            dietItemIds: meal.itemIds,
-          }));
-      });
+      return Object.entries(dayPlan)
+        .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
+        .map(([time, meal]) => ({
+          date: new Date(date).toISOString(),
+          time,
+          dietItemIds: meal.itemIds,
+        }));
+    });
 
-      if (weeklyPlan.length === 0) {
-        toast({
-          title: "No Changes",
-          description: "No diet items to save",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      await createWeeklyDietPlan(patientId, weeklyPlan);
-
+    if (weeklyPlan.length === 0) {
       toast({
-        title: "Success",
-        description: `Successfully saved ${weeklyPlan.length} diet plan entries!`,
-      });
-    } catch (error) {
-      console.error("Error saving diet plan:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to save diet plan.",
+        title: "No Changes",
+        description: "No diet items to save",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
+      return;
     }
-  };
+
+    if (!appointmentId || !consultationId) {
+      toast({
+        title: "Missing info",
+        description: "Appointment or consultation id is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // IMPORTANT: argument order -> (patientId, appointmentId, consultationId, weeklyPlan)
+    await createWeeklyDietPlan(
+      patientId,
+      String(appointmentId),
+      String(consultationId),
+      weeklyPlan
+    );
+
+    toast({
+      title: "Success",
+      description: `Successfully saved ${weeklyPlan.length} diet plan entries!`,
+    });
+  } catch (error) {
+    console.error("Error saving diet plan:", error);
+    toast({
+      title: "Error",
+      description:
+        error instanceof Error ? error.message : "Failed to save diet plan.",
+      variant: "destructive",
+    });
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   const goToPreviousWeek = () => setCurrentWeekStart((prev) => subWeeks(prev, 1));
   const goToNextWeek = () => setCurrentWeekStart((prev) => addWeeks(prev, 1));

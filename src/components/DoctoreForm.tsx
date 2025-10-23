@@ -165,7 +165,10 @@ export default function DoctorForm() {
     
     if (step < 7) setStep(step + 1);
   };
-
+const latestAppointment = patient.appointment.reduce((latest, current) =>
+  new Date(current.date) > new Date(latest.date) ? current : latest
+);
+const latestAppointmentId = latestAppointment.id;
   // Step 1: Create initial consultation
   const handleStep1Submit = async () => {
     if (!patient?.id) {
@@ -177,10 +180,7 @@ export default function DoctorForm() {
     setErr("");
 
     try {
-      const latestAppointment = patient.appointment.reduce((latest, current) =>
-  new Date(current.date) > new Date(latest.date) ? current : latest
-);
-const latestAppointmentId = latestAppointment.id;
+      
 
       const payload = {
         chronicIllnesses: doctorData.pastMedicalHistory.chronicIllnesses,
@@ -917,6 +917,8 @@ const latestAppointmentId = latestAppointment.id;
   <DietTableView
     patientId={patient.id}
     patientName={patient.fullName}
+    latestAppointmentId={latestAppointmentId}
+    consultationId={consultationId}
   />
 )}
                     </div>

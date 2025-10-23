@@ -99,19 +99,19 @@ const Dashboard = () => {
       : userRole === "Naturopathy Doctor"
       ? [
           { key: "overview", name: "Overview", icon: Users },
-          { key: "prescriptions", name: "Prescriptions", icon: Pill },
+          // { key: "prescriptions", name: "Prescriptions", icon: Pill },
  { key: "add-new-diet", name: "Add New Diet", icon: ChartArea },
           {
             key: "add-new-treatment",
             name: "Add New Treatment",
             icon: FileText,
           },
-          {
-            key: "add-post-treatment",
-            name: "Add Post-Treatment",
-            icon: Stethoscope,
-          },
-          { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+          // {
+          //   key: "add-post-treatment",
+          //   name: "Add Post-Treatment",
+          //   icon: Stethoscope,
+          // },
+          // { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
         ]
       : [
           { key: "overview", name: "Overview", icon: Users },

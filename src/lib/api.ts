@@ -385,39 +385,7 @@ export const getDietItems = async () => {
   return await response.json();
 };
 
-// Create diet plan for a specific date and time
-export const createDietPlan = async (
-  date: string, // ISO format: "2025-11-28T06:30:00.000Z"
-  patientId: string,
-  time: string, // e.g., "04:30AM-05:00AM"
-  dietItemIds: string[] // Array of diet item IDs
-) => {
-  const backendToken = getBackendToken();
-  if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
-  const response = await fetch(`${API_BASE_URL}/diet-plan/create`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${backendToken}`,
-    },
-    body: JSON.stringify({
-      date,
-      patientId,
-      dietPlanItem: {
-        time,
-        dietItem: dietItemIds,
-      },
-    }),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`Failed to create diet plan: ${response.status} - ${errorData}`);
-  }
-  
-  return await response.json();
-};
 
 // Get diet plan for a patient
 export const getDietPlan = async (patientId: string, startDate?: string, endDate?: string) => {
@@ -443,21 +411,64 @@ export const getDietPlan = async (patientId: string, startDate?: string, endDate
 // Batch create diet plans for the entire week
 export const createWeeklyDietPlan = async (
   patientId: string,
-  weeklyPlan: {
-    date: string;
-    time: string;
-    dietItemIds: string[];
-  }[]
+  appointmentId: string,
+  consultationId: string,
+  weeklyPlan: { date: string; time: string; dietItemIds: string[] }[],
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
   const promises = weeklyPlan.map((plan) =>
-    createDietPlan(plan.date, patientId, plan.time, plan.dietItemIds)
+    createDietPlan(
+      plan.date,
+      patientId,
+      appointmentId,
+      consultationId,
+      plan.time,
+      plan.dietItemIds
+    )
   );
 
   return await Promise.all(promises);
 };
+
+export const createDietPlan = async (
+  date: string,
+  patientId: string,
+  appointmentId: string,
+  consultationId: string,
+  time: string,
+  dietItemIds: string[],
+) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/diet-plan/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+    body: JSON.stringify({
+      appointmentId,
+      consultationId,
+      date,
+      patientId,
+      dietPlanItem: {
+        time,
+        dietItem: dietItemIds,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`Failed to create diet plan: ${response.status} - ${errorData}`);
+  }
+
+  return await response.json();
+};
+
 // api/diet.ts
 
 
