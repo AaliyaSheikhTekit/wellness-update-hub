@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,21 +6,28 @@ import { Button } from "@/components/ui/button";
 import TreatmentPlanTable from "./TreatmentPlanTable";
 import DietTableView from "./Dietician/DietTableView";
 import { useParams } from "react-router-dom";
-import { getPatientById, createPatientConsult, getBackendToken } from "@/lib/api";
+import {
+  getPatientById,
+  createPatientConsult,
+  getBackendToken,
+} from "@/lib/api";
 import SignatureCanvas from "react-signature-canvas";
 const API_BASE_URL = "https://api.ikshanaturopathy.com/v1";
 
 // API function for updating consultation
 const updatePatientConsult = async (consultationId: string, payload: any) => {
   const backendToken = getBackendToken();
-  const response = await fetch(`${API_BASE_URL}/consultation/update/${consultationId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/consultation/update/${consultationId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
   if (!response.ok) throw new Error(`Update failed: ${response.status}`);
   return await response.json();
 };
@@ -31,7 +37,7 @@ const uploadConsultationReport = async (file: File) => {
   const backendToken = getBackendToken();
   const formData = new FormData();
   formData.append("report", file);
-  
+
   const response = await fetch(`${API_BASE_URL}/consultation/upload`, {
     method: "POST",
     headers: {
@@ -39,7 +45,7 @@ const uploadConsultationReport = async (file: File) => {
     },
     body: formData,
   });
-  
+
   if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
   return await response.json();
 };
@@ -48,14 +54,16 @@ export default function DoctorForm() {
   const { id } = useParams();
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
-   const sigCanvas = useRef<SignatureCanvas>(null);
+  const sigCanvas = useRef<SignatureCanvas>(null);
   const [signature, setSignature] = useState<string | null>(null);
 
   const clear = () => sigCanvas.current?.clear();
 
   const save = () => {
     if (!sigCanvas.current?.isEmpty()) {
-      const base64 = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
+      const base64 = sigCanvas.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png");
       setSignature(base64);
       console.log("Signature Base64:", base64);
     }
@@ -68,9 +76,11 @@ export default function DoctorForm() {
   const [treatmentPlanData, setTreatmentPlanData] = useState<any[]>([]);
   const [includeYoga, setIncludeYoga] = useState(true);
   const [uploadingReport, setUploadingReport] = useState(false);
-  const [investigationsFile, setInvestigationsFile] = useState<File | null>(null);
+  const [investigationsFile, setInvestigationsFile] = useState<File | null>(
+    null
+  );
   const [diagnosisFile, setDiagnosisFile] = useState<File | null>(null);
-  
+
   console.log("Patient ID from params:", patient, id);
 
   useEffect(() => {
@@ -157,18 +167,18 @@ export default function DoctorForm() {
     if (step === 1 && !consultationId) {
       await handleStep1Submit();
     }
-    
+
     // If completing step 5, upload any files
     if (step === 5 && (investigationsFile || diagnosisFile)) {
       await handleStep5FileUploads();
     }
-    
+
     if (step < 7) setStep(step + 1);
   };
-const latestAppointment = patient.appointment.reduce((latest, current) =>
-  new Date(current.date) > new Date(latest.date) ? current : latest
-);
-const latestAppointmentId = latestAppointment.id;
+  const latestAppointment = patient.appointment.reduce((latest, current) =>
+    new Date(current.date) > new Date(latest.date) ? current : latest
+  );
+  const latestAppointmentId = latestAppointment.id;
   // Step 1: Create initial consultation
   const handleStep1Submit = async () => {
     if (!patient?.id) {
@@ -180,32 +190,29 @@ const latestAppointmentId = latestAppointment.id;
     setErr("");
 
     try {
-      
-
       const payload = {
         chronicIllnesses: doctorData.pastMedicalHistory.chronicIllnesses,
         surgeriesOrInjuries: doctorData.pastMedicalHistory.surgeries,
         allergies: doctorData.pastMedicalHistory.allergies,
         familyHistory: doctorData.pastMedicalHistory.familyHistory,
         patientId: patient.id,
-        appointmentId: latestAppointmentId
+        appointmentId: latestAppointmentId,
       };
 
-      
-      
       const result = await createPatientConsult(payload);
-      
+
       console.log("Consultation created successfully:", result);
-      
+
       // Store the consultation ID for subsequent updates
       const createdId = result?.data?.id || result?.id;
       setConsultationId(createdId);
-      
+
       alert("Step 1 completed! Moving to next step.");
-      
     } catch (error: any) {
       console.error("Error creating consultation:", error);
-      setErr(error?.message || "Failed to create consultation. Please try again.");
+      setErr(
+        error?.message || "Failed to create consultation. Please try again."
+      );
       alert(`Error: ${error?.message || "Failed to create consultation"}`);
       throw error; // Prevent moving to next step
     } finally {
@@ -224,7 +231,7 @@ const latestAppointmentId = latestAppointment.id;
         console.log("Uploading investigations report...");
         const result = await uploadConsultationReport(investigationsFile);
         const fileUrl = result?.data?.url || result?.url;
-        
+
         if (fileUrl) {
           setDoctorData({
             ...doctorData,
@@ -239,7 +246,7 @@ const latestAppointmentId = latestAppointment.id;
         console.log("Uploading diagnosis report...");
         const result = await uploadConsultationReport(diagnosisFile);
         const fileUrl = result?.data?.url || result?.url;
-        
+
         if (fileUrl) {
           setDoctorData({
             ...doctorData,
@@ -252,7 +259,6 @@ const latestAppointmentId = latestAppointment.id;
       if (investigationsFile || diagnosisFile) {
         alert("Reports uploaded successfully!");
       }
-
     } catch (error: any) {
       console.error("Error uploading reports:", error);
       setErr(error?.message || "Failed to upload reports. Please try again.");
@@ -275,8 +281,8 @@ const latestAppointmentId = latestAppointment.id;
     try {
       // Prepare medicine history (only non-empty entries)
       const medicineHistory = doctorData.medicineChart
-        .filter(med => med.dosage || med.frequency)
-        .map(med => ({
+        .filter((med) => med.dosage || med.frequency)
+        .map((med) => ({
           ...(med.medicineId ? { medicineId: med.medicineId } : {}),
           dosage: med.dosage,
           frequency: med.frequency,
@@ -322,24 +328,27 @@ const latestAppointmentId = latestAppointment.id;
         },
         doctorName: doctorData.doctorName,
         signature: doctorData.signature,
-        medicineHistory: medicineHistory.length > 0 ? medicineHistory : undefined,
-        treatmentPlan: treatmentPlanData.length > 0 ? treatmentPlanData : undefined,
+        medicineHistory:
+          medicineHistory.length > 0 ? medicineHistory : undefined,
+        treatmentPlan:
+          treatmentPlanData.length > 0 ? treatmentPlanData : undefined,
         includeYoga: includeYoga,
       };
 
       console.log("Updating consultation with payload:", payload);
-      
+
       const result = await updatePatientConsult(consultationId, payload);
-      
+
       console.log("Consultation updated successfully:", result);
       alert("Doctor consultation form submitted successfully!");
-      
+
       // Optionally navigate or reset
       // navigate('/consultations');
-      
     } catch (error: any) {
       console.error("Error updating consultation:", error);
-      setErr(error?.message || "Failed to update consultation. Please try again.");
+      setErr(
+        error?.message || "Failed to update consultation. Please try again."
+      );
       alert(`Error: ${error?.message || "Failed to update consultation"}`);
     } finally {
       setSubmitting(false);
@@ -351,7 +360,9 @@ const latestAppointmentId = latestAppointment.id;
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-4 md:p-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-amber-700 font-semibold">Loading patient data...</p>
+          <p className="text-amber-700 font-semibold">
+            Loading patient data...
+          </p>
         </div>
       </div>
     );
@@ -363,11 +374,21 @@ const latestAppointmentId = latestAppointment.id;
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
             <div className="text-red-600 mb-4">
-              <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-12 h-12 mx-auto mb-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Error Loading Patient</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              Error Loading Patient
+            </h3>
             <p className="text-gray-600">{err}</p>
           </CardContent>
         </Card>
@@ -411,7 +432,9 @@ const latestAppointmentId = latestAppointment.id;
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
                     <span className="font-semibold text-gray-700">Name:</span>
-                    <p className="text-gray-900">{patient?.fullName || "N/A"}</p>
+                    <p className="text-gray-900">
+                      {patient?.fullName || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <span className="font-semibold text-gray-700">Age:</span>
@@ -425,7 +448,9 @@ const latestAppointmentId = latestAppointment.id;
                     <span className="font-semibold text-gray-700">
                       Contact:
                     </span>
-                    <p className="text-gray-900">{patient?.contactNumber || "N/A"}</p>
+                    <p className="text-gray-900">
+                      {patient?.contactNumber || "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -460,7 +485,9 @@ const latestAppointmentId = latestAppointment.id;
                         } ${
                           step === s ? "ring-4 ring-amber-200 scale-110" : ""
                         } ${
-                          s > 1 && !consultationId ? "opacity-50 cursor-not-allowed" : ""
+                          s > 1 && !consultationId
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
                         }`}
                       >
                         {step > s ? (
@@ -852,7 +879,7 @@ const latestAppointmentId = latestAppointment.id;
                         rows={4}
                       />
                     </div>
-                     <div>
+                    <div>
                       <label className="font-semibold text-gray-700 block mb-2">
                         Upload Diagnosis Report
                       </label>
@@ -891,7 +918,6 @@ const latestAppointmentId = latestAppointment.id;
                       </div>
                     )}
                   </div>
-                
                 </div>
               )}
 
@@ -906,21 +932,25 @@ const latestAppointmentId = latestAppointment.id;
                       <label className="font-semibold text-gray-700 block mb-2">
                         Treatment Plan
                       </label>
-                     
-                      <TreatmentPlanTable/>
+
+                      <TreatmentPlanTable
+                        value={treatmentPlanData}
+                        onChange={setTreatmentPlanData}
+                        includeYoga={true} // or a state you already have
+                      />
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
                         Diet Chart
                       </label>
-       {patient && (
-  <DietTableView
-    patientId={patient.id}
-    patientName={patient.fullName}
-    latestAppointmentId={latestAppointmentId}
-    consultationId={consultationId}
-  />
-)}
+                      {patient && (
+                        <DietTableView
+                          patientId={patient.id}
+                          patientName={patient.fullName}
+                          latestAppointmentId={latestAppointmentId}
+                          consultationId={consultationId}
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
@@ -976,38 +1006,42 @@ const latestAppointmentId = latestAppointment.id;
                       Doctor's Signature
                     </label>
                     <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
-                       <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
-      <SignatureCanvas
-        ref={sigCanvas}
-        penColor="black"
-        canvasProps={{
-          className: "w-full h-[150px] bg-white rounded-lg",
-        }}
-      />
-      <div className="flex justify-between mt-2">
-        <button
-          type="button"
-          onClick={clear}
-          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={save}
-          className="px-3 py-1 bg-amber-400 text-white rounded hover:bg-amber-500"
-        >
-          Save
-        </button>
-      </div>
+                      <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
+                        <SignatureCanvas
+                          ref={sigCanvas}
+                          penColor="black"
+                          canvasProps={{
+                            className: "w-full h-[150px] bg-white rounded-lg",
+                          }}
+                        />
+                        <div className="flex justify-between mt-2">
+                          <button
+                            type="button"
+                            onClick={clear}
+                            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            type="button"
+                            onClick={save}
+                            className="px-3 py-1 bg-amber-400 text-white rounded hover:bg-amber-500"
+                          >
+                            Save
+                          </button>
+                        </div>
 
-      {signature && (
-        <div className="mt-4">
-          <p className="text-sm text-gray-600">Preview:</p>
-          <img src={signature} alt="Signature preview" className="mt-2 border rounded" />
-        </div>
-      )}
-    </div>
+                        {signature && (
+                          <div className="mt-4">
+                            <p className="text-sm text-gray-600">Preview:</p>
+                            <img
+                              src={signature}
+                              alt="Signature preview"
+                              className="mt-2 border rounded"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

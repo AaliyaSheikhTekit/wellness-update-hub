@@ -16,8 +16,17 @@ import infrastructure7 from "@/assets/images/infrastructure7.jpg";
 import infrastructure8 from "@/assets/images/infrastructure8.jpg";
 import infrastructure9 from "@/assets/images/infrastructure9.jpg";
 import teamPhoto from "@/assets/images/team.jpg";
+import { useRef } from "react";
 
 const About = () => {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollByPage = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const amount = el.clientWidth; // one "page" width
+    el.scrollBy({ left: dir * amount, behavior: "smooth" });
+  };
   const team = [
     {
       name: "Esha Agrawal",
@@ -32,7 +41,19 @@ const About = () => {
       image: doctor,
     },
   ];
+{/* Infrastructure Carousel – NO LIBRARIES */}
 
+const infrastructureImages = [
+  { src: infrastructure1, alt: "Iksha Naturopathy reception area with pink wall and modern design" },
+  { src: infrastructure2, alt: "Natural therapy treatment setup with herbal compress" },
+  { src: infrastructure3, alt: "Peaceful massage treatment room" },
+  { src: infrastructure4, alt: "Prithvi element therapy room" },
+  { src: infrastructure5, alt: "Hydrotherapy bath treatment facility" },
+  { src: infrastructure6, alt: "Dual water therapy treatment beds" },
+  { src: infrastructure7, alt: "Relaxation lounge with modern seating" },
+  { src: infrastructure8, alt: "Meditation and yoga hall with chakra display" },
+  { src: infrastructure9, alt: "Bird's eye view of reception area" },
+];
   return (
     <section id="about" className="py-20">
       <div className="container mx-auto px-4">
@@ -168,34 +189,80 @@ const About = () => {
             </motion.div>
 
             {/* Infrastructure Gallery */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {[
-                { src: infrastructure1, alt: "Iksha Naturopathy reception area with pink wall and modern design" },
-                { src: infrastructure2, alt: "Natural therapy treatment setup with herbal compress" },
-                { src: infrastructure3, alt: "Peaceful massage treatment room" },
-                { src: infrastructure4, alt: "Prithvi element therapy room" },
-                { src: infrastructure5, alt: "Hydrotherapy bath treatment facility" },
-                { src: infrastructure6, alt: "Dual water therapy treatment beds" },
-                { src: infrastructure7, alt: "Relaxation lounge with modern seating" },
-                { src: infrastructure8, alt: "Meditation and yoga hall with chakra display" },
-                { src: infrastructure9, alt: "Bird's eye view of reception area" },
-              ].map((image, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  className="relative group overflow-hidden rounded-xl wellness-shadow hover:shadow-2xl transition-all duration-300"
-                >
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </motion.div>
-              ))}
+            <div className="relative mb-12">
+      {/* Edge fades */}
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-12 bg-gradient-to-r from-background to-transparent z-10" />
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-background to-transparent z-10" />
+
+      {/* Track */}
+      <div
+        ref={trackRef}
+        className="
+          flex gap-4 overflow-x-auto scroll-smooth
+          snap-x snap-mandatory pb-2
+          [-ms-overflow-style:none] [scrollbar-width:none]
+        "
+        style={{ scrollBehavior: "smooth" }}
+        // hide scrollbar (webkit)
+        // @ts-ignore
+        css={undefined}
+      >
+        {/* hide scrollbar (webkit) */}
+        <style>{`
+          /* Hide scrollbar for Chrome/Safari */
+          [data-carousel-track]::-webkit-scrollbar { display: none; }
+        `}</style>
+
+        <div data-carousel-track className="contents">
+          {infrastructureImages.map((image, idx) => (
+            <div
+              key={idx}
+              className="
+                snap-start
+                min-w-[90%] sm:min-w-[50%] lg:min-w-[33.333%]
+              "
+            >
+              <div className="relative overflow-hidden rounded-xl wellness-shadow hover:shadow-2xl transition-all duration-300">
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  className="w-full h-72 object-cover transition-transform duration-500 hover:scale-110"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <button
+        type="button"
+        aria-label="Previous"
+        onClick={() => scrollByPage(-1)}
+        className="
+          absolute left-2 top-1/2 -translate-y-1/2 z-20
+          rounded-full border bg-white/80 hover:bg-white
+          shadow p-2 backdrop-blur
+        "
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        aria-label="Next"
+        onClick={() => scrollByPage(1)}
+        className="
+          absolute right-2 top-1/2 -translate-y-1/2 z-20
+          rounded-full border bg-white/80 hover:bg-white
+          shadow p-2 backdrop-blur
+        "
+      >
+        ›
+      </button>
+    </div>
 
             {/* Team Photo */}
             <motion.div
