@@ -94,7 +94,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   {
     icon: Phone,
     title: "Call Us",
-    details: ["+91 9727778179"],
+    details: ["+91 9343922950"],
     color: "text-wellness-sage",
   },
   {
@@ -174,7 +174,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </p>
                 <Button variant="wellness" size="lg" className="w-full bg-foreground hover:bg-foreground/90">
                   <Phone className="h-4 w-4 mr-2" />
-                  Call Now: +91 9727778179
+                  Call Now: +91 9343922950
                 </Button>
               </CardContent>
             </Card>
@@ -223,7 +223,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       id="phone"
                       name="phone"
                       type="tel"
-                      placeholder="+91 9727778179"
+                      placeholder="+91 9343922950"
                       value={formData.phone}
                       onChange={handleInputChange}
                     />

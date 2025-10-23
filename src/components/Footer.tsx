@@ -7,6 +7,9 @@ const Footer = () => {
     "Infront of Bypass, next to Empire Estate",
     "Sahara City Homes, Indore, Deoguradia",
     "Madhya Pradesh - 452016",
+    "--------------------------------",
+   " C-8, C-9 AND C-10 EMPIRE MARKET PALACE BICHOLI MARDANA INDORE Dist.",
+"INDORE M.P. 452016",
   ];
 
   return (
@@ -99,8 +102,7 @@ const Footer = () => {
               <div className="flex items-start space-x-3">
                 <Phone className="w-5 h-5 text-primary-foreground/60 mt-1 flex-shrink-0" />
                 <div>
-                  <p className="text-primary-foreground">+91 9727778179
-</p>
+                  <p className="text-primary-foreground">+91 9343922950 </p>
                   <p className="text-primary-foreground/80 text-sm">
                     Emergency: 24/7
                   </p>

@@ -414,6 +414,7 @@ export const createWeeklyDietPlan = async (
   appointmentId: string,
   consultationId: string,
   weeklyPlan: { date: string; time: string; dietItemIds: string[] }[],
+  restrictions:string,
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
@@ -426,6 +427,7 @@ export const createWeeklyDietPlan = async (
       consultationId,
       plan.time,
       plan.dietItemIds
+      restrictions
     )
   );
 
@@ -439,6 +441,7 @@ export const createDietPlan = async (
   consultationId: string,
   time: string,
   dietItemIds: string[],
+  restrictions:string
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
@@ -457,7 +460,7 @@ export const createDietPlan = async (
       dietPlanItem: {
         time,
         dietItem: dietItemIds,
-      },
+      },restrictions
     }),
   });
 

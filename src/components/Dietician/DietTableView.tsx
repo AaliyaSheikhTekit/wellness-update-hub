@@ -402,7 +402,8 @@ const saveWeeklyPlan = async () => {
       patientId,
       String(appointmentId),
       String(consultationId),
-      weeklyPlan
+      weeklyPlan,
+      commonRestrictions
     );
 
     toast({
