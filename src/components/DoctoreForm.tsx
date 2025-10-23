@@ -46,7 +46,7 @@ const uploadConsultationReport = async (file: File) => {
 
 export default function DoctorForm() {
   const { id } = useParams();
-  const [step, setStep] = useState(6);
+  const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
    const sigCanvas = useRef<SignatureCanvas>(null);
   const [signature, setSignature] = useState<string | null>(null);

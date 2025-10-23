@@ -11,6 +11,8 @@ import {
   Stethoscope,
   Search,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getPatients, updateAppointment, getBackendToken } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+
+/* ----------------------------- Types ----------------------------- */
 
 type AppointmentStatus =
   | "pending"
@@ -65,10 +69,118 @@ const statusClasses: Record<AppointmentStatus, string> = {
 };
 
 const StatusBadge = ({ value }: { value: AppointmentStatus }) => (
-  <Badge className={`${statusClasses[value]} capitalize`}>
-    {value.replace("_", " ")}
-  </Badge>
+  <Badge className={`${statusClasses[value]} capitalize`}>{value.replace("_", " ")}</Badge>
 );
+
+/* ------------------------ Small Pagination UI ------------------------ */
+
+type PaginationBarProps = {
+  page: number;
+  totalPages: number;
+  total?: number;
+  limit: number;
+  limits?: number[];
+  onPageChange: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+  className?: string;
+};
+
+const PaginationBar = ({
+  page,
+  totalPages,
+  total,
+  limit,
+  limits = [10, 20, 50],
+  onPageChange,
+  onLimitChange,
+  className = "",
+}: PaginationBarProps) => {
+  // generate a compact page list (1 ... n)
+  const pages = useMemo(() => {
+    const arr: (number | string)[] = [];
+    const add = (v: number | string) => arr.push(v);
+
+    const window = 1; // pages around current
+    const start = Math.max(1, page - window);
+    const end = Math.min(totalPages, page + window);
+
+    add(1);
+    if (start > 2) add("…");
+    for (let p = start; p <= end; p++) add(p);
+    if (end < totalPages - 1) add("…");
+    if (totalPages > 1) add(totalPages);
+    return Array.from(new Set(arr)).filter(Boolean);
+  }, [page, totalPages]);
+
+  return (
+    <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
+      <div className="text-xs text-muted-foreground">
+        {typeof total === "number" ? `Total: ${total}` : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Prev
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {pages.map((p, i) =>
+            typeof p === "number" ? (
+              <Button
+                key={`${p}-${i}`}
+                variant={p === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(p)}
+              >
+                {p}
+              </Button>
+            ) : (
+              <span key={`dots-${i}`} className="px-2 text-xs text-muted-foreground">
+                {p}
+              </span>
+            )
+          )}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+
+        {onLimitChange && (
+          <div className="ml-2 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Per page</span>
+            <Select value={String(limit)} onValueChange={(v) => onLimitChange(Number(v))}>
+              <SelectTrigger className="h-8 w-[78px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {limits.map((opt) => (
+                  <SelectItem key={opt} value={String(opt)}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ---------------------------- Main Screen ---------------------------- */
 
 const DoctorDashboard = () => {
   const { toast } = useToast();
@@ -76,27 +188,44 @@ const DoctorDashboard = () => {
   const DOCTOR_ID = localStorage.getItem("doctor_id") || "doctor123";
   const SOCKET_URL = "https://api.ikshanaturopathy.com";
 
+  // data
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+
+  // loading
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [patientLoading, setPatientLoading] = useState(false);
+
+  // filters / search
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // optimistic update guard
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
+  // -------- APPOINTMENT PAGINATION (server-side) --------
+  const [aptPage, setAptPage] = useState(1);
+  const [aptLimit, setAptLimit] = useState(10);
+  const [aptTotal, setAptTotal] = useState(0);
+  const [aptTotalPages, setAptTotalPages] = useState(1);
+
+  // -------- PATIENT PAGINATION (client-side) --------
+  const [patPage, setPatPage] = useState(1);
+  const [patLimit, setPatLimit] = useState(10);
+
+  // unread
   const unreadAppointments = useMemo(
     () => appointments.filter((apt) => !apt.is_read),
     [appointments]
   );
 
-  // --- Fetch appointments (extracted so we can call it after updates) ---
+  /* --------------------- Fetch Appointments (server) --------------------- */
   const fetchAppointments = useCallback(async () => {
     try {
       setLoadingAppointments(true);
       const token = getBackendToken();
       const res = await fetch(
-        `https://api.ikshanaturopathy.com/v1/appointment/get?filter=all&page=1&limit=20`,
+        `https://api.ikshanaturopathy.com/v1/appointment/get?filter=all&page=${aptPage}&limit=${aptLimit}`,
         {
           method: "GET",
           headers: {
@@ -121,14 +250,15 @@ const DoctorDashboard = () => {
           patient_phone: a.patient?.contactNumber || "—",
           appointment_date: iso.split("T")[0] || "",
           appointment_time: time,
-          status: (a.status ||
-            "pending") as AppointmentStatus, // server status mapping
+          status: (a.status || "pending") as AppointmentStatus,
           notes: a.note || a.notes || null,
           is_read: false,
         };
       });
 
       setAppointments(mapped);
+      setAptTotal(data?.meta?.total ?? mapped.length);
+      setAptTotalPages(data?.meta?.totalPages ?? 1);
     } catch (e) {
       console.error(e);
       toast({
@@ -139,19 +269,20 @@ const DoctorDashboard = () => {
     } finally {
       setLoadingAppointments(false);
     }
-  }, [toast]);
+  }, [aptLimit, aptPage, toast]);
 
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // --- Fetch patients on search ---
+  /* ---------------------- Fetch Patients (on search) --------------------- */
   useEffect(() => {
     const loadPatients = async () => {
       setPatientLoading(true);
       try {
-        const res = await getPatients(searchTerm);
+        const res = await getPatients(searchTerm); // assuming this returns full list by query
         setPatients(res?.data ?? []);
+        setPatPage(1); // reset to first page when search changes
       } catch (err) {
         toast({
           title: "Error fetching patients",
@@ -165,35 +296,22 @@ const DoctorDashboard = () => {
     loadPatients();
   }, [searchTerm, toast]);
 
-  // --- Status change handler ---
-  const handleStatusChange = async (
-    apt: Appointment,
-    nextStatus: AppointmentStatus
-  ) => {
-    const prev = appointments; // snapshot for rollback
+  /* ------------------------ Update Appointment Status ------------------------ */
+  const handleStatusChange = async (apt: Appointment, nextStatus: AppointmentStatus) => {
+    const prev = appointments;
     try {
       setUpdatingStatusId(apt.id);
-
-      // optimistic update
-      setAppointments((cur) =>
-        cur.map((a) => (a.id === apt.id ? { ...a, status: nextStatus } : a))
-      );
-
+      setAppointments((cur) => cur.map((a) => (a.id === apt.id ? { ...a, status: nextStatus } : a)));
       await updateAppointment(apt.id, { status: nextStatus });
-
       toast({
         title: "Status updated",
-        description: `${apt.patient_name} marked as ${nextStatus.replace(
-          "_",
-          " "
-        )}.`,
+        description: `${apt.patient_name} marked as ${nextStatus.replace("_", " ")}.`,
       });
-
-      // Optionally re-sync from server
+      // Re-sync current page from server
       await fetchAppointments();
     } catch (e: any) {
       console.error(e);
-      setAppointments(prev); // rollback
+      setAppointments(prev);
       toast({
         title: "Failed to update status",
         description: e?.message || "Please try again.",
@@ -206,18 +324,16 @@ const DoctorDashboard = () => {
 
   const markAsRead = (appointmentId: string) => {
     setAppointments((prev) =>
-      prev.map((apt) =>
-        apt.id === appointmentId ? { ...apt, is_read: true } : apt
-      )
+      prev.map((apt) => (apt.id === appointmentId ? { ...apt, is_read: true } : apt))
     );
   };
 
-  // --- Socket setup for real-time appointments ---
+  /* ---------------------------- Realtime Socket ---------------------------- */
   useEffect(() => {
     const socket = io(SOCKET_URL);
 
     socket.on("connect", () => {
-      console.log("✅ Connected with id:", socket.id);
+      // console.log("✅ Connected:", socket.id);
       socket.emit("registerDoctor", DOCTOR_ID);
     });
 
@@ -229,24 +345,33 @@ const DoctorDashboard = () => {
         patient_phone: data.patientPhone || "—",
         appointment_date: iso.split("T")[0] || "",
         appointment_time: iso
-          ? new Date(iso).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+          ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
           : "",
         status: (data.status || "pending") as AppointmentStatus,
         notes: data.note || null,
         is_read: false,
       };
+      // Prepend only if it belongs to the current server page OR simply increase attention
       setAppointments((prev) => [newAppointment, ...prev]);
       setShowNotifications(true);
     });
 
-    socket.on("disconnect", () => console.log("Disconnected from socket"));
+    socket.on("disconnect", () => {});
     return () => {
       socket.disconnect();
     };
   }, [DOCTOR_ID]);
+
+  /* ----------------------- Derived Patient Pagination ----------------------- */
+
+  const patTotal = patients.length;
+  const patTotalPages = Math.max(1, Math.ceil(patTotal / patLimit));
+  const pagedPatients = useMemo(() => {
+    const start = (patPage - 1) * patLimit;
+    return patients.slice(start, start + patLimit);
+  }, [patients, patPage, patLimit]);
+
+  /* --------------------------------- UI --------------------------------- */
 
   return (
     <div className="space-y-6">
@@ -258,9 +383,7 @@ const DoctorDashboard = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold">Doctor Dashboard</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your appointments & patients
-            </p>
+            <p className="text-sm text-muted-foreground">Manage your appointments & patients</p>
           </div>
 
           {unreadAppointments.length > 0 && (
@@ -292,9 +415,7 @@ const DoctorDashboard = () => {
           <CardHeader className="border-b">
             <CardTitle>Appointments</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {loadingAppointments
-                ? "Loading…"
-                : `${appointments.length} total appointments`}
+              {loadingAppointments ? "Loading…" : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
             </p>
           </CardHeader>
 
@@ -307,9 +428,7 @@ const DoctorDashboard = () => {
             )}
 
             {!loadingAppointments && appointments.length === 0 && (
-              <p className="text-center text-muted-foreground">
-                No appointments scheduled
-              </p>
+              <p className="text-center text-muted-foreground">No appointments found</p>
             )}
 
             {!loadingAppointments &&
@@ -328,19 +447,12 @@ const DoctorDashboard = () => {
                             <User className="h-4 w-4 text-primary" />
                           </div>
                           {apt.patient_name}
-                          {!apt.is_read && (
-                            <Badge className="ml-2 bg-notification text-white">
-                              New
-                            </Badge>
-                          )}
-                          {/* Status badge next to name */}
+                          {!apt.is_read && <Badge className="ml-2 bg-notification text-white">New</Badge>}
                           <div className="ml-2">
                             <StatusBadge value={apt.status} />
                           </div>
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {apt.patient_phone}
-                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">{apt.patient_phone}</p>
                       </div>
 
                       <div className="flex items-start gap-3">
@@ -351,8 +463,7 @@ const DoctorDashboard = () => {
                             onClick={() => markAsRead(apt.id)}
                             className="hover:bg-success/10 hover:text-success"
                           >
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Mark as
-                            Read
+                            <CheckCircle2 className="h-4 w-4 mr-1" /> Mark as Read
                           </Button>
                         )}
                       </div>
@@ -376,17 +487,12 @@ const DoctorDashboard = () => {
                       </div>
                     )}
 
-                    {/* Status dropdown + quick action */}
                     <div className="flex flex-col sm:flex-row gap-3 sm:items-end justify-between">
                       <div className="w-full sm:w-64">
-                        <Label className="text-xs text-gray-500">
-                          Update Status
-                        </Label>
+                        <Label className="text-xs text-gray-500">Update Status</Label>
                         <Select
                           value={apt.status}
-                          onValueChange={(val) =>
-                            handleStatusChange(apt, val as AppointmentStatus)
-                          }
+                          onValueChange={(val) => handleStatusChange(apt, val as AppointmentStatus)}
                           disabled={updatingStatusId === apt.id}
                         >
                           <SelectTrigger className="mt-1">
@@ -401,20 +507,24 @@ const DoctorDashboard = () => {
                           </SelectContent>
                         </Select>
                       </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/patient/${apt.id}`)}
-                        >
-                          View Patient
-                        </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+
+            {/* Appointments Pagination */}
+            <PaginationBar
+              page={aptPage}
+              totalPages={aptTotalPages}
+              total={aptTotal}
+              limit={aptLimit}
+              onPageChange={(p) => setAptPage(p)}
+              onLimitChange={(lim) => {
+                setAptLimit(lim);
+                setAptPage(1);
+              }}
+              className="pt-2"
+            />
           </CardContent>
         </Card>
 
@@ -424,9 +534,10 @@ const DoctorDashboard = () => {
             <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-sky-50 flex justify-between items-center">
               <CardTitle className="text-lg">Patients</CardTitle>
               <p className="text-xs text-muted-foreground">
-                {patients.length} record{patients.length !== 1 ? "s" : ""}
+                Page {patPage} of {Math.max(1, Math.ceil(patTotal / patLimit))} • {patTotal} total
               </p>
             </CardHeader>
+
             <CardContent className="p-4 space-y-3">
               {patientLoading && (
                 <div className="space-y-2">
@@ -434,51 +545,121 @@ const DoctorDashboard = () => {
                   <div className="h-16 rounded-lg bg-muted animate-pulse" />
                 </div>
               )}
-              {!patientLoading && patients.length === 0 && (
-                <p className="text-center text-muted-foreground">
-                  No patients found.
-                </p>
+
+              {!patientLoading && pagedPatients.length === 0 && (
+                <p className="text-center text-muted-foreground">No patients found.</p>
               )}
+
               {!patientLoading &&
-                patients.map((p) => (
+                pagedPatients.map((p) => (
                   <Card
                     key={p.id || p._id}
-                    className="border-l-4 border-indigo-400 hover:shadow-md transition-shadow cursor-pointer"
+                    className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
                     onClick={() => navigate(`/patient/${p.id || p._id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") && navigate(`/patient/${p.id || p._id}`)
+                    }
                   >
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
-                        {(p.fullName || p.name || "?")
-                          .split(" ")
-                          .map((s: string) => s[0])
-                          .slice(0, 2)
-                          .join("")
-                          .toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                          <User className="h-4 w-4 text-indigo-500" />
-                          <span>{p.fullName || p.name || "—"}</span>
-                          {p.bloodType && (
-                            <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700">
-                              {p.bloodType}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-                          <div>Phone: {p.contactNumber || "—"}</div>
-                          <div>Reference: {p.reference || "—"}</div>
-                          <div>
-                            DOB:{" "}
-                            {p.dateOfBirth
-                              ? new Date(p.dateOfBirth).toLocaleDateString()
-                              : "—"}
+                    <div className="absolute left-0 top-0 h-full w-1 bg-indigo-400" />
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex items-start gap-4 sm:gap-5">
+                        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-100">
+                          <span className="text-sm font-semibold">
+                            {(p.fullName || p.name || "?")
+                              .split(" ")
+                              .map((s: string) => s[0])
+                              .slice(0, 2)
+                              .join("")
+                              .toUpperCase()}
+                          </span>
+                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white ring-2 ring-white">
+                            <User className="h-3.5 w-3.5 text-indigo-500" />
                           </div>
                         </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="truncate text-base font-semibold text-gray-900">
+                                  {p.fullName || p.name || "—"}
+                                </span>
+                                {p.bloodType && (
+                                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+                                    {p.bloodType}
+                                  </span>
+                                )}
+                                {p.reference && (
+                                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-inset ring-sky-200">
+                                    Ref: {p.reference}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-gray-300 text-gray-700 hover:bg-gray-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/patient/${p.id || p._id}`);
+                                }}
+                              >
+                                View Patient
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:mt-4 sm:grid-cols-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
+                                📞
+                              </span>
+                              <span className="truncate">{p.contactNumber || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
+                                🆔
+                              </span>
+                              <span className="truncate">{p.reference || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
+                                🎂
+                              </span>
+                              <span className="truncate">
+                                {p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : "—"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pointer-events-none mt-4 hidden items-center justify-end text-[11px] text-gray-400 sm:flex">
+                        <span className="transition-opacity group-hover:opacity-100">
+                          Press Enter to open
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
+
+              {/* Patients Pagination (client-side) */}
+              <PaginationBar
+                page={patPage}
+                totalPages={patTotalPages}
+                total={patTotal}
+                limit={patLimit}
+                onPageChange={(p) => setPatPage(p)}
+                onLimitChange={(lim) => {
+                  setPatLimit(lim);
+                  setPatPage(1);
+                }}
+              />
             </CardContent>
           </Card>
         </motion.div>
@@ -513,12 +694,8 @@ const DoctorDashboard = () => {
                       <User className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <span className="font-semibold text-gray-800 block">
-                        {apt.patient_name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {apt.patient_phone}
-                      </span>
+                      <span className="font-semibold text-gray-800 block">{apt.patient_name}</span>
+                      <span className="text-xs text-gray-500">{apt.patient_phone}</span>
                     </div>
                   </div>
                   <Button
@@ -533,21 +710,15 @@ const DoctorDashboard = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm bg-primary/5 p-2 rounded-md">
                     <CalendarIcon className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-gray-700">
-                      {apt.appointment_date}
-                    </span>
+                    <span className="font-medium text-gray-700">{apt.appointment_date}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm bg-info/5 p-2 rounded-md">
                     <Clock className="h-4 w-4 text-info" />
-                    <span className="font-medium text-gray-700">
-                      {apt.appointment_time}
-                    </span>
+                    <span className="font-medium text-gray-700">{apt.appointment_time}</span>
                   </div>
                   {apt.notes && (
                     <div className="bg-amber-50 border border-amber-200 p-2 rounded-md">
-                      <p className="text-xs text-amber-900 leading-relaxed">
-                        {apt.notes}
-                      </p>
+                      <p className="text-xs text-amber-900 leading-relaxed">{apt.notes}</p>
                     </div>
                   )}
                 </div>

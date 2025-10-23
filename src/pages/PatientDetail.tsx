@@ -1268,7 +1268,7 @@ const PatientDetail = () => {
                         
             <div className="flex items-center space-x-3">
               {/* New Prescription */}
-              <Dialog
+              {/* <Dialog
                 open={newPrescriptionOpen}
                 onOpenChange={setNewPrescriptionOpen}
               >
@@ -1338,7 +1338,7 @@ const PatientDetail = () => {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
             </div>
                       </div>
                     </div>
