@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,16 +55,21 @@ export default function TreatmentPlanTable({
   const [treatmentOptions, setTreatmentOptions] = useState<any[]>([]);
 
   // load treatment options once
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getTreatmentAll();
-        setTreatmentOptions(data.data || []);
-      } catch (err) {
-        console.error("Error fetching treatments:", err);
-      }
-    })();
-  }, []);
+const fetchedRef = useRef(false);
+
+useEffect(() => {
+  if (fetchedRef.current) return; // ✅ Prevent double run in React 18 StrictMode
+  fetchedRef.current = true;
+
+  (async () => {
+    try {
+      const data = await getTreatmentAll();
+      setTreatmentOptions(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error("Error fetching treatments:", err);
+    }
+  })();
+}, []);
 
   // hydrate rows from parent value
   useEffect(() => {

@@ -596,7 +596,8 @@ const PatientDetail = () => {
             <TabsTrigger value="vitals">Vitals and antropometric measurment</TabsTrigger>
             <TabsTrigger value="consent">Consent & Signature</TabsTrigger>
             <TabsTrigger value="payments">UPI / Payments</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="appointments">Appointments</TabsTrigger><TabsTrigger value="dietchart">Diet Chart</TabsTrigger>
+  <TabsTrigger value="treatmentplan">Treatment Plan</TabsTrigger>
              {/* <TabsTrigger value="prescription">Prescription</TabsTrigger> */}
           </TabsList>
 

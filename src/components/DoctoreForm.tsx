@@ -52,6 +52,7 @@ const uploadConsultationReport = async (file: File) => {
 
 export default function DoctorForm() {
   const { id } = useParams();
+  console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
   const sigCanvas = useRef<SignatureCanvas>(null);
@@ -114,7 +115,7 @@ export default function DoctorForm() {
       familyHistory: "",
     },
     medicineChart: Array.from({ length: 5 }, () => ({
-      medicineId: "",
+      medicineName: "",
       name: "",
       dosage: "",
       frequency: "",
@@ -154,6 +155,11 @@ export default function DoctorForm() {
     yogaChart: "",
     doctorName: "",
     signature: "",
+      treatment: {
+        treatmentPlan:"",
+        dietChart: "",
+        yogaChart: ""
+    },
   });
 
   const handleMedicineChange = (index, field, value) => {
@@ -175,10 +181,17 @@ export default function DoctorForm() {
 
     if (step < 7) setStep(step + 1);
   };
-  const latestAppointment = patient.appointment.reduce((latest, current) =>
-    new Date(current.date) > new Date(latest.date) ? current : latest
-  );
-  const latestAppointmentId = latestAppointment.id;
+const latestAppointment = Array.isArray(patient?.appointment) && patient.appointment.length > 0
+  ? patient.appointment.reduce((latest, current) => {
+      const latestDate = new Date(latest.date);
+      const currentDate = new Date(current.date);
+      return currentDate > latestDate ? current : latest;
+    })
+  : null;
+
+const latestAppointmentId = latestAppointment?.id ?? null;
+
+
   // Step 1: Create initial consultation
   const handleStep1Submit = async () => {
     if (!patient?.id) {
@@ -283,7 +296,7 @@ export default function DoctorForm() {
       const medicineHistory = doctorData.medicineChart
         .filter((med) => med.dosage || med.frequency)
         .map((med) => ({
-          ...(med.medicineId ? { medicineId: med.medicineId } : {}),
+          ...(med.medicineName ? { medicineName: med.medicineName } : {}),
           dosage: med.dosage,
           frequency: med.frequency,
           remarks: med.remarks,
@@ -327,7 +340,7 @@ export default function DoctorForm() {
           yogaChart: doctorData.yogaChart,
         },
         doctorName: doctorData.doctorName,
-        signature: doctorData.signature,
+        signature: signature,
         medicineHistory:
           medicineHistory.length > 0 ? medicineHistory : undefined,
         treatmentPlan:
@@ -627,7 +640,7 @@ export default function DoctorForm() {
                             Sr. No.
                           </th>
                           <th className="border border-amber-300 p-2 text-left">
-                            Medicine ID (Optional)
+                            Medicine Name (Optional)
                           </th>
                           <th className="border border-amber-300 p-2 text-left">
                             Dosage (mg/ml)
@@ -649,11 +662,11 @@ export default function DoctorForm() {
                             <td className="border border-amber-200 p-1">
                               <Input
                                 placeholder="Medicine ID (UUID)"
-                                value={med.medicineId}
+                                value={med.medicineName}
                                 onChange={(e) =>
                                   handleMedicineChange(
                                     index,
-                                    "medicineId",
+                                    "medicineName",
                                     e.target.value
                                   )
                                 }
@@ -928,6 +941,22 @@ export default function DoctorForm() {
                     Treatment Plan
                   </h3>
                   <div className="space-y-4">
+                    <div>
+                      <label className="font-semibold text-gray-700 block mb-2">
+                        Yoga Chart
+                      </label>
+                      <Textarea
+                        placeholder="Enter yoga recommendations..."
+                        value={doctorData.treatment.treatmentPlan}
+                        onChange={(e) =>
+                          setDoctorData({
+                            ...doctorData,
+                            treatmentPlan: e.target.value,
+                          })
+                        }
+                        rows={4}
+                      />
+                    </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
                         Treatment Plan

@@ -301,7 +301,7 @@ export const updateAppointment = async (
   const token = getBackendToken();
   if (!token) throw new Error("Missing backend token. Please login first.");
 
-  const res = await fetch(`${API_BASE_URL}/appointment/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/appointment/update/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
