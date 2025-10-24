@@ -117,11 +117,40 @@ const ReceptionDashboard = () => {
  
 
 
+  // Calculate weekly patient growth
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(today.getDate() - 7);
+  const recentPatients = patients.filter((p) => {
+    if (!p.createdAt) return false;
+    const patientDate = new Date(p.createdAt);
+    return patientDate >= oneWeekAgo;
+  });
+
+  // Calculate available slots (appointments with "pending" or "available" status today)
+  const availableSlots = todaysAppointments.filter(
+    (apt) => apt.status === "pending" || apt.status === "available"
+  );
+  
+  // Find next available appointment time
+  const upcomingAppointments = appointments
+    .filter((apt) => {
+      const aptDate = new Date(apt.date);
+      return aptDate >= today && (apt.status === "pending" || apt.status === "available");
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const nextAvailableTime = upcomingAppointments.length > 0
+    ? new Date(upcomingAppointments[0].date).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "N/A";
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-100 via-pink-50 to-yellow-50">
       {/* Header */}
       <header className="bg-white border-b shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex lg:flex-row flex-col justify-between lg:items-center">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 via-pink-400 to-yellow-400 flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
@@ -180,22 +209,26 @@ const ReceptionDashboard = () => {
           >
             <h3 className="text-sm font-medium">Total Patients</h3>
             <div className="flex items-center mt-2 space-x-2">
-              <span className="text-2xl font-bold">1,247</span>
+              <span className="text-2xl font-bold">{patients.length}</span>
               <Users className="w-5 h-5" />
             </div>
-            <p className="text-sm mt-1">+23 this week</p>
+            <p className="text-sm mt-1">+{recentPatients.length} this week</p>
           </motion.div>
 
-          <motion.div
+           <motion.div
             className="bg-gradient-to-r from-blue-400 to-green-400 rounded-xl shadow-lg p-6 text-white"
             whileHover={{ scale: 1.05 }}
           >
             <h3 className="text-sm font-medium">Available Slots</h3>
             <div className="flex items-center mt-2 space-x-2">
-              <span className="text-2xl font-bold">8</span>
+              <span className="text-2xl font-bold">{availableSlots.length}</span>
               <Calendar className="w-5 h-5" />
             </div>
-            <p className="text-sm mt-1">Next available at 2:00 PM</p>
+            <p className="text-sm mt-1">
+              {upcomingAppointments.length > 0
+                ? `Next available at ${nextAvailableTime}`
+                : "No upcoming slots"}
+            </p>
           </motion.div>
         </section>
 

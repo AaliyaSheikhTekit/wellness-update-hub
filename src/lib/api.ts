@@ -426,7 +426,7 @@ export const createWeeklyDietPlan = async (
       appointmentId,
       consultationId,
       plan.time,
-      plan.dietItemIds
+      plan.dietItemIds,
       restrictions
     )
   );
