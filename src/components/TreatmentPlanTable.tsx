@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,11 +8,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ChevronDown } from "lucide-react";
 
 type TreatmentRow = {
-  id?: string;                // optional existing id from API
-  date: string;               // yyyy-MM-dd (for <input type="date" />)
+  id?: string;
+  date: string;
   timeSlot: string;
-  yoga: string;               // local field; mapped to yogaPlan on save
-  treatments: string[];       // IDs
+  yoga: string;
+  treatments: string[];
 };
 
 type ApiTreatmentPlanItem = {
@@ -20,7 +20,7 @@ type ApiTreatmentPlanItem = {
   timeSlot: string;
   treatments: string[];
   yogaPlan?: string;
-  date: string;               // ISO 8601 string
+  date: string;
 };
 
 function toInputDate(iso?: string) {
@@ -31,9 +31,9 @@ function toInputDate(iso?: string) {
     return "";
   }
 }
+
 function toISODate(ymd?: string) {
   if (!ymd) return "";
-  // Use local midnight to avoid TZ shift, then to ISO
   const [y, m, d] = ymd.split("-").map(Number);
   const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0));
   return dt.toISOString();
@@ -53,44 +53,56 @@ export default function TreatmentPlanTable({
     { date: "", timeSlot: "", yoga: "", treatments: [] },
   ]);
   const [treatmentOptions, setTreatmentOptions] = useState<any[]>([]);
+  
+  // Prevent infinite loops
+  const isHydratingRef = useRef(false);
+  const fetchedRef = useRef(false);
 
-  // load treatment options once
-const fetchedRef = useRef(false);
+  // Load treatment options once
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
 
-useEffect(() => {
-  if (fetchedRef.current) return; // ✅ Prevent double run in React 18 StrictMode
-  fetchedRef.current = true;
+    (async () => {
+      try {
+        const data = await getTreatmentAll();
+        setTreatmentOptions(Array.isArray(data?.data) ? data.data : []);
+      } catch (err) {
+        console.error("Error fetching treatments:", err);
+      }
+    })();
+  }, []);
 
-  (async () => {
-    try {
-      const data = await getTreatmentAll();
-      setTreatmentOptions(Array.isArray(data?.data) ? data.data : []);
-    } catch (err) {
-      console.error("Error fetching treatments:", err);
-    }
-  })();
-}, []);
-
-  // hydrate rows from parent value
+  // Hydrate rows from parent value (only when value changes externally)
   useEffect(() => {
     if (!Array.isArray(value)) return;
+    
+    isHydratingRef.current = true;
+    
     if (value.length === 0) {
       setRows([{ date: "", timeSlot: "", yoga: "", treatments: [] }]);
-      return;
+    } else {
+      const mapped: TreatmentRow[] = value.map((it) => ({
+        id: it.id,
+        date: toInputDate(it.date),
+        timeSlot: it.timeSlot || "",
+        yoga: it.yogaPlan || "",
+        treatments: Array.isArray(it.treatments) ? it.treatments : [],
+      }));
+      setRows(mapped);
     }
-    const mapped: TreatmentRow[] = value.map((it) => ({
-      id: it.id,
-      date: toInputDate(it.date),
-      timeSlot: it.timeSlot || "",
-      yoga: it.yogaPlan || "",
-      treatments: Array.isArray(it.treatments) ? it.treatments : [],
-    }));
-    setRows(mapped);
+    
+    // Reset flag after state update completes
+    setTimeout(() => {
+      isHydratingRef.current = false;
+    }, 0);
   }, [value]);
 
-  // push API-ready data to parent whenever rows change
-  useEffect(() => {
-    const apiItems: ApiTreatmentPlanItem[] = rows
+  // Update parent when rows change (but not during hydration)
+  const updateParent = (newRows: TreatmentRow[]) => {
+    if (isHydratingRef.current) return;
+    
+    const apiItems: ApiTreatmentPlanItem[] = newRows
       .filter((r) => r.timeSlot || r.yoga || r.treatments.length || r.date)
       .map((r) => ({
         ...(r.id ? { id: r.id } : {}),
@@ -99,28 +111,37 @@ useEffect(() => {
         yogaPlan: r.yoga || undefined,
         date: r.date ? toISODate(r.date) : "",
       }));
+    
     onChange(apiItems);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
+  };
 
-  const handleAddRow = () =>
-    setRows((prev) => [...prev, { date: "", timeSlot: "", yoga: "", treatments: [] }]);
+  const handleAddRow = () => {
+    const newRows = [...rows, { date: "", timeSlot: "", yoga: "", treatments: [] }];
+    setRows(newRows);
+    updateParent(newRows);
+  };
 
-  const handleRemoveRow = (index: number) =>
-    setRows((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveRow = (index: number) => {
+    const newRows = rows.filter((_, i) => i !== index);
+    setRows(newRows);
+    updateParent(newRows);
+  };
 
-  const handleChange = (index: number, field: keyof TreatmentRow, value: any) =>
-    setRows((prev) => {
-      const copy = [...prev];
-      (copy[index] as any)[field] = value;
-      return copy;
-    });
+  const handleChange = (index: number, field: keyof TreatmentRow, value: any) => {
+    const newRows = [...rows];
+    (newRows[index] as any)[field] = value;
+    setRows(newRows);
+    updateParent(newRows);
+  };
 
   const printTableWithHeaderFooter = (tableId: string) => {
     const table = document.getElementById(tableId);
     if (!table) return;
+    
     const newWindow = window.open("", "_blank", "width=1000,height=800");
-    newWindow!.document.write(`
+    if (!newWindow) return;
+    
+    newWindow.document.write(`
       <html>
         <head>
           <title>Treatment Plan</title>
@@ -135,7 +156,7 @@ useEffect(() => {
         </head>
         <body>
           <div class="header">
-            <div style="display:flex; justify-content:space-between; align-items:flex-center; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
               <div>
                 <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
               </div>
@@ -152,8 +173,8 @@ useEffect(() => {
         </body>
       </html>
     `);
-    newWindow!.document.close();
-    newWindow!.print();
+    newWindow.document.close();
+    newWindow.print();
   };
 
   return (
@@ -206,7 +227,6 @@ useEffect(() => {
                   </td>
                 )}
                 <td className="border px-2">
-                  {/* Selector */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-between">
@@ -258,7 +278,6 @@ useEffect(() => {
                     </PopoverContent>
                   </Popover>
 
-                  {/* Chips */}
                   {row.treatments.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {row.treatments.map((treatmentId) => {

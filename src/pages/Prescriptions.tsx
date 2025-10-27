@@ -186,57 +186,117 @@ const printTableWithHeaderFooter = (tableId: string) => {
                 </div>
               </CardHeader>
 
-              <CardContent id="prescription-table"  className="p-6 space-y-6">
-                {/* Patient Info */}
-                <div className="grid grid-cols-2 gap-4">
+        <CardContent id="prescription-table" className="p-8 space-y-6">
+                {/* Header with Logo and Contact */}
+                <div className="flex justify-between items-start border-b-4 border-amber-500 pb-4">
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Patient Information</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-foreground">{selectedPatient.fullName}</span>
-                      </div>
-                      <p className="text-muted-foreground">Age: {selectedPatient.age} years</p>
-                      <p className="text-muted-foreground">Gender: {selectedPatient.sex}</p>
-                      <p className="text-muted-foreground">Blood Type: {selectedPatient.bloodType}</p>
-                      <p className="text-muted-foreground">Occupation: {selectedPatient.occupation}</p>
-                    </div>
+                    <img src={IkshaLogo} alt="Iksha Logo" className="h-20 mb-2" />
+                    <p className="text-xs text-gray-600">Integrated Natural Healing system</p>
                   </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Appointment Details</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{new Date(selectedAppointment.date).toLocaleDateString("en-IN")}</span>
-                      </div>
-                      <p className="text-muted-foreground">Payment Method: {selectedAppointment.paymentMethod}</p>
-                      <p className="text-muted-foreground">Consultation Type: {selectedAppointment.consultationType}</p>
-                      <p className="text-muted-foreground">Status: {selectedAppointment.status}</p>
-                      {selectedAppointment.note && <p className="text-muted-foreground">Note: {selectedAppointment.note}</p>}
-                    </div>
+                  <div className="text-right text-xs space-y-1">
+                    <p>📞 +91 9343922950</p>
+                    <p>📧 admin@ikshanaturopathy.com</p>
+                    <p>📍 Indore, Madhya Pradesh</p>
                   </div>
                 </div>
 
-                {/* Prescriptions */}
-                <div>
-                  <h3 className="font-semibold text-foreground mb-3">Prescriptions</h3>
-                  <div className="space-y-3">
-                    {selectedAppointment.prescriptions.length === 0 ? (
-                      <p className="text-muted-foreground">No prescriptions available</p>
-                    ) : (
-                      selectedAppointment.prescriptions.map((presc: any) => (
-                        <div key={presc.id} className="border border-border rounded-md p-4">
-                          <h4 className="font-medium text-foreground">{presc.medicine.name}</h4>
-                          <div className="mt-2 space-y-1 text-sm">
-                            <p className="text-muted-foreground"><strong>Quantity:</strong> {presc.quantity}</p>
-                            <p className="text-muted-foreground"><strong>Duration:</strong> {presc.duration}</p>
-                            <p className="text-muted-foreground"><strong>Instructions:</strong> {presc.instructions}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                {/* Patient & Date Info */}
+                <div className="flex justify-between text-sm">
+                  <div>
+                    <p><strong>ID:</strong> {selectedPatient.id}</p>
+                    <p><strong>Patient:</strong> {selectedPatient.fullName} / {selectedPatient.age}Y / {selectedPatient.sex}</p>
+                    <p><strong>Mob. No.:</strong> {selectedPatient.mobileNumber || "N/A"}</p>
+                    <p><strong>Address:</strong> {selectedPatient.address || "N/A"}</p>
                   </div>
+                  <div className="text-right">
+                    <p><strong>Date:</strong> {new Date(selectedAppointment.date).toLocaleDateString("en-IN")}</p>
+                  </div>
+                </div>
+
+                {/* Vitals */}
+                <div className="border-t border-b border-gray-300 py-3">
+                  <p className="text-sm">
+                    <strong>Vitals:</strong> Weight (Kg): {selectedPatient.weight || "N/A"}, 
+                    Height (Cm): {selectedPatient.height || "N/A"}, 
+                    BP: {selectedPatient.bloodPressure || "N/A"}, 
+                    Pulse: {selectedPatient.pulse || "N/A"}
+                  </p>
+                </div>
+
+                {/* Chief Complaints */}
+                <div>
+                  <h3 className="font-bold text-base mb-2 underline">Chief Complaints</h3>
+                  <p className="text-sm whitespace-pre-line">{selectedPatient.chiefComplaints || "Not specified"}</p>
+                </div>
+
+                {/* Clinical Findings */}
+                {selectedPatient.clinicalFindings && (
+                  <div>
+                    <h3 className="font-bold text-base mb-2 underline">Clinical Findings</h3>
+                    <p className="text-sm whitespace-pre-line">{selectedPatient.clinicalFindings}</p>
+                  </div>
+                )}
+
+                {/* Diagnosis */}
+                {selectedAppointment.diagnosis && (
+                  <div>
+                    <h3 className="font-bold text-base mb-2 underline">Diagnosis:</h3>
+                    <p className="text-sm">* {selectedAppointment.diagnosis}</p>
+                  </div>
+                )}
+
+                {/* Prescriptions Table */}
+                <div>
+                  <h3 className="font-bold text-base mb-3 underline">℞ Prescription</h3>
+                  {selectedAppointment.prescriptions.length === 0 ? (
+                    <p className="text-sm text-gray-600">No prescriptions available</p>
+                  ) : (
+                    <table className="w-full border border-gray-300 text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border border-gray-300 p-2 text-left">Medicine Name</th>
+                          <th className="border border-gray-300 p-2 text-left">Dosage</th>
+                          <th className="border border-gray-300 p-2 text-left">Duration</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedAppointment.prescriptions.map((presc: any, idx: number) => (
+                          <tr key={presc.id}>
+                            <td className="border border-gray-300 p-2">
+                              {idx + 1}) {presc.medicine.name}
+                              {presc.instructions && (
+                                <div className="text-xs text-gray-600 mt-1">{presc.instructions}</div>
+                              )}
+                            </td>
+                            <td className="border border-gray-300 p-2">{presc.quantity}</td>
+                            <td className="border border-gray-300 p-2">{presc.duration}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Advice */}
+                {selectedAppointment.advice && (
+                  <div>
+                    <h3 className="font-bold text-base mb-2 underline">Advice:</h3>
+                    <p className="text-sm whitespace-pre-line">{selectedAppointment.advice}</p>
+                  </div>
+                )}
+
+                {/* Follow Up */}
+                {selectedAppointment.followUpDate && (
+                  <div>
+                    <p className="text-sm"><strong>Follow Up:</strong> {new Date(selectedAppointment.followUpDate).toLocaleDateString("en-IN")}</p>
+                  </div>
+                )}
+
+                {/* Footer Note */}
+                <div className="text-center text-xs text-gray-500 border-t pt-4 mt-6">
+                  <p className="italic">This is not for medico-legal purpose.</p>
+                  <p className="mt-2">📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
+                  <p>© {new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
                 </div>
               </CardContent>
             </Card>

@@ -55,20 +55,24 @@ export default function DoctorForm() {
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
-  const sigCanvas = useRef<SignatureCanvas>(null);
-  const [signature, setSignature] = useState<string | null>(null);
 
-  const clear = () => sigCanvas.current?.clear();
+ const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
+const sigCanvas = useRef<any>(null);
 
-  const save = () => {
-    if (!sigCanvas.current?.isEmpty()) {
-      const base64 = sigCanvas.current
-        .getTrimmedCanvas()
-        .toDataURL("image/png");
-      setSignature(base64);
-      console.log("Signature Base64:", base64);
-    }
-  };
+const clear = () => {
+  sigCanvas.current?.clear();
+  setSignature(""); // Reset to empty string
+};
+
+const save = () => {
+  if (!sigCanvas.current?.isEmpty()) {
+    const base64 = sigCanvas.current
+      .getTrimmedCanvas()
+      .toDataURL("image/png");
+    setSignature(base64);
+    console.log("Signature Base64:", base64);
+  }
+};
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -162,11 +166,25 @@ export default function DoctorForm() {
     },
   });
 
+    const [medicineChart, setMedicineChart] = useState([
+    { medicineName: "", dosage: "", frequency: "", remarks: "" },
+  ]);
+
   const handleMedicineChange = (index, field, value) => {
-    const updated = [...doctorData.medicineChart];
-    updated[index][field] = value;
-    setDoctorData({ ...doctorData, medicineChart: updated });
+    const updatedChart = [...medicineChart];
+    updatedChart[index][field] = value;
+    setMedicineChart(updatedChart);
   };
+
+  const addRow = () => {
+    setMedicineChart([...medicineChart, { medicineName: "", dosage: "", frequency: "", remarks: "" }]);
+  };
+
+  const deleteRow = (index) => {
+    const updatedChart = medicineChart.filter((_, i) => i !== index);
+    setMedicineChart(updatedChart);
+  };
+
 
   const handleNext = async () => {
     // If completing step 1, create the consultation
@@ -628,95 +646,77 @@ const latestAppointmentId = latestAppointment?.id ?? null;
 
               {/* Step 2: Medicine Chart */}
               {step === 2 && (
-                <div className="space-y-4">
-                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
-                    Medicine History Chart
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-amber-100">
-                          <th className="border border-amber-300 p-2 text-left">
-                            Sr. No.
-                          </th>
-                          <th className="border border-amber-300 p-2 text-left">
-                            Medicine Name (Optional)
-                          </th>
-                          <th className="border border-amber-300 p-2 text-left">
-                            Dosage (mg/ml)
-                          </th>
-                          <th className="border border-amber-300 p-2 text-left">
-                            Frequency
-                          </th>
-                          <th className="border border-amber-300 p-2 text-left">
-                            Remarks
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {doctorData.medicineChart.map((med, index) => (
-                          <tr key={index}>
-                            <td className="border border-amber-200 p-2 font-semibold">
-                              {index + 1}
-                            </td>
-                            <td className="border border-amber-200 p-1">
-                              <Input
-                                placeholder="Medicine ID (UUID)"
-                                value={med.medicineName}
-                                onChange={(e) =>
-                                  handleMedicineChange(
-                                    index,
-                                    "medicineName",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </td>
-                            <td className="border border-amber-200 p-1">
-                              <Input
-                                placeholder="Dosage"
-                                value={med.dosage}
-                                onChange={(e) =>
-                                  handleMedicineChange(
-                                    index,
-                                    "dosage",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </td>
-                            <td className="border border-amber-200 p-1">
-                              <Input
-                                placeholder="Frequency"
-                                value={med.frequency}
-                                onChange={(e) =>
-                                  handleMedicineChange(
-                                    index,
-                                    "frequency",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </td>
-                            <td className="border border-amber-200 p-1">
-                              <Input
-                                placeholder="Remarks"
-                                value={med.remarks}
-                                onChange={(e) =>
-                                  handleMedicineChange(
-                                    index,
-                                    "remarks",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            <div className="space-y-4">
+      <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+        Medicine History Chart
+      </h3>
+
+      <div className="flex justify-end gap-2 mb-2">
+        <Button onClick={addRow} className="bg-green-500 hover:bg-green-600 text-white">
+          + Add Row
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-amber-100">
+              <th className="border border-amber-300 p-2 text-left">Sr. No.</th>
+              <th className="border border-amber-300 p-2 text-left">Medicine Name (Optional)</th>
+              <th className="border border-amber-300 p-2 text-left">Dosage (mg/ml)</th>
+              <th className="border border-amber-300 p-2 text-left">Frequency</th>
+              <th className="border border-amber-300 p-2 text-left">Remarks</th>
+              <th className="border border-amber-300 p-2 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {medicineChart.map((med, index) => (
+              <tr key={index}>
+                <td className="border border-amber-200 p-2 font-semibold">{index + 1}</td>
+                <td className="border border-amber-200 p-1">
+                  <Input
+                    placeholder="Medicine Name"
+                    value={med.medicineName}
+                    onChange={(e) => handleMedicineChange(index, "medicineName", e.target.value)}
+                  />
+                </td>
+                <td className="border border-amber-200 p-1">
+                  <Input
+                    placeholder="Dosage"
+                    value={med.dosage}
+                    onChange={(e) => handleMedicineChange(index, "dosage", e.target.value)}
+                  />
+                </td>
+                <td className="border border-amber-200 p-1">
+                  <Input
+                    placeholder="Frequency"
+                    value={med.frequency}
+                    onChange={(e) => handleMedicineChange(index, "frequency", e.target.value)}
+                  />
+                </td>
+                <td className="border border-amber-200 p-1">
+                  <Input
+                    placeholder="Remarks"
+                    value={med.remarks}
+                    onChange={(e) => handleMedicineChange(index, "remarks", e.target.value)}
+                  />
+                </td>
+                <td className="border border-amber-200 p-2 text-center">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteRow(index)}
+                    className="bg-red-500 hover:bg-red-600 text-white"
+                  >
+                    Delete
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
               )}
 
               {/* Step 3: General Physical Examination */}

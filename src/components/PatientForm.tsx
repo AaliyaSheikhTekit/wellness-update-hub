@@ -96,7 +96,7 @@ const LIFESTYLE_FIELDS: Record<string, { options: string[]; other?: boolean; fre
   diet: { options: ["Veg", "Non-Veg", "Mixed", "Vegan"], other: true },
   appetite: { options: ["Good", "Moderate", "Poor"], other: false },
   taste: { options: ["Normal", "Bitter", "Sour", "Salty", "Foul"], other: false },
-  bowel: { options: ["Regular", "Irregular", "Loose", "Constipated"], other: true, frequency: true },
+  bowelMovements: { options: ["Regular", "Irregular", "Loose", "Constipated"], other: true, frequency: true },
   sleep: { options: ["Sound", "Disturbed", "Insomnia"], other: false, wakeTime: true, sleepTime: true },
   addictions: { options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee"], other: true },
   physicalActivity: { options: ["Sedentary", "Active", "Walking", "Yoga", "Exercise"], other: true },
@@ -116,7 +116,7 @@ const PatientRegistrationForm = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [lifestyle, setLifestyle] = useState<Record<string, any>>({
-    diet: "", appetite: [], taste: [], bowel: [], sleep: [], addictions: [],
+    diet: "", appetite: [], taste: [], bowelmovements: [], sleep: [], addictions: [],
     physicalActivity: [], waterIntake: "", stress: [], mentalState: [],
     wakeTime: "", sleepTime: "", otherDiet: "", otherAddictions: "",
     otherBowel: "", otherSleep: "", otherWaterIntake: "",
@@ -359,7 +359,7 @@ const PatientRegistrationForm = () => {
       otherDiet: toStringOrNull(lifestyle.other_diet),
       appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
       taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
-      bowel: lifestyle.bowel.length ? lifestyle.bowel[0] : null,
+      bowel: lifestyle.bowelmovements.length ? lifestyle.bowelmovements[0] : null,
       otherBowel: toStringOrNull(lifestyle.other_bowel),
       bowelFrequency: toStringOrNull(lifestyle.frequency_bowel),
       sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
@@ -546,7 +546,7 @@ const PatientRegistrationForm = () => {
     diet: p.diet || "",
     appetite: p.appetite ? p.appetite.split(",") : [],
     taste: p.taste ? p.taste.split(",") : [],
-    bowel: p.bowel ? p.bowel.split(",") : [],
+    bowelmovements: p.bowelmovements ? p.bowelmovements.split(",") : [],
     sleep: p.sleep ? p.sleep.split(",") : [],
     addictions: p.addictions ? p.addictions.split(",") : [],
     physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
@@ -825,7 +825,7 @@ const PatientRegistrationForm = () => {
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">Lifestyle Information</h3>
                   {Object.entries(LIFESTYLE_FIELDS).map(([key, config]) => (
                     <div key={key}>
-                      <p className="font-semibold">{key.replace(/([A-Z])/g, " $1")}</p>
+                      <p className="font-semibold capitalize">{key.replace(/([A-Z])/g, " $1")}</p>
                       {config.options.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2">
                           {config.options.map((opt) => (
@@ -838,7 +838,7 @@ const PatientRegistrationForm = () => {
                                     [key]: current.includes(opt) ? current.filter((i: string) => i !== opt) : [...current, opt],
                                   });
                                 }} />
-                              <span>{opt}</span>
+                              <span >{opt}</span>
                             </label>
                           ))}
                         </div>

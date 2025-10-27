@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import IkshaLogo from "../assets/iksha_logo.png";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -51,6 +52,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getMedicines, getPatient, postData, updatePatient } from "@/lib/api"; // <-- uses your Bearer token internally
+import PrescriptionPrint from "@/components/PrescriptionPrint";
+import { useReactToPrint } from "react-to-print";
+import DietChartView from "@/components/Dietician/DietChartView";
+import { TreatmentPlanView } from "@/components/TreatmentPlanView";
 
 type ServerPatient = {
   id: string;
@@ -165,7 +170,16 @@ const PatientDetail = () => {
   const [selectedMedicine, setSelectedMedicine] = useState("");
   const [duration, setDuration] = useState("");
   const [instructions, setInstructions] = useState("");
+ const printRef = useRef<HTMLDivElement>(null);
+  // react-to-print type definitions can differ between versions; cast options to any
+  // so the `content` callback is accepted without a TS error.
+  const handlePrint = useReactToPrint(
+    ({
+      content: () => printRef.current,
+    } as any)
+  );
 
+ 
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
     return (
@@ -305,7 +319,8 @@ const PatientDetail = () => {
           patient.appointment && patient.appointment.length > 0
             ? patient.appointment[0].id
             : undefined,
-        medicineId: selectedMedicine, // use medicine ID
+            medicineName:'TEST',
+  
         duration,
         instructions,
         quantity: 14, // you can make this dynamic
@@ -317,6 +332,7 @@ const PatientDetail = () => {
         title: "Prescription Sent",
         description: "Prescription details sent to patient's WhatsApp",
       });
+      handlePrint(); // Trigger print after successful prescription
       setNewPrescriptionOpen(false);
 
       // Reset form
@@ -1269,7 +1285,7 @@ const PatientDetail = () => {
                         
             <div className="flex items-center space-x-3">
               {/* New Prescription */}
-              {/* <Dialog
+              <Dialog
                 open={newPrescriptionOpen}
                 onOpenChange={setNewPrescriptionOpen}
               >
@@ -1339,7 +1355,22 @@ const PatientDetail = () => {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog> */}
+              </Dialog> {/* Hidden printable component */}
+      <div className="hidden">
+        <PrescriptionPrint
+          ref={printRef}
+          logo={IkshaLogo}
+          data={{
+            patientName: patient.fullName,
+            age: "30",
+            sex: "M",
+            date: new Date().toLocaleDateString(),
+            medicine: selectedMedicine,
+            duration,
+            instructions,
+          }}
+        />
+      </div>
             </div>
                       </div>
                     </div>
@@ -1404,6 +1435,11 @@ const PatientDetail = () => {
               </Button>
             </div>
           </TabsContent>
+          <TabsContent value="dietchart"><DietChartView 
+    patient={patient}
+   
+  /></TabsContent>
+  <TabsContent value="treatmentplan"><TreatmentPlanView patient={patient}/></TabsContent>
         </Tabs>
       </div>
     </div>
