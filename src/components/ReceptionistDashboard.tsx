@@ -51,7 +51,7 @@ const ReceptionDashboard = () => {
           }
         );
         const response = await res.json();
-        setAppointments(response.data);
+       setAppointments(Array.isArray(response?.data) ? response.data : []);
       } catch (err) {
         toast({
           title: "Error fetching appointments",
@@ -69,7 +69,7 @@ const ReceptionDashboard = () => {
     setPage(1); // reset page when filter changes
   };
 
-  const filteredAppointments = appointments.filter((apt) => {
+  const filteredAppointments = appointments?.filter((apt) => {
     const patientName = apt.patient?.fullName?.toLowerCase() || "";
     const doctorName = apt.doctor?.username?.toLowerCase() || "";
     return (
@@ -79,7 +79,7 @@ const ReceptionDashboard = () => {
   });
 
   const today = new Date();
-  const todaysAppointments = appointments.filter((apt) => {
+  const todaysAppointments = appointments?.filter((apt) => {
     const aptDate = new Date(apt.date + "T00:00:00");
     return (
       aptDate.getFullYear() === today.getFullYear() &&
@@ -100,7 +100,7 @@ const ReceptionDashboard = () => {
       setPatientLoading(true);
       try {
         const res = await getPatients(searchTerm); // <-- calls api.ts
-        setPatients(res?.data ?? []);
+      setPatients(Array.isArray(res?.data) ? res.data : []);
       } catch (err) {
         toast({
           title: "Error fetching patients",
@@ -120,14 +120,14 @@ const ReceptionDashboard = () => {
   // Calculate weekly patient growth
   const oneWeekAgo = new Date(today);
   oneWeekAgo.setDate(today.getDate() - 7);
-  const recentPatients = patients.filter((p) => {
+  const recentPatients = patients?.filter((p) => {
     if (!p.createdAt) return false;
     const patientDate = new Date(p.createdAt);
     return patientDate >= oneWeekAgo;
   });
 
   // Calculate available slots (appointments with "pending" or "available" status today)
-  const availableSlots = todaysAppointments.filter(
+  const availableSlots = todaysAppointments?.filter(
     (apt) => apt.status === "pending" || apt.status === "available"
   );
   
@@ -198,7 +198,7 @@ const ReceptionDashboard = () => {
               <Clock className="w-5 h-5" />
             </div>
             <p className="text-sm mt-1">
-              {todaysAppointments.filter((a) => a.status === "pending").length}{" "}
+              {todaysAppointments?.filter((a) => a.status === "pending").length}{" "}
               pending confirmations
             </p>
           </motion.div>
@@ -253,7 +253,7 @@ const ReceptionDashboard = () => {
                         {appointments.length} total •{" "}
                         {todaysAppointments.length} today •{" "}
                         {
-                          appointments.filter((a) => a.status === "pending")
+                          appointments?.filter((a) => a.status === "pending")
                             .length
                         }{" "}
                         pending

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getTreatmentAll } from "@/lib/api";
+import { getTreatmentAll, getAllYoga } from "@/lib/api";
 import IkshaLogo from "../assets/iksha_logo.png";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ChevronDown } from "lucide-react";
@@ -13,6 +13,7 @@ type TreatmentRow = {
   timeSlot: string;
   yoga: string;
   treatments: string[];
+  duration: string;
 };
 
 type ApiTreatmentPlanItem = {
@@ -21,6 +22,7 @@ type ApiTreatmentPlanItem = {
   treatments: string[];
   yogaPlan?: string;
   date: string;
+  duration: string;
 };
 
 function toInputDate(iso?: string) {
@@ -50,13 +52,26 @@ export default function TreatmentPlanTable({
 }) {
   const [showYoga, setShowYoga] = useState(includeYoga);
   const [rows, setRows] = useState<TreatmentRow[]>([
-    { date: "", timeSlot: "", yoga: "", treatments: [] },
+    { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
   ]);
   const [treatmentOptions, setTreatmentOptions] = useState<any[]>([]);
-  
+
   // Prevent infinite loops
   const isHydratingRef = useRef(false);
   const fetchedRef = useRef(false);
+  const [yogaCategories, setYogaCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchYoga = async () => {
+      try {
+        const res = await getAllYoga();
+        setYogaCategories(res.data || []);
+      } catch (err) {
+        console.error("Error fetching yoga data:", err);
+      }
+    };
+    fetchYoga();
+  }, []);
 
   // Load treatment options once
   useEffect(() => {
@@ -76,11 +91,13 @@ export default function TreatmentPlanTable({
   // Hydrate rows from parent value (only when value changes externally)
   useEffect(() => {
     if (!Array.isArray(value)) return;
-    
+
     isHydratingRef.current = true;
-    
+
     if (value.length === 0) {
-      setRows([{ date: "", timeSlot: "", yoga: "", treatments: [] }]);
+      setRows([
+        { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
+      ]);
     } else {
       const mapped: TreatmentRow[] = value.map((it) => ({
         id: it.id,
@@ -88,10 +105,11 @@ export default function TreatmentPlanTable({
         timeSlot: it.timeSlot || "",
         yoga: it.yogaPlan || "",
         treatments: Array.isArray(it.treatments) ? it.treatments : [],
+        duration: it.duration || "",
       }));
       setRows(mapped);
     }
-    
+
     // Reset flag after state update completes
     setTimeout(() => {
       isHydratingRef.current = false;
@@ -101,22 +119,29 @@ export default function TreatmentPlanTable({
   // Update parent when rows change (but not during hydration)
   const updateParent = (newRows: TreatmentRow[]) => {
     if (isHydratingRef.current) return;
-    
+
     const apiItems: ApiTreatmentPlanItem[] = newRows
-      .filter((r) => r.timeSlot || r.yoga || r.treatments.length || r.date)
+      .filter(
+        (r) =>
+          r.timeSlot || r.yoga || r.treatments.length || r.date || r.duration
+      )
       .map((r) => ({
         ...(r.id ? { id: r.id } : {}),
         timeSlot: r.timeSlot,
         treatments: r.treatments,
         yogaPlan: r.yoga || undefined,
         date: r.date ? toISODate(r.date) : "",
+        duration: r.duration,
       }));
-    
+
     onChange(apiItems);
   };
 
   const handleAddRow = () => {
-    const newRows = [...rows, { date: "", timeSlot: "", yoga: "", treatments: [] }];
+    const newRows = [
+      ...rows,
+      { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
+    ];
     setRows(newRows);
     updateParent(newRows);
   };
@@ -127,7 +152,11 @@ export default function TreatmentPlanTable({
     updateParent(newRows);
   };
 
-  const handleChange = (index: number, field: keyof TreatmentRow, value: any) => {
+  const handleChange = (
+    index: number,
+    field: keyof TreatmentRow,
+    value: any
+  ) => {
     const newRows = [...rows];
     (newRows[index] as any)[field] = value;
     setRows(newRows);
@@ -137,10 +166,10 @@ export default function TreatmentPlanTable({
   const printTableWithHeaderFooter = (tableId: string) => {
     const table = document.getElementById(tableId);
     if (!table) return;
-    
+
     const newWindow = window.open("", "_blank", "width=1000,height=800");
     if (!newWindow) return;
-    
+
     newWindow.document.write(`
       <html>
         <head>
@@ -197,6 +226,7 @@ export default function TreatmentPlanTable({
               <th className="border px-3 py-2 text-left">Time Slot</th>
               {showYoga && <th className="border px-3 py-2 text-left">Yoga</th>}
               <th className="border px-3 py-2 text-left">Treatment</th>
+              <th className="border px-3 py-2 text-left">Durations</th>
               <th className="border px-3 py-2"></th>
             </tr>
           </thead>
@@ -214,25 +244,58 @@ export default function TreatmentPlanTable({
                   <Input
                     placeholder="Time slot"
                     value={row.timeSlot}
-                    onChange={(e) => handleChange(i, "timeSlot", e.target.value)}
+                    onChange={(e) =>
+                      handleChange(i, "timeSlot", e.target.value)
+                    }
                   />
                 </td>
                 {showYoga && (
                   <td className="border px-2">
-                    <Input
-                      placeholder="Yoga plan"
+                    <select
+                      className="w-full border rounded-lg p-2"
                       value={row.yoga}
                       onChange={(e) => handleChange(i, "yoga", e.target.value)}
-                    />
+                    >
+                      <option value="">— Select Yoga Plan —</option>
+                      {yogaCategories.map((cat) => (
+                        <optgroup key={cat.id} label={cat.name}>
+                          {cat.subCategories.flatMap((sub) =>
+                            sub.items.length > 0 ? (
+                              sub.items.map((item) => (
+                                <option
+                                  key={item.id}
+                                  value={`${cat.name} › ${sub.name} › ${item.name}`}
+                                >
+                                  {sub.name} › {item.name}
+                                </option>
+                              ))
+                            ) : (
+                              <option
+                                key={sub.id}
+                                value={`${cat.name} › ${sub.name}`}
+                              >
+                                {sub.name}
+                              </option>
+                            )
+                          )}
+                        </optgroup>
+                      ))}
+                    </select>
                   </td>
                 )}
+
                 <td className="border px-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
                         <span className="truncate">
                           {row.treatments.length > 0
-                            ? `${row.treatments.length} treatment${row.treatments.length > 1 ? "s" : ""} selected`
+                            ? `${row.treatments.length} treatment${
+                                row.treatments.length > 1 ? "s" : ""
+                              } selected`
                             : "Select treatments"}
                         </span>
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
@@ -245,7 +308,9 @@ export default function TreatmentPlanTable({
                           return (
                             <div
                               key={opt.id}
-                              className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${checked ? "bg-blue-50" : ""}`}
+                              className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
+                                checked ? "bg-blue-50" : ""
+                              }`}
                               onClick={() => {
                                 const next = checked
                                   ? row.treatments.filter((t) => t !== opt.id)
@@ -254,20 +319,34 @@ export default function TreatmentPlanTable({
                               }}
                             >
                               <div className="flex items-start gap-2">
-                                <Checkbox checked={checked} onCheckedChange={() => {}} className="mt-1" />
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => {}}
+                                  className="mt-1"
+                                />
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="font-semibold text-sm">{opt.title}</span>
-                                    <span className="text-xs text-gray-500">{opt.duration}</span>
+                                    <span className="font-semibold text-sm">
+                                      {opt.title}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {opt.duration}
+                                    </span>
                                   </div>
                                   {opt.subTitle && (
-                                    <div className="text-xs text-gray-600 mb-1">{opt.subTitle}</div>
+                                    <div className="text-xs text-gray-600 mb-1">
+                                      {opt.subTitle}
+                                    </div>
                                   )}
                                   {opt.treatment && (
-                                    <div className="text-xs text-gray-500 mb-1">{opt.treatment}</div>
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      {opt.treatment}
+                                    </div>
                                   )}
                                   <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-500">{opt.days}</span>
+                                    <span className="text-xs text-gray-500">
+                                      {opt.days}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -281,7 +360,9 @@ export default function TreatmentPlanTable({
                   {row.treatments.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {row.treatments.map((treatmentId) => {
-                        const t = treatmentOptions.find((opt) => opt.id === treatmentId);
+                        const t = treatmentOptions.find(
+                          (opt) => opt.id === treatmentId
+                        );
                         if (!t) return null;
                         return (
                           <div
@@ -289,8 +370,14 @@ export default function TreatmentPlanTable({
                             className="flex items-center justify-between gap-2 border rounded-md px-2 py-1.5 bg-gray-50 text-xs"
                           >
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{t.title}</div>
-                              {t.subTitle && <div className="text-gray-500 truncate">{t.subTitle}</div>}
+                              <div className="font-medium truncate">
+                                {t.title}
+                              </div>
+                              {t.subTitle && (
+                                <div className="text-gray-500 truncate">
+                                  {t.subTitle}
+                                </div>
+                              )}
                             </div>
                             <button
                               onClick={(e) => {
@@ -312,9 +399,21 @@ export default function TreatmentPlanTable({
                     </div>
                   )}
                 </td>
-
                 <td className="border px-2">
-                  <Button variant="destructive" size="sm" onClick={() => handleRemoveRow(i)}>
+                  <Input
+                    placeholder="Duration"
+                    value={row.duration}
+                    onChange={(e) =>
+                      handleChange(i, "duration", e.target.value)
+                    }
+                  />
+                </td>
+                <td className="border px-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRemoveRow(i)}
+                  >
                     Remove
                   </Button>
                 </td>
@@ -325,7 +424,10 @@ export default function TreatmentPlanTable({
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={() => printTableWithHeaderFooter("treatment-table")} variant="outline">
+        <Button
+          onClick={() => printTableWithHeaderFooter("treatment-table")}
+          variant="outline"
+        >
           Print Treatment Table
         </Button>
         <Button onClick={handleAddRow}>Add Row</Button>

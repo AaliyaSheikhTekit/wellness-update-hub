@@ -30,6 +30,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Stethoscope,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,18 +46,13 @@ import {
   Send,
 } from "lucide-react";
 import { Scissors, Users, FileText } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { getMedicines, getPatient, postData, updatePatient } from "@/lib/api"; // <-- uses your Bearer token internally
+
+import { generatePDF, getMedicines, getPatient, postData, updatePatient } from "@/lib/api"; // <-- uses your Bearer token internally
 import PrescriptionPrint from "@/components/PrescriptionPrint";
 import { useReactToPrint } from "react-to-print";
 import DietChartView from "@/components/Dietician/DietChartView";
-import { TreatmentPlanView } from "@/components/TreatmentPlanView";
+import ConsultationHistory from "@/components/ConsultationHistory";
+import TreatmentSchedulerOneFile from "@/components/TreatmentPlanView";
 
 type ServerPatient = {
   id: string;
@@ -137,19 +134,22 @@ type ServerPatient = {
     date: string; // ISO
     status?: string; // pending/confirmed
     consultationType?: string;
+    consultation: any[];
     consent?: boolean;
     note?: string;
     signature?: string | null;
     createdAt?: string;
     updatedAt?: string;
     prescriptions?: {
-    id?: string;
-    duration?: string;
-    instructions?: string;
-    quantity?: number;
-    medicine?: { name?: string };
-  }[];
+      id?: string;
+      duration?: string;
+      instructions?: string;
+      quantity?: number;
+      medicine?: { name?: string };
+    }[];
   }>;
+
+  treatmentPlan?: any[]; // Add this line to match the Patient type in TreatmentPlanView
 };
 
 const fmtDate = (d?: string | null) =>
@@ -170,16 +170,13 @@ const PatientDetail = () => {
   const [selectedMedicine, setSelectedMedicine] = useState("");
   const [duration, setDuration] = useState("");
   const [instructions, setInstructions] = useState("");
- const printRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   // react-to-print type definitions can differ between versions; cast options to any
   // so the `content` callback is accepted without a TS error.
-  const handlePrint = useReactToPrint(
-    ({
-      content: () => printRef.current,
-    } as any)
-  );
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+  } as any);
 
- 
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
     return (
@@ -228,7 +225,67 @@ const PatientDetail = () => {
     };
     fetchMedicines();
   }, []);
+  // ---- Safe state + helpers at top of component ----
+  const appointments = useMemo(
+    () => (patient?.appointment ?? []) as Array<any>,
+    [patient?.appointment]
+  );
 
+  const sortedAppointments = useMemo(
+    () =>
+      [...appointments].sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt).getTime() -
+          new Date(a.date || a.createdAt).getTime()
+      ),
+    [appointments]
+  );
+
+  // activeAppointment starts as null; we set it from sortedAppointments later
+  const [activeAppointment, setActiveAppointment] = useState<any | null>(null);
+
+  // Whenever patient/appointments change, pick the most recent by default.
+  // If the current active appointment still exists in the new list, keep it.
+  useEffect(() => {
+    if (sortedAppointments.length === 0) {
+      setActiveAppointment(null);
+      return;
+    }
+    setActiveAppointment((prev) =>
+      prev && sortedAppointments.some((a) => a.id === prev.id)
+        ? prev
+        : sortedAppointments[0]
+    );
+  }, [sortedAppointments]);
+
+  // Optional tiny helper
+  const fmtDate = (v?: string) =>
+    v
+      ? new Date(v).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+  // Consultations derived from the selected appointment
+  const consultations = useMemo(
+    () => (activeAppointment?.consultation ?? []) as Array<any>,
+    [activeAppointment]
+  );
+
+  const sortedConsultations = useMemo(
+    () =>
+      [...consultations].sort(
+        (a, b) =>
+          new Date(b.createdAt || b.date).getTime() -
+          new Date(a.createdAt || a.date).getTime()
+      ),
+    [consultations]
+  );
+
+  // tiny date helper you can reuse
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     bloodPressure: "",
@@ -238,6 +295,65 @@ const PatientDetail = () => {
     heightCm: "",
     bmi: "",
   });
+  // --- Latest appointment (by date/createdAt) ---
+  const latestAppointment = useMemo(() => {
+    const list = patient?.appointment ?? [];
+    if (!Array.isArray(list) || list.length === 0) return null;
+    return [...list].sort(
+      (a, b) =>
+        new Date(b?.date || b?.createdAt || 0).getTime() -
+        new Date(a?.date || a?.createdAt || 0).getTime()
+    )[0];
+  }, [patient]);
+
+  // --- Latest consultation (inside the latest appointment) ---
+  const latestConsultation = useMemo(() => {
+    const cons = latestAppointment?.consultation ?? [];
+    if (!Array.isArray(cons) || cons.length === 0) return null;
+    return [...cons].sort(
+      (a, b) =>
+        new Date(b?.createdAt || b?.date || 0).getTime() -
+        new Date(a?.createdAt || a?.date || 0).getTime()
+    )[0];
+  }, [latestAppointment]);
+
+  // Convenience values: prefer latestConsultation.* -> fallback to patient.*
+  const vPrimaryHealthConcern =
+    latestConsultation?.primaryHealthConcern ?? patient?.primaryHealthConcern;
+
+  const vChronicIllnesses =
+    latestConsultation?.chronicIllnesses ?? patient?.chronicIllnesses;
+
+  const vSurgeriesOrInjuries =
+    latestConsultation?.surgeriesOrInjuries ?? patient?.surgeriesOrInjuries;
+
+  const vAllergies = latestConsultation?.allergies ?? patient?.allergies;
+
+  const vFamilyHistory =
+    latestConsultation?.familyHistory ?? patient?.familyHistory;
+
+  // badges / alerts should use the *merged* values
+  const hasCriticalInfo = !!vAllergies && String(vAllergies).trim().length > 0;
+  const hasChronicIllness =
+    !!vChronicIllnesses && String(vChronicIllnesses).trim().length > 0;
+
+  const fmtDT = (v?: string) =>
+    v
+      ? new Date(v).toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—";
+
+  // An optional helper to show a tiny “source” hint
+  const sourceHint = latestConsultation
+    ? ` (latest consultation • ${fmtDT(
+        latestConsultation.createdAt || latestConsultation.date
+      )})`
+    : "";
 
   useEffect(() => {
     if (patient) {
@@ -319,8 +435,8 @@ const PatientDetail = () => {
           patient.appointment && patient.appointment.length > 0
             ? patient.appointment[0].id
             : undefined,
-            medicineName:'TEST',
-  
+        medicineName: "TEST",
+
         duration,
         instructions,
         quantity: 14, // you can make this dynamic
@@ -498,16 +614,54 @@ const PatientDetail = () => {
   };
 
   // Check if patient has any critical information
-  const hasCriticalInfo = patient.allergies && patient.allergies !== "—";
-  const hasChronicIllness =
-    patient.chronicIllnesses && patient.chronicIllnesses !== "—";
 
   const bmiStatus = getBMIStatus(patient.bmi);
-  const consentGiven =
-    patient.consent ?? patient.appointment?.[0]?.consent ?? false;
-  const signature =
-    patient.signature ?? patient.appointment?.[0]?.signature ?? null;
+  const consentGiven = activeAppointment?.consent;
+  const signature = activeAppointment?.signature;
   const prescriptions = patient.appointment?.[0]?.prescriptions ?? [];
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const response = await generatePDF(patient.id);
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+       toast({
+        title: "PDF generated successfully!",
+        // description: "Prescription details sent to patient's WhatsApp",
+      })
+     
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({
+        title: "Please Try Again!",
+        // description: "Prescription details sent to patient's WhatsApp",
+      })
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (pdfUrl) {
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.download = `${patient.fullName.replace(/\s+/g, "_")}_report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "PDF downloaded!",
+        // description: "Prescription details sent to patient's WhatsApp",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -527,7 +681,6 @@ const PatientDetail = () => {
               <div className="h-6 w-px bg-border" />
               <h1 className="text-3xl font-bold">Patient Details</h1>
             </div>
-
           </div>
         </div>
       </div>
@@ -562,19 +715,51 @@ const PatientDetail = () => {
                           {patient.contactNumber || "—"}
                         </span>
                       </div>
-                        {/* Conditionally render button */}
-    {["Naturopathy Doctor", "SuperAdmin"].includes(localStorage.getItem("userName") || "") && (
-<Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate(`/patient-form/${patient.id}`)}
-          className="ml-2"
-        >
-          Give Consultancy
-        </Button>
-)}
-        
-      
+                      {/* Conditionally render button */}
+                      {["Naturopathy Doctor", "SuperAdmin"].includes(
+                        localStorage.getItem("userName") || ""
+                      ) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            navigate(`/patient-form/${patient.id}`)
+                          }
+                          className="ml-2"
+                        >
+                          Give Consultancy
+                        </Button>
+                      )}
+                      <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGeneratePdf}
+                      disabled={isGeneratingPdf}
+                      className="shadow-sm"
+                    >
+                      {isGeneratingPdf ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate PDF
+                        </>
+                      )}
+                    </Button>
+                    {pdfUrl && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleDownloadPdf}
+                        className="shadow-sm"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {patient.address || "—"}
@@ -584,7 +769,9 @@ const PatientDetail = () => {
               </div>
 
               <div className="text-right space-y-2">
-                <Badge variant="outline">{patient.paymentMethod || "—"}</Badge>
+                <Badge variant="outline">
+                  {activeAppointment?.paymentMethod || "—"}
+                </Badge>
                 <div className="text-sm">
                   <p>DOB: {fmtDate(patient.dateOfBirth)}</p>
                   <p>
@@ -606,15 +793,30 @@ const PatientDetail = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="history" className="space-y-6">
+        <Tabs defaultValue="appointments" className="space-y-6">
           <TabsList className="flex flex-wrap gap-2">
-            <TabsTrigger value="history">Personal and lifestyle history</TabsTrigger>
-            <TabsTrigger value="vitals">Vitals and antropometric measurment</TabsTrigger>
-            <TabsTrigger value="consent">Consent & Signature</TabsTrigger>
-            <TabsTrigger value="payments">UPI / Payments</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger><TabsTrigger value="dietchart">Diet Chart</TabsTrigger>
-  <TabsTrigger value="treatmentplan">Treatment Plan</TabsTrigger>
-             {/* <TabsTrigger value="prescription">Prescription</TabsTrigger> */}
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="history" disabled={!activeAppointment}>
+              Personal and lifestyle history
+            </TabsTrigger>
+            <TabsTrigger value="vitals" disabled={!activeAppointment}>
+              Vitals and antropometric measurment
+            </TabsTrigger>
+            <TabsTrigger value="consent" disabled={!activeAppointment}>
+              Consent & Signature
+            </TabsTrigger>
+            <TabsTrigger value="payments" disabled={!activeAppointment}>
+              UPI / Payments
+            </TabsTrigger>
+
+            <TabsTrigger value="dietchart" disabled={!activeAppointment}>
+              Diet Chart
+            </TabsTrigger>
+            <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
+              Treatment Plan
+            </TabsTrigger>
+            {/* <TabsTrigger value="prescription">Prescription</TabsTrigger> */}
+            <TabsTrigger value="consultations">Consultations</TabsTrigger>
           </TabsList>
 
           {/* Medical History */}
@@ -687,7 +889,7 @@ const PatientDetail = () => {
                   <MedicalItem
                     icon={Scissors}
                     label="Surgeries / Injuries"
-                    value={patient.surgeriesOrInjuries}
+                    value={vSurgeriesOrInjuries}
                     color="blue"
                     iconBg="blue"
                   />
@@ -701,7 +903,7 @@ const PatientDetail = () => {
                     <MedicalItem
                       icon={AlertTriangle}
                       label="Allergies"
-                      value={patient.allergies}
+                      value={vAllergies}
                       color="red"
                       iconBg="red"
                     />
@@ -719,7 +921,7 @@ const PatientDetail = () => {
                   <MedicalItem
                     icon={Users}
                     label="Family History"
-                    value={patient.familyHistory}
+                    value={vFamilyHistory}
                     color="purple"
                     iconBg="purple"
                   />
@@ -1156,8 +1358,12 @@ const PatientDetail = () => {
                 <CardContent className="p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">Consent Status</p>
-                    <Badge variant={consentGiven ? "default" : "secondary"}>
-                      {consentGiven ? "Given" : "Not Given"}
+                    <Badge
+                      variant={
+                        activeAppointment?.consent ? "default" : "secondary"
+                      }
+                    >
+                      {activeAppointment?.consent ? "Given" : "Not Given"}
                     </Badge>
                   </div>
                 </CardContent>
@@ -1172,9 +1378,9 @@ const PatientDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 text-sm">
-                  {signature ? (
+                  {activeAppointment?.signature ? (
                     <img
-                      src={signature}
+                      src={activeAppointment.signature}
                       alt="Signature"
                       className="h-32 w-full object-contain border rounded bg-white"
                     />
@@ -1200,7 +1406,7 @@ const PatientDetail = () => {
                     <p className="font-medium">Payment Method</p>
                     <p className="text-muted-foreground">
                       {patient.appointment && patient.appointment.length > 0
-                        ? patient.appointment[0].paymentMethod || "—"
+                        ? activeAppointment?.paymentMethod || "—"
                         : "—"}
                     </p>
                   </div>
@@ -1235,156 +1441,80 @@ const PatientDetail = () => {
             </Card>
           </TabsContent>
 
-          {/* Appointments */}
           <TabsContent value="appointments">
             <Card>
               <CardHeader>
-                <CardTitle>Appointments</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  Appointments
+                  <Badge variant="outline" className="text-sm">
+                    {patient.appointment?.length || 0} Total
+                  </Badge>
+                </CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-3">
                 {patient.appointment && patient.appointment.length > 0 ? (
-                  patient.appointment.map((a, idx) => (
-                    <div key={a.id || idx} className="p-3 border rounded">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-green-600" />
-                          <div className="text-sm">
-                            <p className="font-medium">{fmtDate(a.date)}</p>
-                            {a.note && (
-                              <p className="text-muted-foreground">
-                                Notes: {a.note}
-                              </p>
-                            )}
-                            <p className="text-muted-foreground">
-                              Consultation Type: {a.consultationType || "—"}
-                            </p>
-                            <p className="text-muted-foreground">
-                              Consent: {a.consent ? "Given" : "Not Given"}
-                            </p>
-                            {a.signature && (
-                              <img
-                                src={a.signature}
-                                alt="Signature"
-                                className="h-16 mt-1 border rounded bg-white"
-                              />
-                            )}
-                          </div>
-                        </div>
-                        <Badge
-                          className={
-                            a.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : a.status === "confirmed"
-                              ? "bg-green-100 text-green-800"
-                              : ""
-                          }
-                          variant="outline"
-                        >
-                          {a.status || "—"}
-                        </Badge>
-                        
-            <div className="flex items-center space-x-3">
-              {/* New Prescription */}
-              <Dialog
-                open={newPrescriptionOpen}
-                onOpenChange={setNewPrescriptionOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <Pill className="h-4 w-4" />
-                    <span>Prescribe Medicine</span>
-                  </Button>
-                </DialogTrigger>
-
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>New Prescription</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="medicineSelect">Select Medicine</Label>
-                      <Select
-                        onValueChange={setSelectedMedicine}
-                        value={selectedMedicine}
+                  patient.appointment
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date || b.createdAt).getTime() -
+                        new Date(a.date || a.createdAt).getTime()
+                    )
+                    .map((a, idx) => (
+                      <div
+                        key={a.id || idx}
+                        onClick={() => setActiveAppointment(a)}
+                        className={`p-4 border rounded cursor-pointer transition-all ${
+                          activeAppointment?.id === a.id
+                            ? "bg-blue-50 border-blue-400 shadow-sm"
+                            : "hover:bg-muted/40"
+                        }`}
                       >
-                        <SelectTrigger
-                          id="medicineSelect"
-                          className="w-full mt-2"
-                        >
-                          <SelectValue placeholder="Choose a medicine" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {naturopathyMedicines.map((med) => (
-                            <SelectItem key={med.id} value={med.id}>
-                              {med.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input
-                        id="duration"
-                        placeholder="e.g., 7 days"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="instructions">Instructions</Label>
-                      <Textarea
-                        id="instructions"
-                        placeholder="Usage instructions..."
-                        value={instructions}
-                        onChange={(e) => setInstructions(e.target.value)}
-                      />
-                    </div>
-
-                    <Button
-                      onClick={handlePrescribeMedicine}
-                      className="w-full"
-                    >
-                      <Send className="h-4 w-4 mr-2" /> Send to WhatsApp
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog> {/* Hidden printable component */}
-      <div className="hidden">
-        <PrescriptionPrint
-          ref={printRef}
-          logo={IkshaLogo}
-          data={{
-            patientName: patient.fullName,
-            age: "30",
-            sex: "M",
-            date: new Date().toLocaleDateString(),
-            medicine: selectedMedicine,
-            duration,
-            instructions,
-          }}
-        />
-      </div>
-            </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {new Date(
+                                a.date || a.createdAt
+                              ).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {a.consultationType || "—"}
+                            </p>
+                          </div>
+                          <Badge
+                            className={
+                              a.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : a.status === "confirmed"
+                                ? "bg-green-100 text-green-800"
+                                : a.status === "completed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }
+                            variant="outline"
+                          >
+                            {a.status || "unknown"}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No appointments found.
+                    No appointments found for this patient.
                   </p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
-           <TabsContent value="prescription">
-            <h3 className="font-semibold text-gray-700 mb-3">Prescribed Medicines</h3>
+
+          <TabsContent value="prescription">
+            <h3 className="font-semibold text-gray-700 mb-3">
+              Prescribed Medicines
+            </h3>
 
             {prescriptions.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
@@ -1392,10 +1522,18 @@ const PatientDetail = () => {
                   <thead className="bg-gray-100 text-gray-700">
                     <tr>
                       <th className="border-b p-3 text-left font-medium">#</th>
-                      <th className="border-b p-3 text-left font-medium">Medicine</th>
-                      <th className="border-b p-3 text-left font-medium">Qty</th>
-                      <th className="border-b p-3 text-left font-medium">Duration</th>
-                      <th className="border-b p-3 text-left font-medium">Instructions</th>
+                      <th className="border-b p-3 text-left font-medium">
+                        Medicine
+                      </th>
+                      <th className="border-b p-3 text-left font-medium">
+                        Qty
+                      </th>
+                      <th className="border-b p-3 text-left font-medium">
+                        Duration
+                      </th>
+                      <th className="border-b p-3 text-left font-medium">
+                        Instructions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1405,17 +1543,25 @@ const PatientDetail = () => {
                         className="hover:bg-gray-50 transition-colors"
                       >
                         <td className="border-b p-3">{i + 1}</td>
-                        <td className="border-b p-3">{p.medicine?.name || "—"}</td>
+                        <td className="border-b p-3">
+                          {p.medicine?.name || "—"}
+                        </td>
                         <td className="border-b p-3">{p.quantity || "—"}</td>
-                        <td className="border-b p-3">{p.duration ? `${p.duration} days` : "—"}</td>
-                        <td className="border-b p-3">{p.instructions || "—"}</td>
+                        <td className="border-b p-3">
+                          {p.duration ? `${p.duration} days` : "—"}
+                        </td>
+                        <td className="border-b p-3">
+                          {p.instructions || "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No prescriptions available.</p>
+              <p className="text-gray-500 text-sm">
+                No prescriptions available.
+              </p>
             )}
 
             {patient?.appointment?.[0]?.signature && (
@@ -1435,11 +1581,23 @@ const PatientDetail = () => {
               </Button>
             </div>
           </TabsContent>
-          <TabsContent value="dietchart"><DietChartView 
-    patient={patient}
-   
-  /></TabsContent>
-  <TabsContent value="treatmentplan"><TreatmentPlanView patient={patient}/></TabsContent>
+          <TabsContent value="dietchart">
+            <DietChartView patient={patient} />
+          </TabsContent>
+          <TabsContent value="treatmentplan">
+            <div>
+               <TreatmentSchedulerOneFile patient={patient as any} />
+            </div>
+          </TabsContent>
+          <TabsContent value="consultations">
+            <ConsultationHistory
+              consultations={sortedConsultations}
+              appointment={activeAppointment}
+              dateFormatter={fmtDT}
+              showHeader={true}
+              embedded={true}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

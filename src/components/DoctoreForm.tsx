@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import TreatmentPlanTable from "./TreatmentPlanTable";
 import DietTableView from "./Dietician/DietTableView";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   getPatientById,
   createPatientConsult,
@@ -52,6 +52,7 @@ const uploadConsultationReport = async (file: File) => {
 
 export default function DoctorForm() {
   const { id } = useParams();
+  const navigate = useNavigate();
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
@@ -374,7 +375,7 @@ const latestAppointmentId = latestAppointment?.id ?? null;
       alert("Doctor consultation form submitted successfully!");
 
       // Optionally navigate or reset
-      // navigate('/consultations');
+      navigate("/patient/" + patient?.id);
     } catch (error: any) {
       console.error("Error updating consultation:", error);
       setErr(

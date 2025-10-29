@@ -308,3 +308,178 @@ const printTableWithHeaderFooter = (tableId: string) => {
 };
 
 export default Prescriptions;
+// import { useEffect, useState } from "react";
+// import { Search, User, Calendar, Printer, Plus, FileText } from "lucide-react";
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Badge } from "@/components/ui/badge";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { getPatients, getPatientById } from "@/lib/api";
+// import PrescriptionView from "@/components/PrescriptionView";
+// import AddPrescriptionForm from "@/components/AddPrescriptionView";
+
+// const Prescriptions = () => {
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const [patients, setPatients] = useState<any[]>([]);
+//   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+//   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+//   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+//   const [isAddingPrescription, setIsAddingPrescription] = useState(false);
+
+//   useEffect(() => {
+//     const fetchPatients = async () => {
+//       try {
+//         const res = await getPatients(searchTerm);
+//         setPatients(res.data || []);
+//         if (res.data.length > 0) setSelectedPatientId(res.data[0].id);
+//       } catch (err) {
+//         console.error("Error fetching patients:", err);
+//       }
+//     };
+//     fetchPatients();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!selectedPatientId) return;
+
+//     const fetchPatient = async () => {
+//       try {
+//         const res = await getPatientById(selectedPatientId);
+//         const patient = res.data[0];
+//         setSelectedPatient(patient);
+//         setSelectedAppointment(patient.appointment?.[0] || null);
+//       } catch (err) {
+//         console.error("Error fetching patient:", err);
+//       }
+//     };
+
+//     fetchPatient();
+//   }, [selectedPatientId]);
+
+//   const filteredPatients = patients.filter(
+//     (patient) =>
+//       patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//       patient.id.toLowerCase().includes(searchTerm.toLowerCase())
+//   );
+
+//   const handleSavePrescription = (prescriptionData: any) => {
+//     // In a real app, this would save to your backend
+//     console.log("Saving prescription:", prescriptionData);
+    
+//     // Mock: add to current patient's appointments
+//     if (selectedPatient) {
+//       const newAppointment = {
+//         id: `A${Date.now()}`,
+//         date: prescriptionData.date,
+//         paymentMethod: prescriptionData.paymentMethod,
+//         consultationType: prescriptionData.consultationType,
+//         status: "Completed",
+//         note: prescriptionData.note,
+//         prescriptions: prescriptionData.medicines.map((m: any, idx: number) => ({
+//           id: `PR${Date.now()}_${idx}`,
+//           ...m
+//         }))
+//       };
+      
+//       // Update selected appointment to show the new one
+//       setSelectedAppointment(newAppointment);
+//       setIsAddingPrescription(false);
+//     }
+//   };
+
+//   if (!selectedPatient || !selectedAppointment) {
+//     return (
+//       <div className="min-h-screen bg-background flex items-center justify-center">
+//         <p className="text-muted-foreground">Loading...</p>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <div className="container mx-auto px-4 py-8">
+//         <div className="mb-8 flex items-center justify-between">
+//           <div>
+//             <h1 className="text-3xl font-bold text-foreground mb-2">Prescriptions</h1>
+//             <p className="text-muted-foreground">View and manage patient prescriptions</p>
+//           </div>
+//           {selectedPatient && !isAddingPrescription && (
+//             <Button 
+//               onClick={() => setIsAddingPrescription(true)} 
+//               className="bg-medical-green hover:bg-medical-green/90"
+//             >
+//               <FileText className="h-4 w-4 mr-2" />
+//               New Prescription
+//             </Button>
+//           )}
+//         </div>
+
+//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+//           {/* Patient List */}
+//           <div className="lg:col-span-1 space-y-4">
+//             <div className="flex gap-2">
+//               <div className="relative flex-1">
+//                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+//                 <Input
+//                   placeholder="Search patients..."
+//                   value={searchTerm}
+//                   onChange={(e) => setSearchTerm(e.target.value)}
+//                   className="pl-10"
+//                 />
+//               </div>
+//               <Button className="bg-primary hover:bg-primary-dark">
+//                 <Plus className="h-4 w-4" />
+//               </Button>
+//             </div>
+
+//             <div className="space-y-3 max-h-[600px] overflow-y-auto">
+//               {filteredPatients.map((patient) => (
+//                 <Card
+//                   key={patient.id}
+//                   className={`cursor-pointer transition-all shadow-natural hover:shadow-card-hover ${
+//                     selectedPatientId === patient.id ? "ring-2 ring-primary" : ""
+//                   }`}
+//                   onClick={() => setSelectedPatientId(patient.id)}
+//                 >
+//                   <CardContent className="p-4">
+//                     <div className="flex items-start justify-between mb-2">
+//                       <div>
+//                         <h3 className="font-semibold text-foreground">{patient.fullName}</h3>
+//                         <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
+//                       </div>
+//                       <Badge className="bg-medical-green text-white text-xs">
+//                         {patient.status || "active"}
+//                       </Badge>
+//                     </div>
+//                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
+//                       <Calendar className="h-3 w-3" />
+//                       <span>{new Date(patient.formDate).toLocaleDateString("en-IN")}</span>
+//                     </div>
+//                   </CardContent>
+//                 </Card>
+//               ))}
+//             </div>
+//           </div>
+
+//           {/* Prescription View or Add Form */}
+//           <div className="lg:col-span-2">
+//             {isAddingPrescription ? (
+//               <AddPrescriptionForm
+//                 patient={selectedPatient}
+//                 onSave={handleSavePrescription}
+//                 onCancel={() => setIsAddingPrescription(false)}
+//               />
+//             ) : (
+//               <PrescriptionView
+//                 patient={selectedPatient}
+//                 appointment={selectedAppointment}
+//               />
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Prescriptions;

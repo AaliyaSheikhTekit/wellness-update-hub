@@ -325,7 +325,11 @@ const PatientRegistrationForm = () => {
     fatherOrHusbandName: toStringOrNull(formData.fatherOrHusbandName),
     contactNumber: toStringOrNull(formData.contactNumber),
     maritalStatus: toStringOrNull(formData.maritalStatus),
-    dateOfBirth: formData.dateOfBirth ? toISODate(formData.dateOfBirth) : null,
+dateOfBirth:
+  typeof formData.dateOfBirth === "string"
+    ? formData.dateOfBirth
+    : new Date(formData.dateOfBirth).toISOString().split("T")[0],
+
     bloodType: toStringOrNull(formData.bloodType),
     occupation: toStringOrNull(formData.occupation),
     reference: toStringOrNull(formData.reference),
@@ -359,9 +363,31 @@ const PatientRegistrationForm = () => {
       otherDiet: toStringOrNull(lifestyle.other_diet),
       appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
       taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
-      bowel: lifestyle.bowelmovements.length ? lifestyle.bowelmovements[0] : null,
-      otherBowel: toStringOrNull(lifestyle.other_bowel),
-      bowelFrequency: toStringOrNull(lifestyle.frequency_bowel),
+    bowel: (() => {
+  const bowelValue = lifestyle.bowelmovements;
+  if (Array.isArray(bowelValue) && bowelValue.length > 0) {
+    return bowelValue[0]; // "Alcohol"
+  } else if (typeof bowelValue === 'string' && bowelValue.trim()) {
+    return bowelValue.trim();
+  }
+  return null;
+})(),
+
+otherBowel: (() => {
+  const otherBowel = lifestyle.otherBowel || lifestyle.other_bowel;
+  if (otherBowel && typeof otherBowel === 'string' && otherBowel.trim()) {
+    return otherBowel.trim(); // "N/A"
+  }
+  return null;
+})(),
+
+bowelFrequency: (() => {
+  const freq = lifestyle.frequency_bowel || lifestyle.bowelFrequency;
+  if (freq !== null && freq !== undefined && freq !== '') {
+    return String(freq); // "3"
+  }
+  return null;
+})(),
       sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
       sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
       sleepTime: toStringOrNull(lifestyle.sleepTime),
@@ -380,6 +406,7 @@ const PatientRegistrationForm = () => {
       qrId: qr?.id ? qr.id : "",
     };
   };
+
 
   const normalizeBloodPressure = (value: string): string | null => {
     if (!value) return null;

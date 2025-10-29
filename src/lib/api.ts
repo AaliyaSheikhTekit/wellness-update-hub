@@ -608,3 +608,146 @@ export const createPatientConsult = async (payload: any) => {
   if (!response.ok) throw new Error(`Create failed: ${response.status}`);
   return await response.json();
 };
+//-----------------------Invoice----------------
+export const createInvoice = async (payload: any) => {
+ const backendToken = getBackendToken();
+  const response = await fetch(`${API_BASE_URL}/invoice/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Create failed: ${response.status}`);
+  return await response.json();
+};
+// api.ts
+export const getAllInvoices = async (status: "paid" | "unpaid" | "draft" = "paid") => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/invoice/get?status=${status}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!response.ok) throw new Error(`Error: ${response.status}`);
+  return await response.json();
+};
+export async function getInvoiceById(id: string) {
+  const token = getBackendToken();
+  const res = await fetch(`${API_BASE_URL}/invoice/get/${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,   // <-- Bearer token (not base_url)
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch patient: ${res.status} ${text}`);
+  }
+  return res.json(); // assume { data: {...} }
+}
+export async function updateInvoice(id: string, payload: Record<string, any>) {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+
+  const res = await fetch(`${API_BASE_URL}/invoice/update/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to update invoice: ${res.status} ${text}`);
+  }
+
+  return await res.json();
+}
+//therapist 
+export const getAllTherapist = async () => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/therapist/get`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!response.ok) throw new Error(`Error: ${response.status}`);
+  return await response.json();
+};
+export const assignTherapist = async (
+  therapistId: string,
+  treatmentPlanId: string,
+  treatmentId: string
+) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/patient/assign-therapist`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+    body: JSON.stringify({
+      therapistId,
+      treatmentPlanId,
+      treatmentId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Assign failed: ${response.status} - ${errText}`);
+  }
+
+  return await response.json();
+};
+//----------------------generate pdf
+export const generatePDF = async (patientId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/appointment/generate/${patientId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+//yogas
+export const getAllYoga = async () => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(`${API_BASE_URL}/yoga`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!response.ok) throw new Error(`Error: ${response.status}`);
+  return await response.json();
+};

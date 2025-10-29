@@ -23,12 +23,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  appointmentPost,
-  getBackendToken,
-  getDoctors,
-} from "@/lib/api";
+import { appointmentPost, getBackendToken, getDoctors } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { StatusButtons } from "@/components/StatusButtons";
 
 /* ------------------------ Types ------------------------ */
 interface Doctor {
@@ -82,7 +79,11 @@ const statusClasses: Record<AppointmentStatus, string> = {
 const StatusBadge = ({ value }: { value: string }) => {
   const v = (value as AppointmentStatus) || "pending";
   return (
-    <Badge className={`${statusClasses[v] ?? "bg-gray-100 text-gray-800 border"} capitalize`}>
+    <Badge
+      className={`${
+        statusClasses[v] ?? "bg-gray-100 text-gray-800 border"
+      } capitalize`}
+    >
       {v.replace("_", " ")}
     </Badge>
   );
@@ -105,8 +106,18 @@ const SimpleCalendar = ({
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const monthNames = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -146,13 +157,20 @@ const SimpleCalendar = ({
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case "confirmed": return "bg-green-100 border-green-300 text-green-800";
-      case "pending": return "bg-yellow-100 border-yellow-300 text-yellow-800";
-      case "cancelled": return "bg-red-100 border-red-300 text-red-800";
-      case "completed": return "bg-emerald-100 border-emerald-300 text-emerald-800";
-      case "rescheduled": return "bg-violet-100 border-violet-300 text-violet-800";
-      case "no_show": return "bg-orange-100 border-orange-300 text-orange-800";
-      default: return "bg-gray-100 border-gray-300 text-gray-800";
+      case "confirmed":
+        return "bg-green-100 border-green-300 text-green-800";
+      case "pending":
+        return "bg-yellow-100 border-yellow-300 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 border-red-300 text-red-800";
+      case "completed":
+        return "bg-emerald-100 border-emerald-300 text-emerald-800";
+      case "rescheduled":
+        return "bg-violet-100 border-violet-300 text-violet-800";
+      case "no_show":
+        return "bg-orange-100 border-orange-300 text-orange-800";
+      default:
+        return "bg-gray-100 border-gray-300 text-gray-800";
     }
   };
 
@@ -191,14 +209,18 @@ const SimpleCalendar = ({
             day === new Date().getDate();
 
           const dateStr = day
-            ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+            ? `${currentDate.getFullYear()}-${String(
+                currentDate.getMonth() + 1
+              ).padStart(2, "0")}-${String(day).padStart(2, "0")}`
             : "";
 
           return (
             <div
               key={index}
               className={`min-h-32 p-1 border rounded-lg ${
-                day ? "bg-white hover:bg-gray-50 cursor-pointer" : "bg-transparent"
+                day
+                  ? "bg-white hover:bg-gray-50 cursor-pointer"
+                  : "bg-transparent"
               } ${isToday ? "ring-2 ring-blue-500" : ""} ${
                 selectedDate === dateStr ? "ring-2 ring-indigo-500" : ""
               }`}
@@ -208,7 +230,9 @@ const SimpleCalendar = ({
                 <>
                   <div
                     className={`font-medium text-sm mb-1 p-1 ${
-                      isToday ? "bg-blue-500 text-white rounded text-center" : ""
+                      isToday
+                        ? "bg-blue-500 text-white rounded text-center"
+                        : ""
                     }`}
                   >
                     {day}
@@ -224,14 +248,20 @@ const SimpleCalendar = ({
                           e.stopPropagation();
                           onEventClick?.(apt);
                         }}
-                        title={`${apt.patient?.fullName || "Unknown"} - ${apt.time || "N/A"}`}
+                        title={`${apt.patient?.fullName || "Unknown"} - ${
+                          apt.time || "N/A"
+                        }`}
                       >
                         <div className="font-medium truncate">
                           {apt.patient?.fullName || "Unknown"}
                         </div>
-                        <div className="truncate opacity-75">{apt.time || "N/A"}</div>
+                        <div className="truncate opacity-75">
+                          {apt.time || "N/A"}
+                        </div>
                         {apt.note && (
-                          <div className="truncate text-xs opacity-60">{apt.note}</div>
+                          <div className="truncate text-xs opacity-60">
+                            {apt.note}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -321,7 +351,11 @@ const Appointments = () => {
           fullName: appt.patient.fullName || appt.patientName || "Unknown",
           contactNumber: appt.patient.contactNumber || "",
         }
-      : { id: "unknown", fullName: appt.patientName || "Unknown", contactNumber: "" },
+      : {
+          id: "unknown",
+          fullName: appt.patientName || "Unknown",
+          contactNumber: "",
+        },
     doctor: appt.doctor
       ? {
           id: appt.doctor.id || "unknown",
@@ -333,7 +367,10 @@ const Appointments = () => {
         },
     date: appt.date ? appt.date.split("T")[0] : "",
     time: appt.date
-      ? new Date(appt.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      ? new Date(appt.date).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
       : "",
     status: (appt.status ?? "pending") as AppointmentStatus,
     note: appt.note,
@@ -348,7 +385,13 @@ const Appointments = () => {
       const filter = activeTab === "today" ? "today" : "all";
       const res = await fetch(
         `https://api.ikshanaturopathy.com/v1/appointment/get?page=${page}&limit=${limit}&filter=${filter}`,
-        { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const result = await res.json();
 
@@ -368,7 +411,13 @@ const Appointments = () => {
       // Get page 1 to learn total pages
       const firstRes = await fetch(
         `https://api.ikshanaturopathy.com/v1/appointment/get?page=1&limit=${limit}&filter=${filter}`,
-        { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const firstJson = await firstRes.json();
       const total = firstJson.meta?.totalPages || 1;
@@ -382,7 +431,13 @@ const Appointments = () => {
           promises.push(
             fetch(
               `https://api.ikshanaturopathy.com/v1/appointment/get?page=${p}&limit=${limit}&filter=${filter}`,
-              { method: "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
             ).then((r) => r.json())
           );
         }
@@ -489,7 +544,10 @@ const Appointments = () => {
       const res = await appointmentPost("/appointment/create", payload);
       if ((res as any)?.id) {
         await refetchForActiveTab();
-        toast({ title: "Appointment booked", description: "Successfully added." });
+        toast({
+          title: "Appointment booked",
+          description: "Successfully added.",
+        });
       }
     } catch (error) {
       console.error(error);
@@ -530,13 +588,19 @@ const Appointments = () => {
 
       await response.json();
       await refetchForActiveTab();
-      toast({ title: "Appointment updated", description: "Changes saved successfully." });
+      toast({
+        title: "Appointment updated",
+        description: "Changes saved successfully.",
+      });
       setEditAppointmentOpen(false);
     } catch (error) {
       console.error("Update error:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update appointment",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update appointment",
       });
     }
   };
@@ -561,13 +625,21 @@ const Appointments = () => {
   const handleDeleteAppointment = () => {
     if (!selectedEvent) return;
     // client-only removal; if you add API delete, call it here
-    setAppointmentsPage((prev) => prev.filter((appt) => appt.id !== selectedEvent.id));
-    setAppointmentsAll((prev) => prev.filter((appt) => appt.id !== selectedEvent.id));
+    setAppointmentsPage((prev) =>
+      prev.filter((appt) => appt.id !== selectedEvent.id)
+    );
+    setAppointmentsAll((prev) =>
+      prev.filter((appt) => appt.id !== selectedEvent.id)
+    );
     setEditAppointmentOpen(false);
   };
 
   /* ------------------------ Reusable List Renderer ------------------------ */
-  const renderAppointmentList = (list: Appointment[], tabKey: TabKey, title: string) => (
+  const renderAppointmentList = (
+    list: Appointment[],
+    tabKey: TabKey,
+    title: string
+  ) => (
     <TabsContent value={tabKey} className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{title}</h2>
@@ -594,12 +666,15 @@ const Appointments = () => {
                       <div className="flex items-center gap-2 text-gray-600">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {appointment.date} {appointment.time ? `• ${appointment.time}` : ""}
+                          {appointment.date}{" "}
+                          {appointment.time ? `• ${appointment.time}` : ""}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin className="h-4 w-4" />
-                        <span>{appointment.doctor?.username || "No doctor assigned"}</span>
+                        <span>
+                          {appointment.doctor?.username || "No doctor assigned"}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -611,17 +686,27 @@ const Appointments = () => {
                 </div>
 
                 <div className="flex gap-2 ml-4">
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(appointment)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(appointment)}
+                  >
                     Edit
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate(`/add-patient/${appointment.patient?.id}`)}
+                    onClick={() =>
+                      navigate(`/add-patient/${appointment.patient?.id}`)
+                    }
                   >
                     Add Detail
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openView(appointment)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openView(appointment)}
+                  >
                     View
                   </Button>
                 </div>
@@ -641,18 +726,29 @@ const Appointments = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Appointments</h1>
-            <p className="text-gray-600">Manage patient appointments and schedules</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Appointments
+            </h1>
+            <p className="text-gray-600">
+              Manage patient appointments and schedules
+            </p>
           </div>
 
           {/* Add Appointment Dialog */}
-          <Dialog open={newAppointmentOpen} onOpenChange={setNewAppointmentOpen}>
+          <Dialog
+            open={newAppointmentOpen}
+            onOpenChange={setNewAppointmentOpen}
+          >
             <DialogTrigger asChild>
-              <Button className="bg-foreground text-white hover:bg-gray-800">+ Book Appointment</Button>
+              <Button className="bg-foreground text-white hover:bg-gray-800">
+                + Book Appointment
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[480px] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-xl font-semibold">Schedule Appointment</DialogTitle>
+                <DialogTitle className="text-xl font-semibold">
+                  Schedule Appointment
+                </DialogTitle>
               </DialogHeader>
 
               <form
@@ -671,7 +767,11 @@ const Appointments = () => {
                     onChange={(e) => setPatientName(e.target.value)}
                     required
                   />
-                  {errors.patientName && <p className="text-xs text-red-600 mt-1">{errors.patientName}</p>}
+                  {errors.patientName && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.patientName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -684,7 +784,11 @@ const Appointments = () => {
                     onChange={(e) => setPatientNumber(e.target.value)}
                     required
                   />
-                  {errors.patientNumber && <p className="text-xs text-red-600 mt-1">{errors.patientNumber}</p>}
+                  {errors.patientNumber && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.patientNumber}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -696,7 +800,9 @@ const Appointments = () => {
                     onChange={(e) => setDate(e.target.value)}
                     required
                   />
-                  {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
+                  {errors.date && (
+                    <p className="text-xs text-red-600 mt-1">{errors.date}</p>
+                  )}
                 </div>
 
                 <div>
@@ -708,7 +814,9 @@ const Appointments = () => {
                     onChange={(e) => setTime(e.target.value)}
                     required
                   />
-                  {errors.time && <p className="text-xs text-red-600 mt-1">{errors.time}</p>}
+                  {errors.time && (
+                    <p className="text-xs text-red-600 mt-1">{errors.time}</p>
+                  )}
                 </div>
 
                 <div>
@@ -752,12 +860,16 @@ const Appointments = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="consultation">Consultation</SelectItem>
-                      <SelectItem value="regular_checkup">Regular Checkup</SelectItem>
+                      <SelectItem value="regular_checkup">
+                        Regular Checkup
+                      </SelectItem>
                       <SelectItem value="follow_up">Follow-up</SelectItem>
                       <SelectItem value="emergency">Emergency</SelectItem>
                     </SelectContent>
                   </Select>
-                  {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
+                  {errors.type && (
+                    <p className="text-xs text-red-600 mt-1">{errors.type}</p>
+                  )}
                 </div>
 
                 <div>
@@ -770,7 +882,10 @@ const Appointments = () => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full bg-foreground text-white hover:bg-gray-800">
+                <Button
+                  type="submit"
+                  className="w-full bg-foreground text-white hover:bg-gray-800"
+                >
                   Schedule
                 </Button>
               </form>
@@ -818,7 +933,12 @@ const Appointments = () => {
                             {appointment.patient?.fullName}
                           </h3>
                         </div>
-                        <StatusBadge value={appointment.status} />
+                        <div className="mt-3">
+                          <label className="text-xs text-gray-500 block mb-1">
+                            Update Status
+                          </label>
+                        
+                        </div>{" "}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -826,37 +946,63 @@ const Appointments = () => {
                           <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="h-4 w-4" />
                             <span>
-                              {appointment.date} {appointment.time ? `• ${appointment.time}` : ""}
+                              {appointment.date}{" "}
+                              {appointment.time ? `• ${appointment.time}` : ""}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-gray-600">
                             <MapPin className="h-4 w-4" />
-                            <span>{appointment.doctor?.username || "No doctor assigned"}</span>
+                            <span>
+                              {appointment.doctor?.username ||
+                                "No doctor assigned"}
+                            </span>
                           </div>
                         </div>
                         <div className="space-y-2">
                           <p className="text-sm text-gray-600">
-                            <strong>Notes:</strong> {appointment.note || "No notes"}
+                            <strong>Notes:</strong>{" "}
+                            {appointment.note || "No notes"}
                           </p>
+                          
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 ml-4">
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(appointment)}>
+                 <div className="flex flex-col space-y-6">   <div className="flex gap-2 ml-4 justify-end">
+                 
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(appointment)}
+                      >
                         Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/add-patient/${appointment.patient?.id}`)}
+                        onClick={() =>
+                          navigate(`/add-patient/${appointment.patient?.id}`)
+                        }
                       >
                         Add Detail
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => openView(appointment)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openView(appointment)}
+                      >
                         View
                       </Button>
                     </div>
+                    <div>   <StatusButtons
+    apt={{ id: appointment.id, status: appointment.status }}
+    fetchAppointments={refetchForActiveTab}   // refreshes current tab + calendar
+    onChanged={(next) => {
+      // optional local UI update (snappier)
+      setAppointmentsPage(prev => prev.map(a => a.id === appointment.id ? { ...a, status: next } : a));
+      setAppointmentsAll(prev => prev.map(a => a.id === appointment.id ? { ...a, status: next } : a));
+    }}
+  /></div></div>
                   </CardContent>
                 </Card>
               ))}
@@ -864,10 +1010,17 @@ const Appointments = () => {
 
             {/* Pagination */}
             <div className="flex justify-center gap-4 mt-4">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
                 Previous
               </Button>
-              <span className="mt-2">Page {page} of {totalPages}</span>
+              <span className="mt-2">
+                Page {page} of {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
@@ -880,10 +1033,18 @@ const Appointments = () => {
           </TabsContent>
 
           {/* TODAY */}
-          {renderAppointmentList(todaysAppointments, "today", `Today - ${todayISO}`)}
+          {renderAppointmentList(
+            todaysAppointments,
+            "today",
+            `Today - ${todayISO}`
+          )}
 
           {/* UPCOMING */}
-          {renderAppointmentList(upcomingAppointments, "upcoming", "Upcoming Appointments")}
+          {renderAppointmentList(
+            upcomingAppointments,
+            "upcoming",
+            "Upcoming Appointments"
+          )}
 
           {/* CALENDAR */}
           <TabsContent value="calendar" className="space-y-4">
@@ -901,16 +1062,43 @@ const Appointments = () => {
           </TabsContent>
 
           {/* STATUS TABS */}
-          {renderAppointmentList(pendingAppointments, "pending", "Pending Appointments")}
-          {renderAppointmentList(confirmedAppointments, "confirmed", "Confirmed Appointments")}
-          {renderAppointmentList(cancelledAppointments, "cancelled", "Cancelled Appointments")}
-          {renderAppointmentList(completedAppointments, "completed", "Completed Appointments")}
-          {renderAppointmentList(rescheduledAppointments, "rescheduled", "Rescheduled Appointments")}
-          {renderAppointmentList(noShowAppointments, "no_show", "No Show Appointments")}
+          {renderAppointmentList(
+            pendingAppointments,
+            "pending",
+            "Pending Appointments"
+          )}
+          {renderAppointmentList(
+            confirmedAppointments,
+            "confirmed",
+            "Confirmed Appointments"
+          )}
+          {renderAppointmentList(
+            cancelledAppointments,
+            "cancelled",
+            "Cancelled Appointments"
+          )}
+          {renderAppointmentList(
+            completedAppointments,
+            "completed",
+            "Completed Appointments"
+          )}
+          {renderAppointmentList(
+            rescheduledAppointments,
+            "rescheduled",
+            "Rescheduled Appointments"
+          )}
+          {renderAppointmentList(
+            noShowAppointments,
+            "no_show",
+            "No Show Appointments"
+          )}
         </Tabs>
 
         {/* Edit Appointment Dialog */}
-        <Dialog open={editAppointmentOpen} onOpenChange={setEditAppointmentOpen}>
+        <Dialog
+          open={editAppointmentOpen}
+          onOpenChange={setEditAppointmentOpen}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Edit Appointment</DialogTitle>
@@ -937,15 +1125,29 @@ const Appointments = () => {
               </div>
               <div>
                 <Label htmlFor="edit-date">Date</Label>
-                <Input id="edit-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="edit-time">Time</Label>
-                <Input id="edit-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                <Input
+                  id="edit-time"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="edit-type">Service Type</Label>
-                <Input id="edit-type" value={type} onChange={(e) => setType(e.target.value)} />
+                <Input
+                  id="edit-type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="doctor">Doctor</Label>
@@ -983,7 +1185,10 @@ const Appointments = () => {
               <Button variant="destructive" onClick={handleDeleteAppointment}>
                 Delete
               </Button>
-              <Button onClick={handleUpdateAppointment} className="bg-blue-600 hover:bg-blue-700">
+              <Button
+                onClick={handleUpdateAppointment}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
                 Update
               </Button>
             </DialogFooter>
@@ -991,7 +1196,10 @@ const Appointments = () => {
         </Dialog>
 
         {/* View Appointment Dialog */}
-        <Dialog open={viewAppointmentOpen} onOpenChange={setViewAppointmentOpen}>
+        <Dialog
+          open={viewAppointmentOpen}
+          onOpenChange={setViewAppointmentOpen}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Appointment Details</DialogTitle>
@@ -1000,7 +1208,9 @@ const Appointments = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  <span className="font-medium">{selectedEvent.patient?.fullName}</span>
+                  <span className="font-medium">
+                    {selectedEvent.patient?.fullName}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
@@ -1013,22 +1223,28 @@ const Appointments = () => {
                   <span>{selectedEvent.doctor?.username}</span>
                 </div>
                 <div>
-                  <span className="font-medium">Status:</span> <StatusBadge value={selectedEvent.status} />
+                  <span className="font-medium">Status:</span>{" "}
+                  <StatusBadge value={selectedEvent.status} />
                 </div>
                 {selectedEvent.consultationType && (
                   <div>
-                    <span className="font-medium">Type:</span> {selectedEvent.consultationType}
+                    <span className="font-medium">Type:</span>{" "}
+                    {selectedEvent.consultationType}
                   </div>
                 )}
                 <div>
-                  <span className="font-medium">Notes:</span> {selectedEvent.note || "—"}
+                  <span className="font-medium">Notes:</span>{" "}
+                  {selectedEvent.note || "—"}
                 </div>
               </div>
             ) : (
               <div>No appointment selected.</div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setViewAppointmentOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setViewAppointmentOpen(false)}
+              >
                 Close
               </Button>
               {selectedEvent && (
