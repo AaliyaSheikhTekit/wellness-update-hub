@@ -92,7 +92,8 @@ const ReceptionDashboard = () => {
   // below existing useState declarations
   const [patients, setPatients] = useState<any[]>([]);
   const [patientLoading, setPatientLoading] = useState(false);
-
+const [patientPage, setPatientPage] = useState(1);
+const patientLimit = 8; 
   // reuse the same header searchTerm for server-side patient search,
   // or make a separate state if you want different searches.
   useEffect(() => {
@@ -114,7 +115,10 @@ const ReceptionDashboard = () => {
     loadPatients();
   }, [searchTerm]); // refetch when the header search changes
 
- 
+ const paginatedPatients = patients.slice(
+  (patientPage - 1) * patientLimit,
+  patientPage * patientLimit
+);
 
 
   // Calculate weekly patient growth
@@ -126,10 +130,7 @@ const ReceptionDashboard = () => {
     return patientDate >= oneWeekAgo;
   });
 
-  // Calculate available slots (appointments with "pending" or "available" status today)
-  const availableSlots = todaysAppointments?.filter(
-    (apt) => apt.status === "pending" || apt.status === "available"
-  );
+ 
   
   // Find next available appointment time
   const upcomingAppointments = appointments
@@ -145,6 +146,10 @@ const ReceptionDashboard = () => {
         minute: "2-digit",
       })
     : "N/A";
+const availableSlots = todaysAppointments?.filter(
+  (apt) =>
+    apt.status === "pending" || apt.status === "confirmed"
+);
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-100 via-pink-50 to-yellow-50">
@@ -215,21 +220,37 @@ const ReceptionDashboard = () => {
             <p className="text-sm mt-1">+{recentPatients.length} this week</p>
           </motion.div>
 
-           <motion.div
-            className="bg-gradient-to-r from-blue-400 to-green-400 rounded-xl shadow-lg p-6 text-white"
-            whileHover={{ scale: 1.05 }}
-          >
-            <h3 className="text-sm font-medium">Available Slots</h3>
-            <div className="flex items-center mt-2 space-x-2">
-              <span className="text-2xl font-bold">{availableSlots.length}</span>
-              <Calendar className="w-5 h-5" />
-            </div>
-            <p className="text-sm mt-1">
-              {upcomingAppointments.length > 0
-                ? `Next available at ${nextAvailableTime}`
-                : "No upcoming slots"}
-            </p>
-          </motion.div>
+          <motion.div
+  className="bg-gradient-to-r from-blue-400 to-green-400 rounded-xl shadow-lg p-6 text-white"
+  whileHover={{ scale: 1.05 }}
+>
+  <h3 className="text-sm font-medium">Available Slots</h3>
+  <div className="flex items-center mt-2 space-x-2">
+    <span className="text-2xl font-bold">{nextAvailableTime}</span>
+    <Calendar className="w-5 h-5" />
+  </div>
+  <p className="text-sm mt-1">
+    {availableSlots.length > 0
+      ? availableSlots
+          .slice(0, 3)
+          .map(
+            (slot) =>
+              new Date(slot.date).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+          )
+          .join(", ")
+      : "No available slots"}
+  </p>
+
+  {availableSlots.length > 3 && (
+    <p className="text-xs text-yellow-100 mt-1">
+      +{availableSlots.length - 3} more slots available
+    </p>
+  )}
+</motion.div>
+
         </section>
 
         {/* Appointments + Patients */}
@@ -445,81 +466,84 @@ const ReceptionDashboard = () => {
 
                   {!patientLoading && patients.length > 0 && (
                     <div className="space-y-3">
-                      {patients.map((p: any) => (
-                        <Card
-                          key={p.id || p._id}
-                          className="border-l-4 border-indigo-400 hover:shadow-md transition-shadow"
-                         onClick={() => navigate(`/patient/${p.id || p._id}`)}   // <-- go to detail
-      
-                       >
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
-                                {(p.fullName || p.name || "?")
-                                  .split(" ")
-                                  .map((s: string) => s[0])
-                                  .slice(0, 2)
-                                  .join("")
-                                  .toUpperCase()}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                                  <User className="h-4 w-4 text-indigo-500" />
-                                  <span>{p.fullName || p.name || "—"}</span>
-                                  {p.bloodType && (
-                                    <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700">
-                                      {p.bloodType}
-                                    </span>
-                                  )}
-                                </div>
+                      {paginatedPatients.map((p: any) => (
+  <Card
+    key={p.id || p._id}
+    className="border-l-4 border-indigo-400 hover:shadow-md transition-shadow cursor-pointer"
+    onClick={() => navigate(`/patient/${p.id || p._id}`)}
+  >
+    <CardContent className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
+          {(p.fullName || p.name || "?")
+            .split(" ")
+            .map((s: string) => s[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+            <User className="h-4 w-4 text-indigo-500" />
+            <span>{p.fullName || p.name || "—"}</span>
+            {p.bloodType && (
+              <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700">
+                {p.bloodType}
+              </span>
+            )}
+          </div>
 
-                                <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-                                  <div>
-                                    <span className="font-medium text-foreground">
-                                      Phone:
-                                    </span>{" "}
-                                    {p.contactNumber || "—"}
-                                  </div>
-                                   <div>
-                                    <span className="font-medium text-foreground">
-                                      Reference:
-                                    </span>{" "}
-                                    {p.reference || "—"}
-                                  </div>
-                                  
-                                  <div>
-                                    <span className="font-medium text-foreground">
-                                      DOB:
-                                    </span>{" "}
-                                    {p.dateOfBirth
-                                      ? new Date(
-                                          p.dateOfBirth
-                                        ).toLocaleDateString()
-                                      : "—"}
-                                  </div>
-                                  <div className="truncate sm:text-right sm:pr-1">
-                                    <span className="font-medium text-foreground">
-                                      ID:
-                                    </span>{" "}
-                                    {p.id || p._id || "—"}
-                                  </div>
-                                  {p.primaryHealthConcern && (
-                                    <div className="sm:col-span-3">
-                                      <span className="font-medium text-foreground">
-                                        Concern:
-                                      </span>{" "}
-                                      {p.primaryHealthConcern}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+          <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
+            <div>
+              <span className="font-medium text-foreground">Phone:</span>{" "}
+              {p.contactNumber || "—"}
+            </div>
+            <div>
+              <span className="font-medium text-foreground">Reference:</span>{" "}
+              {p.reference || "—"}
+            </div>
+            <div>
+              <span className="font-medium text-foreground">DOB:</span>{" "}
+              {p.dateOfBirth
+                ? new Date(p.dateOfBirth).toLocaleDateString()
+                : "—"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+))}
+
                     </div>
                   )}
                 </CardContent>
+                <div className="flex justify-center gap-3 mt-5">
+  <Button
+    onClick={() => setPatientPage((prev) => Math.max(prev - 1, 1))}
+    disabled={patientPage === 1}
+    variant="outline"
+    className="h-8"
+  >
+    Previous
+  </Button>
+  <div className="inline-flex items-center justify-center h-8 min-w-8 px-2 text-sm rounded border bg-white">
+    {patientPage}
+  </div>
+  <Button
+    onClick={() =>
+      setPatientPage((prev) =>
+        prev * patientLimit < patients.length ? prev + 1 : prev
+      )
+    }
+    disabled={patientPage * patientLimit >= patients.length}
+    variant="outline"
+    className="h-8"
+  >
+    Next
+  </Button>
+</div>
+
               </Card>
             </motion.section>
           </div>

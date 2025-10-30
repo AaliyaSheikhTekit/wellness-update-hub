@@ -163,48 +163,6 @@ export default function TreatmentPlanTable({
     updateParent(newRows);
   };
 
-  const printTableWithHeaderFooter = (tableId: string) => {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const newWindow = window.open("", "_blank", "width=1000,height=800");
-    if (!newWindow) return;
-
-    newWindow.document.write(`
-      <html>
-        <head>
-          <title>Treatment Plan</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            .header, .footer { width: 100%; text-align: center; margin: 10px 0; }
-            .footer { font-size: 10px; color: #555; }
-            img { max-height: 80px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
-              <div>
-                <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
-              </div>
-            </div>
-          </div>
-
-          ${table.outerHTML}
-
-          <div class="footer">
-            <p>Integrated Natural Healing system for a comprehensive</p>
-            <p>📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
-            <p>© ${new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
-          </div>
-        </body>
-      </html>
-    `);
-    newWindow.document.close();
-    newWindow.print();
-  };
 
   return (
     <div className="space-y-4">
@@ -424,12 +382,7 @@ export default function TreatmentPlanTable({
       </div>
 
       <div className="flex gap-2">
-        <Button
-          onClick={() => printTableWithHeaderFooter("treatment-table")}
-          variant="outline"
-        >
-          Print Treatment Table
-        </Button>
+       
         <Button onClick={handleAddRow}>Add Row</Button>
       </div>
     </div>

@@ -61,7 +61,6 @@ import ConsultationHistory from "@/components/ConsultationHistory";
 import TreatmentSchedulerOneFile from "@/components/TreatmentPlanView";
 import PrescriptionDialog from "./Prescriptions";
 
-
 type ServerPatient = {
   id: string;
   fullName: string;
@@ -171,13 +170,16 @@ const PatientDetail = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
 
-
   const printRef = useRef<HTMLDivElement>(null);
- 
-const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
-const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
-console.log("Selected Appointment for Prescription:", selectedAppointment);
-const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null>(null);
+
+  const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
+    null
+  );
+  console.log("Selected Appointment for Prescription:", selectedAppointment);
+  const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<
+    string | null
+  >(null);
 
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
@@ -216,7 +218,6 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
     };
   }, [id]);
 
-  
   // ---- Safe state + helpers at top of component ----
   const appointments = useMemo(
     () => (patient?.appointment ?? []) as Array<any>,
@@ -567,49 +568,43 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
   // Check if patient has any critical information
 
   const bmiStatus = getBMIStatus(patient.bmi);
-  
-  const handleGeneratePdf = async () => {
-    setIsGeneratingPdf(true);
-    try {
-      const response = await generatePDF(patient.id);
 
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
+const handleGeneratePdf = async (appointmentId: string) => {
+  setIsGeneratingPdf(true);
+  try {
+    const blob = await generatePDF(appointmentId); // 🔥 now correctly returns blob
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
-      toast({
-        title: "PDF generated successfully!",
-        // description: "Prescription details sent to patient's WhatsApp",
-      });
-    } catch (error) {
-      console.error("PDF generation error:", error);
-      toast({
-        title: "Please Try Again!",
-        // description: "Prescription details sent to patient's WhatsApp",
-      });
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
+    const url = window.URL.createObjectURL(blob);
+    setPdfUrl(url);
 
-  const handleDownloadPdf = () => {
-    if (pdfUrl) {
-      const link = document.createElement("a");
-      link.href = pdfUrl;
-      link.download = `${patient.fullName.replace(/\s+/g, "_")}_report.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    // Auto-download after generation
+    handleDownloadPdf(url);
 
-      toast({
-        title: "PDF downloaded!",
-        // description: "Prescription details sent to patient's WhatsApp",
-      });
-    }
-  };
+    toast({
+      title: "PDF generated successfully!",
+    });
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    toast({
+      title: "Please Try Again!",
+    });
+  } finally {
+    setIsGeneratingPdf(false);
+  }
+};
+
+
+  const handleDownloadPdf = (url: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${patient.fullName.replace(/\s+/g, "_")}_report.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  toast({ title: "PDF downloaded!" });
+};
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -678,36 +673,7 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
                           Give Consultancy
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleGeneratePdf}
-                        disabled={isGeneratingPdf}
-                        className="shadow-sm"
-                      >
-                        {isGeneratingPdf ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Generate PDF
-                          </>
-                        )}
-                      </Button>
-                      {pdfUrl && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={handleDownloadPdf}
-                          className="shadow-sm"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      )}
+                   
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {patient.address || "—"}
@@ -742,8 +708,8 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
 
         {/* Tabs */}
         <Tabs defaultValue="appointments" className="space-y-6">
-         <TabsList
-  className="
+          <TabsList
+            className="
     flex gap-1 sm:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent
     border-b border-gray-200 bg-white sticky top-0 z-10
     [&::-webkit-scrollbar]:h-1.5
@@ -751,30 +717,29 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
     [&::-webkit-scrollbar-thumb]:bg-gray-300
     [&::-webkit-scrollbar-track]:bg-transparent
   "
->
-  <TabsTrigger value="appointments">Appointments</TabsTrigger>
-  <TabsTrigger value="prescription">Prescription</TabsTrigger>
-  <TabsTrigger value="history" disabled={!activeAppointment}>
-    Personal and lifestyle history
-  </TabsTrigger>
-  <TabsTrigger value="vitals" disabled={!activeAppointment}>
-    Vitals and anthropometric measurement
-  </TabsTrigger>
-  <TabsTrigger value="consent" disabled={!activeAppointment}>
-    Consent & Signature
-  </TabsTrigger>
-  <TabsTrigger value="payments" disabled={!activeAppointment}>
-    UPI / Payments
-  </TabsTrigger>
-  <TabsTrigger value="dietchart" disabled={!activeAppointment}>
-    Diet Chart
-  </TabsTrigger>
-  <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
-    Treatment Plan
-  </TabsTrigger>
-  <TabsTrigger value="consultations">Consultations</TabsTrigger>
-</TabsList>
-
+          >
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="prescription">Prescription</TabsTrigger>
+            <TabsTrigger value="history" disabled={!activeAppointment}>
+              Personal and lifestyle history
+            </TabsTrigger>
+            <TabsTrigger value="vitals" disabled={!activeAppointment}>
+              Vitals and anthropometric measurement
+            </TabsTrigger>
+            <TabsTrigger value="consent" disabled={!activeAppointment}>
+              Consent & Signature
+            </TabsTrigger>
+            <TabsTrigger value="payments" disabled={!activeAppointment}>
+              UPI / Payments
+            </TabsTrigger>
+            <TabsTrigger value="dietchart" disabled={!activeAppointment}>
+              Diet Chart
+            </TabsTrigger>
+            <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
+              Treatment Plan
+            </TabsTrigger>
+            <TabsTrigger value="consultations">Consultations</TabsTrigger>
+          </TabsList>
 
           {/* Medical History */}
           <TabsContent value="history">
@@ -1410,173 +1375,203 @@ const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null
               </CardHeader>
 
               <CardContent className="space-y-3">
-                {patient.appointment && patient.appointment.length > 0 ? (
-                  patient.appointment
-                    .sort(
-                      (a, b) =>
-                        new Date(b.date || b.createdAt).getTime() -
-                        new Date(a.date || a.createdAt).getTime()
-                    )
-                    .map((a, idx) => (
-                      <div
-                        key={a.id || idx}
-                        onClick={() => setActiveAppointment(a)}
-                        className={`p-4 border rounded cursor-pointer transition-all ${
-                          activeAppointment?.id === a.id
-                            ? "bg-blue-50 border-blue-400 shadow-sm"
-                            : "hover:bg-muted/40"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">
-                              {new Date(
-                                a.date || a.createdAt
-                              ).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {a.consultationType || "—"}
-                            </p>
-                          </div>
-                          <Badge
-                            className={
-                              a.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : a.status === "confirmed"
-                                ? "bg-green-100 text-green-800"
-                                : a.status === "completed"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }
-                            variant="outline"
-                          >
-                            {a.status || "unknown"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No appointments found for this patient.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-         <TabsContent value="prescription">
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center justify-between">
-        Prescriptions
-        <Badge variant="outline" className="text-sm">
-          {patient.appointment?.length || 0} Appointments
-        </Badge>
-      </CardTitle>
-    </CardHeader>
-
-<CardContent className="space-y-4">
-  {patient.appointment && patient.appointment.length > 0 ? (
-    patient.appointment.map((a, idx) => (
+              {patient.appointment && patient.appointment.length > 0 ? (
+  patient.appointment
+    .sort(
+      (a, b) =>
+        new Date(b.date || b.createdAt).getTime() -
+        new Date(a.date || a.createdAt).getTime()
+    )
+    .map((a, idx) => (
       <div
         key={a.id || idx}
-        className="border rounded-lg p-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        onClick={() => setActiveAppointment(a)}
+        className={`p-4 border rounded cursor-pointer transition-all ${
+          activeAppointment?.id === a.id
+            ? "bg-blue-50 border-blue-400 shadow-sm"
+            : "hover:bg-muted/40"
+        }`}
       >
-        {/* Left section: appointment details */}
-        <div>
-          <div className="font-semibold text-gray-800">
-            Appointment on{" "}
-            {new Date(a.date || a.createdAt).toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="font-medium">
+              {new Date(a.date || a.createdAt).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {a.consultationType || "—"}
+            </p>
           </div>
-          <div className="text-sm text-gray-500">
-            {a.consultationType || "—"} · {a.status}
-          </div>
+          <Badge
+            className={
+              a.status === "pending"
+                ? "bg-yellow-100 text-yellow-800"
+                : a.status === "confirmed"
+                ? "bg-green-100 text-green-800"
+                : a.status === "completed"
+                ? "bg-blue-100 text-blue-800"
+                : "bg-gray-100 text-gray-800"
+            }
+            variant="outline"
+          >
+            {a.status || "unknown"}
+          </Badge>
         </div>
 
-        {/* Right section: action buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* 🟢 Add Prescription Button */}
-          <button
-            onClick={() => {
-              setSelectedAppointment(a); // keep full object, not just ID
-              setPrescriptionDialogOpen(true);
+        {/* ✅ Generate PDF Button */}
+        <div className="mt-3 flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async (e) => {
+              e.stopPropagation(); // prevent triggering setActiveAppointment
+              await handleGeneratePdf(a.id);
             }}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition"
+            disabled={isGeneratingPdf}
+            className="shadow-sm"
           >
-            + Add Prescription
-          </button>
-
-          {/* 🧾 Generate PDF button (visible only if prescription created for this appointment) */}
-          {pdfReadyAppointmentId === a.id && (
-            <button
-              onClick={async () => {
-                try {
-                  console.log("🧾 Generating PDF for appointment:", a.id);
-                  const res = await generatePDF(a.id); // ✅ send the appointment ID only
-                  console.log("PDF generation response:", res);
-                } catch (err) {
-                  console.error("Error generating PDF:", err);
-                  alert("Failed to generate PDF. Check console for details.");
-                }
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
-            >
-              📄 Generate PDF
-            </button>
-          )}
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Generate PDF
+              </>
+            )}
+          </Button>
         </div>
       </div>
     ))
-  ) : (
-    <p className="text-sm text-muted-foreground">
-      No appointments available for prescriptions.
-    </p>
-  )}
-</CardContent>
-
-{/* Prescription Dialog */}
-{selectedAppointment && (
-  <PrescriptionDialog
-    open={!!prescriptionDialogOpen}
-    onClose={() => {
-      setPrescriptionDialogOpen(false);
-      setSelectedAppointment(null);
-    }}
-    patient={{ ...patient, appointment: [selectedAppointment] }}
-    onPrescriptionCreated={() => {
-      // mark that this appointment now has a ready prescription
-      setPdfReadyAppointmentId(selectedAppointment.id);
-    }}
-  />
+) : (
+  <p className="text-sm text-muted-foreground">
+    No appointments found for this patient.
+  </p>
 )}
 
-  </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="prescription">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Prescriptions
+                  <Badge variant="outline" className="text-sm">
+                    {patient.appointment?.length || 0} Appointments
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
 
-  {/* 🔹 Prescription Dialog (only opens when appointment is selected) */}
-  {selectedAppointment && (
-    <PrescriptionDialog
-      open={!!prescriptionDialogOpen}
-      onClose={() => {
-        setPrescriptionDialogOpen(false);
-        setSelectedAppointment(null);
-      }}
-      patient={{ ...patient, appointment: [selectedAppointment] }}
+              <CardContent className="space-y-4">
+                {patient.appointment && patient.appointment.length > 0 ? (
+                  patient.appointment.map((a, idx) => (
+                    <div
+                      key={a.id || idx}
+                      className="border rounded-lg p-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      {/* Left section: appointment details */}
+                      <div>
+                        <div className="font-semibold text-gray-800">
+                          Appointment on{" "}
+                          {new Date(a.date || a.createdAt).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {a.consultationType || "—"} · {a.status}
+                        </div>
+                      </div>
 
-      // 🧩 New callback to tell parent when prescription succeeds
-      onPrescriptionCreated={() => {
-        setPdfReadyAppointmentId(selectedAppointment.id);
-      }}
-    />
-  )}
-</TabsContent>
+                      {/* Right section: action buttons */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* 🟢 Add Prescription Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedAppointment(a); // keep full object, not just ID
+                            setPrescriptionDialogOpen(true);
+                          }}
+                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition"
+                        >
+                          + Add Prescription
+                        </button>
 
+                        {/* 🧾 Generate PDF button (visible only if prescription created for this appointment) */}
+                        {pdfReadyAppointmentId === a.id && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                console.log(
+                                  "🧾 Generating PDF for appointment:",
+                                  a.id
+                                );
+                                const res = await generatePDF(a.id); // ✅ send the appointment ID only
+                                console.log("PDF generation response:", res);
+                              } catch (err) {
+                                console.error("Error generating PDF:", err);
+                                alert(
+                                  "Failed to generate PDF. Check console for details."
+                                );
+                              }
+                            }}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
+                          >
+                            📄 Generate PDF
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No appointments available for prescriptions.
+                  </p>
+                )}
+              </CardContent>
+
+              {/* Prescription Dialog */}
+              {selectedAppointment && (
+                <PrescriptionDialog
+                  open={!!prescriptionDialogOpen}
+                  onClose={() => {
+                    setPrescriptionDialogOpen(false);
+                    setSelectedAppointment(null);
+                  }}
+                  patient={{ ...patient, appointment: [selectedAppointment] }}
+                  onPrescriptionCreated={() => {
+                    // mark that this appointment now has a ready prescription
+                    setPdfReadyAppointmentId(selectedAppointment.id);
+                  }}
+                />
+              )}
+            </Card>
+
+            {/* 🔹 Prescription Dialog (only opens when appointment is selected) */}
+            {selectedAppointment && (
+              <PrescriptionDialog
+                open={!!prescriptionDialogOpen}
+                onClose={() => {
+                  setPrescriptionDialogOpen(false);
+                  setSelectedAppointment(null);
+                }}
+                patient={{ ...patient, appointment: [selectedAppointment] }}
+                // 🧩 New callback to tell parent when prescription succeeds
+                onPrescriptionCreated={() => {
+                  setPdfReadyAppointmentId(selectedAppointment.id);
+                }}
+              />
+            )}
+          </TabsContent>
 
           <TabsContent value="dietchart">
             <DietChartView patient={patient} />

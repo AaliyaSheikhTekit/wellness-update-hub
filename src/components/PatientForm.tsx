@@ -473,38 +473,29 @@ const PatientRegistrationForm = () => {
   const toStringOrNull = (value: any) =>
     value !== undefined && value !== null ? String(value) : "";
 
-  const buildCreatePayload = () => ({
-    fullName: toStringOrNull(formData.name),
-    age: toNumberOrNull(formData.age),
-    sex: toStringOrNull(formData.sex),
-    fatherOrHusbandName: toStringOrNull(formData.fatherOrHusbandName),
-    contactNumber: toStringOrNull(formData.contactNumber),
-    maritalStatus: toStringOrNull(formData.maritalStatus),
-    dateOfBirth:
-      typeof formData.dateOfBirth === "string"
-        ? formData.dateOfBirth
-        : new Date(formData.dateOfBirth).toISOString().split("T")[0],
-
-    bloodType: toStringOrNull(formData.bloodType),
-    occupation: toStringOrNull(formData.occupation),
-    reference: toStringOrNull(formData.reference),
-    address: toStringOrNull(formData.address),
-    primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
-    chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
-    surgeriesOrInjuries: toStringOrNull(formData.surgeriesOrInjuries),
-    allergies: toStringOrNull(formData.allergies),
-    familyHistory: formData.familyHistory,
-  });
-const normalizeString = (val: any): string => {
-  if (Array.isArray(val)) return val.join(", ");
-  if (typeof val === "string") return val.trim();
-  if (val == null) return "";
-  return String(val).trim();
-};
-
 
   const buildUpdatePayload = (opts: { includeConsent?: boolean } = {}) => {
     return {
+      fullName: toStringOrNull(formData.name),
+      age: toNumberOrNull(formData.age),
+      sex: toStringOrNull(formData.sex),
+      fatherHusbandName: toStringOrNull(formData.fatherOrHusbandName),
+      contactNumber: toStringOrNull(formData.contactNumber),
+      maritalStatus: toStringOrNull(formData.maritalStatus),
+      dateOfBirth:
+        typeof formData.dateOfBirth === "string"
+          ? formData.dateOfBirth
+          : new Date(formData.dateOfBirth).toISOString().split("T")[0],
+
+      bloodType: toStringOrNull(formData.bloodType),
+      occupation: toStringOrNull(formData.occupation),
+      reference: toStringOrNull(formData.reference),
+      address: toStringOrNull(formData.address),
+      primaryHealthConcern: toStringOrNull(formData.primaryHealthConcern),
+      chronicIllnesses: toStringOrNull(formData.chronicIllnesses),
+      surgeriesOrInjuries: toStringOrNull(formData.surgeriesOrInjuries),
+      allergies: toStringOrNull(formData.allergies),
+      familyHistory: formData.familyHistory,
       bloodPressure: toStringOrNull(vitals["Blood Pressure"]),
       pulse: toNumberOrNull(vitals["Pulse"]),
       weightKg: toNumberOrNull(vitals["Weight"]),
@@ -531,26 +522,21 @@ const normalizeString = (val: any): string => {
       otherDiet: toStringOrNull(lifestyle.other_diet),
       appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
       taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
-   // 🩺 Bowel Movements mapping — UI → Backend
-bowel: 
-  Array.isArray(lifestyle.bowelMovements)
-    ? lifestyle.bowelMovements.join(", ")
-    : lifestyle.bowelMovements
-    ? String(lifestyle.bowelMovements)
-    : "",
+      // 🩺 Bowel Movements mapping — UI → Backend
+      bowel: Array.isArray(lifestyle.bowelMovements)
+        ? lifestyle.bowelMovements.join(", ")
+        : lifestyle.bowelMovements
+        ? String(lifestyle.bowelMovements)
+        : "",
 
-otherBowel: 
-  lifestyle.otherBowel ??
-  lifestyle.other_bowelMovements ?String(lifestyle.other_bowelMovements) :  
-  ""
-,
-
-bowelFrequency: 
-  lifestyle.bowelFrequency ??
-  lifestyle.frequency_bowelMovements ?String(lifestyle.frequency_bowelMovements) :  
-  ""
-,
-
+      otherBowel:
+        lifestyle.otherBowel ?? lifestyle.other_bowelMovements
+          ? String(lifestyle.other_bowelMovements)
+          : "",
+      bowelFrequency:
+        lifestyle.bowelFrequency ?? lifestyle.frequency_bowelMovements
+          ? String(lifestyle.frequency_bowelMovements)
+          : "",
       sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
       sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
       sleepTime: toStringOrNull(lifestyle.sleepTime),
@@ -604,10 +590,9 @@ bowelFrequency:
 
       if (step === 1) {
         setSubmitting(true);
-        const res = await createPatient(buildCreatePayload());
+        await updatePatient(id, buildUpdatePayload({ includeConsent: false }));
         setSubmitting(false);
-        const id = res?.data?.id || res?.id;
-        if (!id) throw new Error("No patient id received");
+
         setPatientId(id);
         setApiSuccess("Patient created.");
       }

@@ -40,7 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getPatients, // (q: string) -> {data: Patient[]}
   getTreatmentAll, // () -> {data: ServiceItem[]}
-  // listInvoices,              // (q?: string) -> {data: ApiInvoice[]}
+  generatetInvoicePDF, // (q?: string) -> {data: ApiInvoice[]}
   createInvoice,
   getAllInvoices,
   getInvoiceById,
@@ -563,6 +563,20 @@ const Invoices = () => {
   const catalogFiltered = services.filter((s) =>
     (s.title?.toLowerCase() ?? "").includes(serviceQuery.toLowerCase())
   );
+  const downloadInvoicePDF = async (invoiceId: string) => {
+    try {
+      const blob = await generatetInvoicePDF(invoiceId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice_${invoiceId}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Invoice PDF download failed:", err);
+      alert(err.message || "Failed to generate Invoice PDF.");
+    }
+  };
 
   /* ---------------- View Mode (existing invoice) ---------------- */
   const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => (
@@ -589,8 +603,12 @@ const Invoices = () => {
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" /> Print
             </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" /> Download
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadInvoicePDF(inv.id)}
+            >
+              <Download className="h-4 w-4 mr-2" /> PDF
             </Button>
           </div>
         </div>

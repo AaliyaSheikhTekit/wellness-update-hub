@@ -7,6 +7,7 @@ import {
   getAllYoga,
   generatetTreatmentPDF,
 } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 // -------------------- TYPES -------------------- //
 type TreatmentOption = {
@@ -901,32 +902,48 @@ export function TreatmentPlanView({ patient }) {
               <strong>Age/Gender:</strong> {patient.age ?? "N/A"}Y /{" "}
               {patient.sex || "N/A"}
             </div>
-            <button
-              className="px-2.5 py-1.5 rounded-lg border text-sm bg-green-50 hover:bg-green-100"
-              onClick={async () => {
-                try {
-                  const appointmentId = patient?.appointment?.[0]?.id; // or whichever appointment you want
-                  if (!appointmentId) {
-                    alert("No appointment ID found for this patient.");
-                    return;
-                  }
+         <button
+  className="px-2.5 py-1.5 rounded-lg border text-sm bg-green-50 hover:bg-green-100"
+  onClick={async () => {
+    try {
+      const appointmentId = patient?.appointment?.[0]?.id;
+      if (!appointmentId) {
+        alert("No appointment ID found for this patient.");
+        return;
+      }
 
-                  const result = await generatetTreatmentPDF(appointmentId);
-                  console.log("PDF generated:", result);
+      // 🔹 Call the updated binary-safe function
+      const blob = await generatetTreatmentPDF(appointmentId);
 
-                  // If backend returns a URL, open it:
-                  if (result?.url) window.open(result.url, "_blank");
-                  else alert("PDF generated successfully!");
-                } catch (err) {
-                  console.error("Error generating PDF:", err);
-                  alert(
-                    "Failed to generate treatment PDF. See console for details."
-                  );
-                }
-              }}
-            >
-              📄 PDF
-            </button>
+      // 🔹 Convert blob to a downloadable link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${patient.fullName.replace(/\s+/g, "_")}_treatment_plan.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 🔹 Optionally open in new tab instead:
+      // window.open(url, "_blank");
+
+      toast({
+        title: "Treatment PDF generated!",
+        description: "File downloaded successfully.",
+      });
+    } catch (err) {
+      console.error("Error generating treatment PDF:", err);
+      toast({
+        title: "Error generating PDF",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }}
+>
+  📄 PDF
+</button>
+
           </div>
         </div>
 

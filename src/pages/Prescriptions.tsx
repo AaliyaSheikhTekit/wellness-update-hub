@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { postData ,generatePDF} from "@/lib/api";
+import { postData, generatePDF } from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
+import { Loader2, FileText, Download } from "lucide-react";
 
-
-export default function PrescriptionDialog({ open, onClose, patient, onPrescriptionCreated }: any) {
+export default function PrescriptionDialog({
+  open,
+  onClose,
+  patient,
+  onPrescriptionCreated,
+}: any) {
   const [medicineName, setMedicineName] = useState("");
   const [duration, setDuration] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -24,20 +29,26 @@ export default function PrescriptionDialog({ open, onClose, patient, onPrescript
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [prescriptionCreated, setPrescriptionCreated] = useState(false);
 
+  // 🩺 Create Prescription
   const handlePrescribeMedicine = async () => {
-    if (!medicineName.trim()) return alert("Please enter medicine name");
-    if (!duration.trim()) return alert("Please specify duration");
-    if (!instructions.trim()) return alert("Please enter instructions");
+    if (!medicineName.trim() || !duration.trim() || !instructions.trim()) {
+      toast({ title: "Please fill all required fields." });
+      return;
+    }
 
     try {
       setLoading(true);
+      const appointmentId = patient?.appointment?.[0]?.id;
+
+      if (!appointmentId) {
+        toast({ title: "Missing appointment ID." });
+        return;
+      }
 
       const payload = {
-        appointmentId:
-          patient?.appointment?.length > 0
-            ? patient.appointment[0].id
-            : undefined,
+        appointmentId,
         medicineName,
         duration,
         instructions,
@@ -52,11 +63,14 @@ export default function PrescriptionDialog({ open, onClose, patient, onPrescript
       console.log("Prescription API result:", result);
 
       toast({
-        title: "Prescription Sent",
-        description: "Prescription details sent to patient's WhatsApp",
+        title: "Prescription created successfully!",
+        description: "You can now generate a PDF.",
       });
-  onPrescriptionCreated?.();
-      // reset input fields
+
+      onPrescriptionCreated?.();
+      setPrescriptionCreated(true); // ✅ unlock the PDF button
+
+      // Reset fields
       setMedicineName("");
       setDuration("");
       setInstructions("");
@@ -66,38 +80,43 @@ export default function PrescriptionDialog({ open, onClose, patient, onPrescript
       setAvoid("");
     } catch (error: any) {
       console.error("Error creating prescription:", error);
-      alert(error?.message || "Failed to send prescription");
+      toast({ title: "Failed to create prescription" });
     } finally {
       setLoading(false);
     }
   };
 
-  // 🧩 Generate PDF Button Handler
+  // 🧩 Generate PDF for appointment
   const handleGeneratePDF = async () => {
     try {
-      if (!patient?.id) {
-        alert("Missing patient ID");
+      const appointmentId = patient?.appointment?.[0]?.id;
+      if (!appointmentId) {
+        toast({ title: "Missing appointment ID." });
         return;
       }
-      setPdfLoading(true);
-      const pdfRes = await generatePDF(patient.id);
-      console.log("PDF result:", pdfRes);
 
-      if (pdfRes?.url) {
-        setPdfUrl(pdfRes.url);
-        toast({
-          title: "PDF Generated",
-          description: "Click below to download.",
-        });
-      } else {
-        toast({
-          title: "PDF Generated",
-          description: "PDF generated successfully.",
-        });
-      }
+      setPdfLoading(true);
+      const blob = await generatePDF(appointmentId); // 🧠 binary response
+
+      // ✅ Create object URL from blob
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+
+      // Auto-download file
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${patient.fullName.replace(/\s+/g, "_")}_prescription.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "PDF Generated!",
+        description: "Your prescription PDF has been downloaded.",
+      });
     } catch (error: any) {
       console.error("Error generating PDF:", error);
-      alert(error?.message || "Failed to generate PDF");
+      toast({ title: "Failed to generate PDF" });
     } finally {
       setPdfLoading(false);
     }
@@ -110,7 +129,7 @@ export default function PrescriptionDialog({ open, onClose, patient, onPrescript
           <DialogTitle>Create Prescription</DialogTitle>
         </DialogHeader>
 
-        {/* Scrollable content */}
+        {/* Scrollable form content */}
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           <div className="space-y-3">
             <div>
@@ -185,7 +204,26 @@ export default function PrescriptionDialog({ open, onClose, patient, onPrescript
             Close
           </Button>
 
-          
+          {/* ✅ Show Generate PDF only after prescription is created */}
+          {prescriptionCreated && (
+            <Button
+              onClick={handleGeneratePDF}
+              disabled={pdfLoading}
+              variant="secondary"
+            >
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate PDF
+                </>
+              )}
+            </Button>
+          )}
 
           <Button
             onClick={handlePrescribeMedicine}

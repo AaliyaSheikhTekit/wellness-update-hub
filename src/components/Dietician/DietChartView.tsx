@@ -11,24 +11,35 @@ export default function DietChartView({ patient }: { patient: any }) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // ✅ Backend PDF generator per appointment
-  const downloadPDF = async (appointmentId: string) => {
-    try {
-      setDownloadingId(appointmentId);
-      const blob = await generateDietPDF(appointmentId);
-      const url = window.URL.createObjectURL(blob);
+ const downloadPDF = async (appointmentId: string) => {
+  try {
+    setDownloadingId(appointmentId);
+    const blob = await generateDietPDF(appointmentId);
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Diet_Chart_${patient?.fullName?.replace(/\s+/g, "_") || "Patient"}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error("Diet PDF download failed:", err);
-      alert(err.message || "Failed to download PDF.");
-    } finally {
-      setDownloadingId(null);
-    }
-  };
+    // ✅ Create a URL from the blob
+    const url = window.URL.createObjectURL(blob);
+
+    // ✅ Download or open PDF
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Diet_Chart_${patient?.fullName?.replace(/\s+/g, "_") || "Patient"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Optional: auto-open in a new tab instead of download
+    // window.open(url, "_blank");
+
+    // ✅ Clean up URL after use
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  } catch (err: any) {
+    console.error("Diet PDF download failed:", err);
+    alert(err.message || "Failed to download PDF.");
+  } finally {
+    setDownloadingId(null);
+  }
+};
+
 
   // ✅ Filter only appointments that have a diet plan
   const appointmentsWithDiet = appointments.filter(

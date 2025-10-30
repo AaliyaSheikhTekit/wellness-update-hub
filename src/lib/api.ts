@@ -101,7 +101,7 @@ export const getData = async (endpoint: string, params: Record<string, any> = {}
 };
 export const createPatient = async (payload: any) => {
  const backendToken = getBackendToken();
-  const response = await fetch(`${API_BASE_URL}/patient/create`, {
+  const response = await fetch(`${API_BASE_URL}/patient`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -733,7 +733,10 @@ export const generatePDF = async (patientId: string) => {
     }
   );
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-  return await response.json();
+    // 🧠 Expect binary PDF, not JSON
+  const blob = await response.blob();
+  return blob;
+
 };
 //yogas
 export const getAllYoga = async () => {
@@ -769,14 +772,16 @@ export const generateDietPDF = async (appointmentId: string) => {
     }
   );
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-  return await response.json();
+    // 🧠 Expect binary data (PDF), not JSON
+  const blob = await response.blob();
+  return blob;
 };
 export const generatetTreatmentPDF = async (appointmentId: string) => {
  const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
   const response = await fetch(
-    `${API_BASE_URL}/appointment/generate-diet-pdf/${appointmentId}`,
+    `${API_BASE_URL}/appointment/generate-treatment-pdf/${appointmentId}`,
     {
       method: "GET",
       headers: {
@@ -786,5 +791,26 @@ export const generatetTreatmentPDF = async (appointmentId: string) => {
     }
   );
   if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-  return await response.json();
+    // 🧠 Expect binary data (PDF), not JSON
+  const blob = await response.blob();
+  return blob;
+};
+export const generatetInvoicePDF = async (invoiceId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/generate-invoice/${invoiceId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+    // 🧠 Expect binary data (PDF), not JSON
+  const blob = await response.blob();
+  return blob;
 };
