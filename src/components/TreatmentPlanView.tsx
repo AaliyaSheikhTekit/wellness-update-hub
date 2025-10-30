@@ -6,6 +6,7 @@ import {
   assignTherapist,
   getAllYoga,
   generatetTreatmentPDF,
+  getPatientById,
 } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
@@ -169,31 +170,20 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
   selectedDate,
   setSelectedDate,
 }) => {
+  const { sessions } = useContext(SessionsContext);
   const [currentDate, setCurrentDate] = useState(new Date());
+
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December",
   ];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  // 🔹 Automatically flatten treatmentPlan-style data
+  // 🧩 Normalize appointments only once
   const normalizeAppointments = (input: any[]) => {
     if (!input?.length) return [];
-
-    // detect nested structure like your JSON
     const looksNested = input[0]?.treatmentAssign && input[0]?.timeSlot;
-
-    if (!looksNested) return input; // already flat sessions
+    if (!looksNested) return input;
 
     const all: any[] = [];
     input.forEach((plan) => {
@@ -206,10 +196,9 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
           treatmentTitle: assign.treatment?.title || "Unknown Treatment",
           therapistName: assign.therapist?.name || "Unassigned",
           patientName: "Patient",
-          status: "pending",
+          status: assign.therapist ? "confirmed" : "pending",
         });
       });
-
       (plan.asanas || []).forEach((asana: any) => {
         all.push({
           id: `asana-${asana.id}`,
@@ -222,11 +211,14 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
         });
       });
     });
-
     return all;
   };
 
-  const flatAppointments = normalizeAppointments(appointments);
+  // ✅ Use live sessions if available, otherwise fallback
+  const flatAppointments = useMemo(
+    () => (sessions?.length ? sessions : normalizeAppointments(appointments)),
+    [sessions, appointments]
+  );
 
   const navigateMonth = (dir: number) => {
     setCurrentDate((prev) => {
@@ -245,20 +237,8 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
     const startingDayOfWeek = firstDay.getDay();
     const days: (number | null)[] = [];
     for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
-    for (let day = 1; day <= daysInMonth; day++) days.push(day);
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
     return days;
-  };
-
-  const getAppointmentsForDay = (day: number | null) => {
-    if (!day) return [];
-    return flatAppointments.filter((apt) => {
-      const aptDate = new Date(apt.date + "T00:00:00");
-      return (
-        aptDate.getFullYear() === currentDate.getFullYear() &&
-        aptDate.getMonth() === currentDate.getMonth() &&
-        aptDate.getDate() === day
-      );
-    });
   };
 
   const getStatusColor = (status?: string) => {
@@ -280,8 +260,21 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
     }
   };
 
+  const getAppointmentsForDay = (day: number | null) => {
+    if (!day) return [];
+    return flatAppointments.filter((apt) => {
+      const aptDate = new Date(apt.date + "T00:00:00");
+      return (
+        aptDate.getFullYear() === currentDate.getFullYear() &&
+        aptDate.getMonth() === currentDate.getMonth() &&
+        aptDate.getDate() === day
+      );
+    });
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-4">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <button
           className="px-3 py-1.5 rounded border"
@@ -300,6 +293,7 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
         </button>
       </div>
 
+      {/* Days of Week */}
       <div className="grid grid-cols-7 gap-2 mb-4">
         {dayNames.map((day) => (
           <div key={day} className="text-center font-medium text-gray-500 py-2">
@@ -308,6 +302,7 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
         ))}
       </div>
 
+      {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1">
         {getDaysInMonth(currentDate).map((day, idx) => {
           const dayAppointments = getAppointmentsForDay(day);
@@ -316,6 +311,7 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
             currentDate.getMonth() === new Date().getMonth() &&
             currentDate.getFullYear() === new Date().getFullYear() &&
             day === new Date().getDate();
+
           const dateStr = day
             ? `${currentDate.getFullYear()}-${String(
                 currentDate.getMonth() + 1
@@ -325,67 +321,58 @@ const SimpleCalendar: React.FC<SimpleCalendarProps> = ({
           return (
             <div
               key={idx}
-              className={`min-h-32 p-1 border rounded-lg ${
-                day
-                  ? "bg-white hover:bg-gray-50 cursor-pointer"
-                  : "bg-transparent"
+              className={`min-h-32 p-2 border rounded-lg flex flex-col ${
+                day ? "bg-white hover:bg-gray-50 cursor-pointer" : "bg-transparent"
               } ${isToday ? "ring-2 ring-blue-500" : ""} ${
                 selectedDate === dateStr ? "ring-2 ring-indigo-500" : ""
               }`}
               onClick={() => day && setSelectedDate && setSelectedDate(dateStr)}
             >
+              {/* 📅 Date Header */}
               {day && (
-                <>
+                <div
+                  className={`font-semibold text-sm mb-2 ${
+                    isToday
+                      ? "bg-blue-500 text-white rounded text-center py-1"
+                      : "text-gray-800 text-center"
+                  }`}
+                >
+                  {day}
+                </div>
+              )}
+
+              {/* 🧾 Treatments in same row (grouped) */}
+              <div className="flex flex-col gap-1 overflow-y-auto">
+                {dayAppointments.length === 0 && (
+                  <div className="text-xs text-gray-400 text-center">No treatments</div>
+                )}
+
+                {dayAppointments.map((apt) => (
                   <div
-                    className={`font-medium text-sm mb-1 p-1 ${
-                      isToday
-                        ? "bg-blue-500 text-white rounded text-center"
-                        : ""
+                    key={apt.id}
+                    className={`text-xs p-2 rounded-lg border ${getStatusColor(
+                      apt.status
+                    )} hover:opacity-90 transition-all`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEventClick?.(apt);
+                    }}
+                    title={`${apt.treatmentTitle} • ${apt.time} • ${
+                      apt.therapistName || "Unassigned"
                     }`}
                   >
-                    {day}
-                  </div>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {dayAppointments.slice(0, 4).map((apt) => (
-                      <div
-                        key={apt.id}
-                        className={`text-xs p-2 rounded-lg border hover:opacity-90 transition-all ${getStatusColor(
-                          apt.status
-                        )} shadow-sm`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick?.(apt);
-                        }}
-                        title={`${apt.treatmentTitle} • ${apt.time} • ${
-                          apt.therapistName || "Unassigned"
-                        }`}
-                      >
-                        <div className="font-semibold truncate text-amber-800 flex items-center gap-1">
-                          💆‍♀️{" "}
-                          <span>
-                            {apt.treatmentTitle || "Untitled Treatment"}
-                          </span>
-                        </div>
-                        <div className="truncate text-sky-800 flex items-center gap-1">
-                          👤{" "}
-                          <span>
-                            {apt.therapistName || "No Therapist Assigned"}
-                          </span>
-                        </div>
-                        <div className="truncate text-gray-700 flex items-center gap-1">
-                          🕒 <span>{apt.time}</span> · 🧍{" "}
-                          <span>{apt.patientName}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {dayAppointments.length > 4 && (
-                    <div className="text-xs text-gray-500 mt-1 text-center">
-                      +{dayAppointments.length - 4} more
+                    <div className="truncate font-semibold text-amber-800 flex items-center gap-1">
+                      💆‍♀️ <span>{apt.treatmentTitle}</span>
                     </div>
-                  )}
-                </>
-              )}
+                    <div className="truncate text-sky-800 flex items-center gap-1">
+                      👤 <span>{apt.therapistName || "Unassigned"}</span>
+                    </div>
+                    <div className="truncate text-gray-700 flex items-center gap-1">
+                      🕒 <span>{apt.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
@@ -582,9 +569,8 @@ export const TreatmentUpdateDialog: React.FC<TreatmentUpdateDialogProps> = ({
 
                 // ✅ 3. Send update request
                 await updatePatient(patient.id, payload);
-
-                console.log("✅ Treatment & Yoga updated successfully!");
-                onSave(); // refresh parent
+onSave();
+              
                 onClose();
               } catch (err) {
                 console.error("Error updating treatment:", err);
@@ -816,6 +802,7 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
                     })),
                   })),
                 });
+             
               } catch (err) {
                 console.error("Error assigning therapist:", err);
               }
@@ -835,28 +822,29 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
 // -------------------- TREATMENT PLAN VIEW -------------------- //
 
 export function TreatmentPlanView({ patient }) {
-  console.log("Rendering TreatmentPlanView for patient:", patient);
   const { sessions, setSessions, therapists, treatments } =
     useContext(SessionsContext);
-  const [draft, setDraft] = useState<{
-    open: boolean;
-    initial?: Partial<TreatmentSession> & {
-      treatmentId?: string;
-      treatmentPlanId?: string;
-    };
-  }>({ open: false });
 
-  // 🔹 New: state for update dialog
+  const [localPatient, setLocalPatient] = useState(patient);
+  const [draft, setDraft] = useState({
+    open: false,
+    initial: undefined,
+  });
   const [updateOpen, setUpdateOpen] = useState(false);
-  const [updateInitial, setUpdateInitial] = useState<{
-    patientId: string;
-    treatmentPlanId: string;
-    treatmentAssignId: string;
-  } | null>(null);
+  const [updateInitial, setUpdateInitial] = useState(null);
 
-  const getTreatmentDetails = (treatmentId: string) =>
+  // 🔹 Sync localPatient when patient prop changes
+  useEffect(() => {
+    if (patient) {
+      setLocalPatient(patient);
+    }
+  }, [patient]);
+
+  // 🔹 Get treatment details
+  const getTreatmentDetails = (treatmentId) =>
     treatments.find((t) => t.id === treatmentId);
 
+  // 🔹 Assign dialog opener
   const openAssign = (plan, treatmentId) => {
     const { start, durationMin } = parseTimeSlot(plan.timeSlot);
     const t = getTreatmentDetails(treatmentId);
@@ -864,9 +852,9 @@ export function TreatmentPlanView({ patient }) {
     setDraft({
       open: true,
       initial: {
-        patientId: patient.id,
-        patientName: patient.fullName,
-        treatmentPlanId: plan.id, // ✅ crucial line
+        patientId: localPatient.id,
+        patientName: localPatient.fullName,
+        treatmentPlanId: plan.id,
         treatmentId,
         date: toYMD(plan.date),
         time: start || "09:00",
@@ -878,225 +866,236 @@ export function TreatmentPlanView({ patient }) {
     });
   };
 
-  const refreshPatientData = () => {
-    // 🔹 You can replace this with your actual refetch function
-    console.log("Refetch patient data after treatment update...");
+  // 🔹 Refresh patient data after update
+  const refreshPatientData = async () => {
+    try {
+      const res = await getPatientById(localPatient.id);
+      setLocalPatient(res.data); // ✅ update state properly
+      setSessions(
+        mapTreatmentPlansToSessions(res.data.treatmentPlan, res.data.fullName)
+      );
+    } catch (err) {
+      console.error("Failed to refresh patient:", err);
+    }
   };
+
+  // 🧩 Group all plans by date (for single-row-per-date)
+  const groupedPlans = useMemo(() => {
+    const groups = {};
+    (localPatient.treatmentPlan || []).forEach((plan) => {
+      const date = plan.date;
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(plan);
+    });
+    return groups;
+  }, [localPatient.treatmentPlan]);
 
   return (
     <div className="bg-white p-4 shadow rounded-xl border">
       <div className="flex items-center justify-between pb-4 border-b">
         <h2 className="text-2xl font-semibold">Treatment Plan</h2>
-      </div>
+        <button
+          className="px-3 py-1.5 rounded-lg border bg-green-50 hover:bg-green-100"
+          onClick={async () => {
+            try {
+              const appointmentId = localPatient?.appointment?.[0]?.id;
+              if (!appointmentId) {
+                alert("No appointment ID found for this patient.");
+                return;
+              }
 
-      <div className="mt-4">
-        <div className="bg-gray-50 p-4 rounded-lg mb-4 text-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <strong>Patient Name:</strong> {patient.fullName}
-            </div>
-            <div>
-              <strong>Patient ID:</strong> {patient.id}
-            </div>
-            <div>
-              <strong>Age/Gender:</strong> {patient.age ?? "N/A"}Y /{" "}
-              {patient.sex || "N/A"}
-            </div>
-         <button
-  className="px-2.5 py-1.5 rounded-lg border text-sm bg-green-50 hover:bg-green-100"
-  onClick={async () => {
-    try {
-      const appointmentId = patient?.appointment?.[0]?.id;
-      if (!appointmentId) {
-        alert("No appointment ID found for this patient.");
-        return;
-      }
+              const blob = await generatetTreatmentPDF(appointmentId);
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${localPatient.fullName.replace(
+                /\s+/g,
+                "_"
+              )}_treatment_plan.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
 
-      // 🔹 Call the updated binary-safe function
-      const blob = await generatetTreatmentPDF(appointmentId);
-
-      // 🔹 Convert blob to a downloadable link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${patient.fullName.replace(/\s+/g, "_")}_treatment_plan.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // 🔹 Optionally open in new tab instead:
-      // window.open(url, "_blank");
-
-      toast({
-        title: "Treatment PDF generated!",
-        description: "File downloaded successfully.",
-      });
-    } catch (err) {
-      console.error("Error generating treatment PDF:", err);
-      toast({
-        title: "Error generating PDF",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }}
->
-  📄 PDF
-</button>
-
-          </div>
-        </div>
-
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-bold bg-gray-200 py-2 rounded">
-            Treatment Plan Overview
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-2 border-gray-800 text-sm">
-            <thead>
-              <tr>
-                <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                  Date
-                </th>
-                <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                  Time Slot
-                </th>
-                <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                  Yoga/Asanas
-                </th>
-                <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                  Treatments
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {patient.treatmentPlan.map((plan, idx) => (
-                <tr key={plan.id ?? `plan-${idx}`}>
-                  <td className="border-2 border-gray-800 p-3 font-semibold">
-                    {formatDate(plan.date)}
-                  </td>
-                  <td className="border-2 border-gray-800 p-3">
-                    {plan.timeSlot || "N/A"}
-                  </td>
-                  <td className="border-2 border-gray-800 p-3 whitespace-pre-line">
-                    {plan.yogaPlan ||
-                      (plan.asanas?.length
-                        ? plan.asanas.map((a) => a.name).join(", ")
-                        : "N/A")}
-                  </td>
-                  <td className="border-2 border-gray-800 p-3">
-                    {plan.treatmentAssign?.length ? (
-                      <div className="space-y-3">
-                        {plan.treatmentAssign.map((assign, tIdx) => {
-                          const t = assign.treatment;
-                          const therapist = assign.therapist;
-                          const existing = sessions.find(
-                            (s) =>
-                              s.treatmentId === t.id &&
-                              s.date === toYMD(plan.date)
-                          );
-
-                          return (
-                            <div
-                              key={assign.id}
-                              className="border-l-4 border-amber-500 pl-3 py-2 bg-gray-50 rounded"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-semibold text-gray-800">
-                                    {t?.title || `Treatment ${tIdx + 1}`}
-                                  </div>
-                                  {t?.subTitle && (
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      {t.subTitle}
-                                    </div>
-                                  )}
-                                  {existing && (
-                                    <div className="mt-2 text-xs text-emerald-700">
-                                      Assigned: {existing.time} ·{" "}
-                                      {existing.therapistName ||
-                                        "(No therapist)"}
-                                    </div>
-                                  )}
-                                  {therapist && !existing && (
-                                    <div className="mt-2 text-xs text-emerald-700">
-                                      Assigned to: {therapist.name}
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex gap-2">
-                                  <button
-                                    className="px-2.5 py-1.5 rounded-lg border text-sm"
-                                    onClick={() => openAssign(plan, t.id)}
-                                  >
-                                    {existing ? "Edit" : "Assign"}
-                                  </button>
-
-                                  {/* 🟢 Change Treatment Button */}
-                                  <button
-                                    className="px-2.5 py-1.5 rounded-lg border text-sm bg-blue-50 hover:bg-blue-100"
-                                    onClick={() => {
-                                      setUpdateInitial({
-                                        patientId: patient.id,
-                                        treatmentPlanId: plan.id,
-                                        treatmentAssignId: assign.id,
-                                      });
-                                      setUpdateOpen(true);
-                                    }}
-                                  >
-                                    Change
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span className="text-gray-500">
-                        No treatments assigned
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 🧩 Session Editor Modal */}
-        <SessionEditor
-          open={draft.open}
-          onClose={() => setDraft({ open: false })}
-          therapists={therapists}
-          treatments={treatments}
-          initial={draft.initial || {}}
-          onSave={(sess) => {
-            setSessions((prev) => {
-              const exists = prev.some((p) => p.id === sess.id);
-              return exists
-                ? prev.map((p) => (p.id === sess.id ? sess : p))
-                : [...prev, sess];
-            });
+              toast({
+                title: "Treatment PDF generated!",
+                description: "File downloaded successfully.",
+              });
+            } catch (err) {
+              console.error("Error generating treatment PDF:", err);
+              toast({
+                title: "Error generating PDF",
+                description: "Please try again.",
+                variant: "destructive",
+              });
+            }
           }}
-          patient={patient}
-        />
-
-        {/* 🧩 Treatment Update Dialog */}
-        {updateInitial && (
-          <TreatmentUpdateDialog
-            open={updateOpen}
-            onClose={() => setUpdateOpen(false)}
-            onSave={refreshPatientData}
-            patient={patient}
-            treatments={treatments}
-            initial={updateInitial}
-          />
-        )}
+        >
+          📄 PDF
+        </button>
       </div>
+
+      {/* Patient Info */}
+      <div className="bg-gray-50 p-4 rounded-lg mt-4 text-sm grid sm:grid-cols-3 gap-4">
+        <div>
+          <strong>Patient Name:</strong> {localPatient.fullName}
+        </div>
+        <div>
+          <strong>Patient ID:</strong> {localPatient.id}
+        </div>
+        <div>
+          <strong>Age/Gender:</strong>{" "}
+          {localPatient.age ?? "N/A"}Y / {localPatient.sex || "N/A"}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full border-2 border-gray-800 text-sm">
+          <thead>
+            <tr>
+              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+                Date
+              </th>
+              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+                Time Slot
+              </th>
+              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+                Yoga/Asanas
+              </th>
+              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+                Treatments
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(groupedPlans).map(([date, plansRaw], idx) => {
+              const plans = plansRaw as TreatmentPlanEntry[];
+              // combine all plans of the same date
+              const allTimeSlots = plans.map((p) => p.timeSlot || "N/A").join(", ");
+              const allAsanas =
+                plans
+                  .map(
+                    (p) =>
+                      p.yogaPlan ||
+                      (p.asanas?.length ? p.asanas.map((a) => a.name).join(", ") : "")
+                  )
+                  .filter(Boolean)
+                  .join(", ") || "N/A";
+
+              // collect all treatments across all plans of same date
+              const allTreatments = plans.flatMap((plan:any) => {
+                if (!plan.treatmentAssign?.length)
+                  return [
+                    <span
+                      key={plan.id}
+                      className="text-gray-500 italic block"
+                    >
+                      No treatments assigned
+                    </span>,
+                  ];
+
+                return plan.treatmentAssign.map((assign, tIdx) => {
+                  const t = assign.treatment;
+                  const therapist = assign.therapist;
+                  const existing = sessions.find(
+                    (s) => s.treatmentId === t.id && s.date === toYMD(plan.date)
+                  );
+
+                  return (
+                    <div
+                      key={assign.id}
+                      className="border-l-4 border-amber-500 pl-3 py-2 bg-gray-50 rounded mb-2 last:mb-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-gray-800">
+                            {t?.title || `Treatment ${tIdx + 1}`}
+                          </div>
+                          {t?.subTitle && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {t.subTitle}
+                            </div>
+                          )}
+                       
+                          {existing && therapist && (
+                            <div className="mt-2 text-xs text-emerald-700">
+                              Assigned to: {therapist.name}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            className="px-2.5 py-1.5 rounded-lg border text-sm"
+                            onClick={() => openAssign(plan, t.id)}
+                          >
+                            {existing ? "Edit" : "Assign"}
+                          </button>
+                          <button
+                            className="px-2.5 py-1.5 rounded-lg border text-sm bg-blue-50 hover:bg-blue-100"
+                            onClick={() => {
+                              setUpdateInitial({
+                                patientId: localPatient.id,
+                                treatmentPlanId: plan.id,
+                                treatmentAssignId: assign.id,
+                              });
+                              setUpdateOpen(true);
+                            }}
+                          >
+                            Change
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              });
+
+              return (
+                <tr key={date}>
+                  <td className="border-2 border-gray-800 p-3 font-semibold">
+                    {formatDate(date)}
+                  </td>
+                  <td className="border-2 border-gray-800 p-3">{allTimeSlots}</td>
+                  <td className="border-2 border-gray-800 p-3 whitespace-pre-line">
+                    {allAsanas}
+                  </td>
+                  <td className="border-2 border-gray-800 p-3">{allTreatments}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 🧩 Modals */}
+      <SessionEditor
+        open={draft.open}
+        onClose={() => setDraft({ open: false, initial: undefined })}
+        therapists={therapists}
+        treatments={treatments}
+        initial={draft.initial || {}}
+        onSave={(sess) => {
+          setSessions((prev) => {
+            const exists = prev.some((p) => p.id === sess.id);
+            return exists
+              ? prev.map((p) => (p.id === sess.id ? sess : p))
+              : [...prev, sess];
+          });
+        }}
+        patient={localPatient}
+      />
+
+      {updateInitial && (
+        <TreatmentUpdateDialog
+          open={updateOpen}
+          onClose={() => setUpdateOpen(false)}
+          onSave={refreshPatientData}
+          patient={localPatient}
+          treatments={treatments}
+          initial={updateInitial}
+        />
+      )}
     </div>
   );
 }
