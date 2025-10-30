@@ -7,41 +7,28 @@ import { generateDietPDF } from "@/lib/api";
 
 export default function DietChartView({ patient }: { patient: any }) {
   const appointments = patient?.appointment || [];
-
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  // ✅ Backend PDF generator per appointment
- const downloadPDF = async (appointmentId: string) => {
-  try {
-    setDownloadingId(appointmentId);
-    const blob = await generateDietPDF(appointmentId);
+  const downloadPDF = async (appointmentId: string) => {
+    try {
+      setDownloadingId(appointmentId);
+      const blob = await generateDietPDF(appointmentId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Diet_Chart_${patient?.fullName?.replace(/\s+/g, "_") || "Patient"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err: any) {
+      console.error("Diet PDF download failed:", err);
+      alert(err.message || "Failed to download PDF.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
-    // ✅ Create a URL from the blob
-    const url = window.URL.createObjectURL(blob);
-
-    // ✅ Download or open PDF
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Diet_Chart_${patient?.fullName?.replace(/\s+/g, "_") || "Patient"}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Optional: auto-open in a new tab instead of download
-    // window.open(url, "_blank");
-
-    // ✅ Clean up URL after use
-    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-  } catch (err: any) {
-    console.error("Diet PDF download failed:", err);
-    alert(err.message || "Failed to download PDF.");
-  } finally {
-    setDownloadingId(null);
-  }
-};
-
-
-  // ✅ Filter only appointments that have a diet plan
   const appointmentsWithDiet = appointments.filter(
     (apt: any) => apt.dietPlan && apt.dietPlan.length > 0
   );
@@ -67,6 +54,16 @@ export default function DietChartView({ patient }: { patient: any }) {
     );
   }
 
+  const getLocationLabel = (time: string) => {
+    if (time === "04:30AM-05:00AM" || time === "07:30AM-08:00AM") {
+      return "(Yoga Bhawan)";
+    }
+    if (time === "05:00PM-06:00PM") {
+      return "(Canteen)";
+    }
+    return "";
+  };
+
   return (
     <div className="min-h-screen bg-background p-4">
       <Card className="shadow-lg max-w-7xl mx-auto">
@@ -77,7 +74,6 @@ export default function DietChartView({ patient }: { patient: any }) {
         </CardHeader>
 
         <CardContent className="p-6">
-          {/* Clinic Header */}
           <div className="flex justify-between items-start border-b-4 border-amber-500 pb-4 mb-6">
             <div>
               <img src={IkshaLogo} alt="Iksha Logo" className="h-16 mb-2" />
@@ -92,15 +88,14 @@ export default function DietChartView({ patient }: { patient: any }) {
             </div>
           </div>
 
-          {/* ✅ Appointment-based Diet Plans */}
-          {appointmentsWithDiet.map((apt: any, index: number) => (
+          {appointmentsWithDiet.map((apt: any, aptIndex: number) => (
             <div
               key={apt.id}
               className="border border-gray-400 rounded-lg p-4 mb-8 bg-white shadow-sm"
             >
-              <div className="flex justify-between items-center mb-3">
+              <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">
-                  Appointment #{index + 1} —{" "}
+                  Appointment #{aptIndex + 1} —{" "}
                   {new Date(apt.date).toLocaleDateString("en-IN")} (
                   {apt.consultationType})
                 </h2>
@@ -118,116 +113,159 @@ export default function DietChartView({ patient }: { patient: any }) {
                 </Button>
               </div>
 
-              {apt.dietPlan.map((plan: any, planIndex: number) => (
-                <div
-                  key={plan.id}
-                  className="border border-gray-300 rounded-lg p-4 mb-6 shadow-sm"
-                >
-                  <h3 className="text-md font-bold bg-gray-200 p-2 rounded text-center mb-4">
-                    Diet Plan #{planIndex + 1} —{" "}
-                    {new Date(plan.createdAt).toLocaleString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </h3>
+              {apt.dietPlan.map((plan: any, planIndex: number) => {
+                // Collect all unique time slots
+                const allTimeSlotsSet = new Set<string>();
+                plan.patientDietPlan.forEach((pdp: any) => {
+                  pdp.dietPlanItem.forEach((item: any) => {
+                    allTimeSlotsSet.add(item.time);
+                  });
+                });
 
-                  {/* ✅ Table Display per Diet Plan */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-2 border-gray-800 text-xs">
-                      <thead>
-                        <tr>
-                          <th className="border-2 border-gray-800 bg-gray-300 p-2 text-center">
-                            Date
-                          </th>
-                          {[
-                            ...new Set(
-                              plan.patientDietPlan.flatMap((pdp: any) =>
-                                pdp.dietPlanItem.map((item: any) => item.time)
-                              )
-                            ),
-                          ].map((time) => (
-                            <th
-                              key={String(time)}
-                              className="border-2 border-gray-800 bg-gray-200 p-2 text-center"
-                            >
-                              {String(time)}
-                              {time === "04:30AM-05:00AM" && (
-                                <div className="text-[10px]">(Yoga Bhawan)</div>
-                              )}
-                              {time === "07:30AM-08:00AM" && (
-                                <div className="text-[10px]">(Yoga Bhawan)</div>
-                              )}
-                              {time === "05:00PM-06:00PM" && (
-                                <div className="text-[10px]">(Canteen)</div>
-                              )}
+                // Sort time slots chronologically
+                const allTimeSlots = Array.from(allTimeSlotsSet).sort((a, b) => {
+                  const parseTime = (t: string) => {
+                    const match = t.match(/(\d+):(\d+)(AM|PM)/);
+                    if (!match) return 0;
+                    let hours = parseInt(match[1]);
+                    const minutes = parseInt(match[2]);
+                    const period = match[3];
+                    if (period === "PM" && hours !== 12) hours += 12;
+                    if (period === "AM" && hours === 12) hours = 0;
+                    return hours * 60 + minutes;
+                  };
+                  return parseTime(a) - parseTime(b);
+                });
+
+                // ✅ Group all diet plan items by date
+                const dateMap = new Map<string, any[]>();
+                plan.patientDietPlan.forEach((pdp: any) => {
+                  const dateKey = pdp.date;
+                  if (!dateMap.has(dateKey)) {
+                    dateMap.set(dateKey, []);
+                  }
+                  dateMap.get(dateKey)!.push(pdp);
+                });
+
+                // Sort dates
+             const parseIndianDate = (dateStr: string) => {
+  // Handles DD/MM/YYYY or DD-MM-YYYY formats
+  const [day, month, year] = dateStr.split(/[-/]/).map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const sortedDates = Array.from(dateMap.keys()).sort(
+  (a, b) => parseIndianDate(a).getTime() - parseIndianDate(b).getTime()
+);
+
+                return (
+                  <div key={plan.id} className="mb-6">
+                    <h3 className="text-md font-bold bg-gray-200 p-2 rounded text-center mb-4">
+                      Diet Plan #{planIndex + 1} —{" "}
+                    {new Date(parseIndianDate(plan.createdAt)).toLocaleDateString("en-IN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+})}
+                    </h3>
+
+                    {plan.restrictions && (
+                      <div className="mb-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
+                        <strong>Restrictions:</strong> {plan.restrictions}
+                      </div>
+                    )}
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-2 border-gray-800 text-xs">
+                        <thead>
+                          <tr>
+                            <th className="border-2 border-gray-800 bg-amber-500 text-white p-3 text-center font-bold">
+                              Date
                             </th>
-                          ))}
-                        </tr>
-                      </thead>
+                            {allTimeSlots.map((time) => (
+                              <th
+                                key={time}
+                                className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-semibold"
+                              >
+                                <div>{time}</div>
+                                {getLocationLabel(time) && (
+                                  <div className="text-[10px] text-gray-600 font-normal mt-1">
+                                    {getLocationLabel(time)}
+                                  </div>
+                                )}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
 
-                      <tbody>
-                        {plan.patientDietPlan.map((pdp: any) => {
-                          const allTimes = [
-                            ...new Set(
-                              plan.patientDietPlan.flatMap((p: any) =>
-                                p.dietPlanItem.map((item: any) => item.time)
-                              )
-                            ),
-                          ];
-                          return (
-                            <tr key={pdp.id}>
-                              <td className="border-2 border-gray-800 p-3 font-semibold bg-gray-50 text-center">
-                                {new Date(pdp.date).toLocaleDateString("en-IN")}
-                              </td>
-                              {allTimes.map((time) => {
-                                const dietItem = pdp.dietPlanItem.find(
-                                  (i: any) => i.time === time
-                                );
-                                return (
-                                  <td
-                                    key={String(time)}
-                                    className="border-2 border-gray-800 p-3 align-top"
-                                  >
-                                    {dietItem ? (
-                                      dietItem.dietItem.map(
-                                        (food: any, idx: number) => (
-                                          <div key={idx} className="mb-1">
-                                            <div className="font-medium">
-                                              {food.name}
-                                            </div>
-                                            {food.subForm && (
-                                              <div className="text-gray-600 text-[10px]">
-                                                {food.subForm}
+                        <tbody>
+                          {sortedDates.map((date) => {
+                            const pdpsForDate = dateMap.get(date)!;
+
+                            return (
+                              <tr key={date}>
+                                <td className="border-2 border-gray-800 p-3 font-bold bg-gray-50 text-center align-top">
+                                  {new Date(date).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  })}
+                                </td>
+                                {allTimeSlots.map((timeSlot) => {
+                                  // ✅ Collect ALL diet items for this time slot across all pdps for this date
+                                  const allDietItems: any[] = [];
+                                  
+                                  pdpsForDate.forEach((pdp: any) => {
+                                    const dietItem = pdp.dietPlanItem.find(
+                                      (item: any) => item.time === timeSlot
+                                    );
+                                    if (dietItem && dietItem.dietItem.length > 0) {
+                                      allDietItems.push(...dietItem.dietItem);
+                                    }
+                                  });
+
+                                  return (
+                                    <td
+                                      key={timeSlot}
+                                      className="border-2 border-gray-800 p-3 align-top bg-white"
+                                    >
+                                      {allDietItems.length > 0 ? (
+                                        <div className="space-y-2">
+                                          {allDietItems.map(
+                                            (food: any, idx: number) => (
+                                              <div
+                                                key={food.id || idx}
+                                                className="leading-tight"
+                                              >
+                                                <div className="font-semibold text-gray-800">
+                                                  {food.name}
+                                                </div>
+                                                {food.subForm && (
+                                                  <div className="text-[10px] text-gray-500 mt-0.5">
+                                                    {food.subForm}
+                                                  </div>
+                                                )}
                                               </div>
-                                            )}
-                                          </div>
-                                        )
-                                      )
-                                    ) : (
-                                      <div className="text-gray-400 italic text-[10px] text-center">
-                                        —
-                                      </div>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {plan.restrictions && (
-                    <div className="mt-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
-                      Restrictions: {plan.restrictions}
+                                            )
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-gray-400 italic text-center">
+                                          —
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </CardContent>
