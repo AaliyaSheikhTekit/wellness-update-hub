@@ -633,92 +633,132 @@ const Appointments = () => {
     );
     setEditAppointmentOpen(false);
   };
+  const [expandedNotes, setExpandedNotes] = useState<{ [id: string]: boolean }>(
+    {}
+  );
 
+  const toggleExpanded = (id: string) => {
+    setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   /* ------------------------ Reusable List Renderer ------------------------ */
+
   const renderAppointmentList = (
     list: Appointment[],
     tabKey: TabKey,
     title: string
-  ) => (
-    <TabsContent value={tabKey} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">{title}</h2>
-      </div>
+  ) => {
+    // ✅ Move expanded state outside the map
+    const [expandedNotes, setExpandedNotes] = useState<{
+      [id: string]: boolean;
+    }>({});
 
-      {list.length > 0 ? (
-        <div className="grid gap-4">
-          {list.map((appointment) => (
-            <Card key={appointment.id} className="shadow-sm">
-              <CardContent className="p-6 flex justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-semibold text-gray-900">
-                        {appointment.patient?.fullName || "Unknown Patient"}
-                      </h3>
-                    </div>
-                    <StatusBadge value={appointment.status} />
-                  </div>
+    const toggleExpanded = (id: string) => {
+      setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
+    };
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Clock className="h-4 w-4" />
-                        <span>
-                          {appointment.date}{" "}
-                          {appointment.time ? `• ${appointment.time}` : ""}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <MapPin className="h-4 w-4" />
-                        <span>
-                          {appointment.doctor?.username || "No doctor assigned"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
-                        <strong>Notes:</strong> {appointment.note || "No notes"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(appointment)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      navigate(`/add-patient/${appointment.patient?.id}`)
-                    }
-                  >
-                    Add Detail
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openView(appointment)}
-                  >
-                    View
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+    return (
+      <TabsContent value={tabKey} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">{title}</h2>
         </div>
-      ) : (
-        <p className="text-gray-500 italic">No records.</p>
-      )}
-    </TabsContent>
-  );
+
+        {list.length > 0 ? (
+          <div className="grid gap-4">
+            {list.map((appointment) => {
+              const note = appointment.note || "No notes";
+              const isLong = note.length > 120;
+              const expanded = expandedNotes[appointment.id] || false;
+              const displayNote = expanded
+                ? note
+                : isLong
+                ? note.slice(0, 120) + "..."
+                : note;
+
+              return (
+                <Card key={appointment.id} className="shadow-sm">
+                  <CardContent className="p-6 flex justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <User className="h-5 w-5 text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">
+                            {appointment.patient?.fullName || "Unknown Patient"}
+                          </h3>
+                        </div>
+                        <StatusBadge value={appointment.status} />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              {appointment.date}{" "}
+                              {appointment.time ? `• ${appointment.time}` : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <MapPin className="h-4 w-4" />
+                            <span>
+                              {appointment.doctor?.username ||
+                                "No doctor assigned"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* ✅ Notes Section */}
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600 break-words whitespace-pre-wrap max-w-full">
+                            <strong>Notes:</strong> {displayNote}
+                            {isLong && (
+                              <button
+                                className="ml-2 text-blue-600 text-xs underline"
+                                onClick={() => toggleExpanded(appointment.id)}
+                              >
+                                {expanded ? "Show less" : "Show more"}
+                              </button>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(appointment)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/add-patient/${appointment.patient?.id}`)
+                        }
+                      >
+                        Add Detail
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openView(appointment)}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-gray-500 italic">No records.</p>
+        )}
+      </TabsContent>
+    );
+  };
 
   /* ------------------------ Render ------------------------ */
   return (
@@ -937,7 +977,6 @@ const Appointments = () => {
                           <label className="text-xs text-gray-500 block mb-1">
                             Update Status
                           </label>
-                        
                         </div>{" "}
                       </div>
 
@@ -959,50 +998,95 @@ const Appointments = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 break-words whitespace-pre-wrap max-w-full">
                             <strong>Notes:</strong>{" "}
-                            {appointment.note || "No notes"}
+                            {(() => {
+                              const note = appointment.note || "No notes";
+                              const isLong = note.length > 120;
+                              const expanded =
+                                expandedNotes[appointment.id] || false;
+                              const displayNote = expanded
+                                ? note
+                                : isLong
+                                ? note.slice(0, 120) + "..."
+                                : note;
+
+                              return (
+                                <>
+                                  {displayNote}
+                                  {isLong && (
+                                    <button
+                                      className="ml-2 text-blue-600 text-xs underline"
+                                      onClick={() =>
+                                        toggleExpanded(appointment.id)
+                                      }
+                                    >
+                                      {expanded ? "Show less" : "Show more"}
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </p>
-                          
                         </div>
                       </div>
                     </div>
 
-                 <div className="flex flex-col space-y-6">   <div className="flex gap-2 ml-4 justify-end">
-                 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(appointment)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/add-patient/${appointment.patient?.id}`)
-                        }
-                      >
-                        Add Detail
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openView(appointment)}
-                      >
-                        View
-                      </Button>
+                    <div className="flex flex-col space-y-6">
+                      {" "}
+                      <div className="flex gap-2 ml-4 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(appointment)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            navigate(`/add-patient/${appointment.patient?.id}`)
+                          }
+                        >
+                          Add Detail
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openView(appointment)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                      <div>
+                        {" "}
+                        <StatusButtons
+                          apt={{
+                            id: appointment.id,
+                            status: appointment.status,
+                          }}
+                          fetchAppointments={refetchForActiveTab} // refreshes current tab + calendar
+                          onChanged={(next) => {
+                            // optional local UI update (snappier)
+                            setAppointmentsPage((prev) =>
+                              prev.map((a) =>
+                                a.id === appointment.id
+                                  ? { ...a, status: next }
+                                  : a
+                              )
+                            );
+                            setAppointmentsAll((prev) =>
+                              prev.map((a) =>
+                                a.id === appointment.id
+                                  ? { ...a, status: next }
+                                  : a
+                              )
+                            );
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div>   <StatusButtons
-    apt={{ id: appointment.id, status: appointment.status }}
-    fetchAppointments={refetchForActiveTab}   // refreshes current tab + calendar
-    onChanged={(next) => {
-      // optional local UI update (snappier)
-      setAppointmentsPage(prev => prev.map(a => a.id === appointment.id ? { ...a, status: next } : a));
-      setAppointmentsAll(prev => prev.map(a => a.id === appointment.id ? { ...a, status: next } : a));
-    }}
-  /></div></div>
                   </CardContent>
                 </Card>
               ))}

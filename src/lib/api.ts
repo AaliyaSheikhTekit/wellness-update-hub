@@ -751,3 +751,40 @@ export const getAllYoga = async () => {
   if (!response.ok) throw new Error(`Error: ${response.status}`);
   return await response.json();
 };
+
+
+//diet pdf 
+export const generateDietPDF = async (appointmentId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/appointment/generate-diet-pdf/${appointmentId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};
+export const generatetTreatmentPDF = async (appointmentId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/appointment/generate-diet-pdf/${appointmentId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  return await response.json();
+};

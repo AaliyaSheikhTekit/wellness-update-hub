@@ -5,6 +5,7 @@ import {
   updatePatient,
   assignTherapist,
   getAllYoga,
+  generatetTreatmentPDF,
 } from "@/lib/api";
 
 // -------------------- TYPES -------------------- //
@@ -833,6 +834,7 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
 // -------------------- TREATMENT PLAN VIEW -------------------- //
 
 export function TreatmentPlanView({ patient }) {
+  console.log("Rendering TreatmentPlanView for patient:", patient);
   const { sessions, setSessions, therapists, treatments } =
     useContext(SessionsContext);
   const [draft, setDraft] = useState<{
@@ -899,6 +901,32 @@ export function TreatmentPlanView({ patient }) {
               <strong>Age/Gender:</strong> {patient.age ?? "N/A"}Y /{" "}
               {patient.sex || "N/A"}
             </div>
+            <button
+              className="px-2.5 py-1.5 rounded-lg border text-sm bg-green-50 hover:bg-green-100"
+              onClick={async () => {
+                try {
+                  const appointmentId = patient?.appointment?.[0]?.id; // or whichever appointment you want
+                  if (!appointmentId) {
+                    alert("No appointment ID found for this patient.");
+                    return;
+                  }
+
+                  const result = await generatetTreatmentPDF(appointmentId);
+                  console.log("PDF generated:", result);
+
+                  // If backend returns a URL, open it:
+                  if (result?.url) window.open(result.url, "_blank");
+                  else alert("PDF generated successfully!");
+                } catch (err) {
+                  console.error("Error generating PDF:", err);
+                  alert(
+                    "Failed to generate treatment PDF. See console for details."
+                  );
+                }
+              }}
+            >
+              📄 PDF
+            </button>
           </div>
         </div>
 

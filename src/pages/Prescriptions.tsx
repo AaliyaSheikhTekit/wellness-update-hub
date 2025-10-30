@@ -1,485 +1,201 @@
-import { useEffect, useState } from "react";
-import { Search, User, Calendar, Download, Printer, Plus } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getPatients, getPatientById } from "@/lib/api"; // <-- your API functions
-import IkshaLogo from "../assets/iksha_logo.png";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { postData ,generatePDF} from "@/lib/api";
+import { toast } from "@/components/ui/use-toast";
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "active": return "bg-green-500";
-    case "completed": return "bg-blue-500";
-    case "pending": return "bg-yellow-500";
-    default: return "bg-gray-500";
-  }
-};
 
-const Prescriptions = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [patients, setPatients] = useState<any[]>([]);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+export default function PrescriptionDialog({ open, onClose, patient, onPrescriptionCreated }: any) {
+  const [medicineName, setMedicineName] = useState("");
+  const [duration, setDuration] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [quantity, setQuantity] = useState(14);
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [investigation, setInvestigation] = useState("");
+  const [avoid, setAvoid] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // Fetch patients list
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const res = await getPatients(searchTerm);
-        setPatients(res.data || []);
-        if (res.data.length > 0) setSelectedPatientId(res.data[0].id);
-      } catch (err) {
-        console.error("Error fetching patients:", err);
-      }
-    };
-    fetchPatients();
-  }, []);
+  const handlePrescribeMedicine = async () => {
+    if (!medicineName.trim()) return alert("Please enter medicine name");
+    if (!duration.trim()) return alert("Please specify duration");
+    if (!instructions.trim()) return alert("Please enter instructions");
 
-  // Fetch patient & appointment by ID
-  useEffect(() => {
-    if (!selectedPatientId) return;
+    try {
+      setLoading(true);
 
-    const fetchPatient = async () => {
-      try {
-        const res = await getPatientById(selectedPatientId);
-        const patient = res.data[0]; // assuming API returns data array
-        setSelectedPatient(patient);
-        // Set first appointment by default
-        setSelectedAppointment(patient.appointment?.[0] || null);
-      } catch (err) {
-        console.error("Error fetching patient:", err);
-      }
-    };
+      const payload = {
+        appointmentId:
+          patient?.appointment?.length > 0
+            ? patient.appointment[0].id
+            : undefined,
+        medicineName,
+        duration,
+        instructions,
+        quantity,
+        chiefComplaint,
+        investigation,
+        avoid,
+      };
 
-    fetchPatient();
-  }, [selectedPatientId]);
+      console.log("🧾 Prescription payload:", payload);
+      const result = await postData("/prescription/create", payload);
+      console.log("Prescription API result:", result);
 
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (!selectedPatient || !selectedAppointment) return <p>Loading...</p>;
-const printTableWithHeaderFooter = (tableId: string) => {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const newWindow = window.open("", "_blank", "width=1000,height=800");
-    newWindow!.document.write(`
-      <html>
-        <head>
-          <title>Print</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            table, .prescription-card { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            .header, .footer { width: 100%; text-align: center; margin: 10px 0; }
-            .footer { font-size: 10px; color: #555; }
-            img { max-height: 80px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:4px solid #F59E0B; padding-bottom:10px;">
-              <div>
-                <img src="${IkshaLogo}" alt="Iksha Logo" style="height: 80px;" />
-                <p style="font-size:12px; color:#555;">Integrated Natural Healing system for a comprehensive</p>
-              </div>
-              <div style="text-align:right; font-size:12px;">
-                <p>📞 +91 9343922950</p>
-                <p>📧 admin@ikshanaturopathy.com</p>
-                <p>📍 Bhopal, Madhya Pradesh</p>
-              </div>
-            </div>
-          </div>
-
-          ${table.outerHTML}
-
-          <div class="footer">
-            <p>Integrated Natural Healing system for a comprehensive</p>
-            <p>📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
-            <p>© ${new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
-          </div>
-        </body>
-      </html>
-    `);
-    newWindow!.document.close();
-    newWindow!.print();
+      toast({
+        title: "Prescription Sent",
+        description: "Prescription details sent to patient's WhatsApp",
+      });
+  onPrescriptionCreated?.();
+      // reset input fields
+      setMedicineName("");
+      setDuration("");
+      setInstructions("");
+      setQuantity(14);
+      setChiefComplaint("");
+      setInvestigation("");
+      setAvoid("");
+    } catch (error: any) {
+      console.error("Error creating prescription:", error);
+      alert(error?.message || "Failed to send prescription");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // 🧩 Generate PDF Button Handler
+  const handleGeneratePDF = async () => {
+    try {
+      if (!patient?.id) {
+        alert("Missing patient ID");
+        return;
+      }
+      setPdfLoading(true);
+      const pdfRes = await generatePDF(patient.id);
+      console.log("PDF result:", pdfRes);
+
+      if (pdfRes?.url) {
+        setPdfUrl(pdfRes.url);
+        toast({
+          title: "PDF Generated",
+          description: "Click below to download.",
+        });
+      } else {
+        toast({
+          title: "PDF Generated",
+          description: "PDF generated successfully.",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      alert(error?.message || "Failed to generate PDF");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Prescriptions</h1>
-          <p className="text-muted-foreground">View and manage patient prescriptions</p>
-        </div>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md w-full max-h-[80vh] flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle>Create Prescription</DialogTitle>
+        </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Patient List */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search patients..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button className="bg-primary hover:bg-primary-dark">
-                <Plus className="h-4 w-4" />
-              </Button>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">Medicine Name</label>
+              <Input
+                value={medicineName}
+                onChange={(e) => setMedicineName(e.target.value)}
+                placeholder="e.g. Paracetamol 500mg"
+              />
             </div>
 
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {filteredPatients.map((patient) => (
-                <Card
-                  key={patient.id}
-                  className={`cursor-pointer transition-all shadow-natural hover:shadow-card-hover ${
-                    selectedPatientId === patient.id ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => setSelectedPatientId(patient.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{patient.fullName}</h3>
-                        <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
-                      </div>
-                      <Badge className={`bg-gray-500 text-white text-xs`}>
-                        {patient.status || "active"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>{new Date(patient.formDate).toLocaleDateString("en-IN")}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div>
+              <label className="text-sm font-medium">Duration</label>
+              <Input
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="e.g. 7 days"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Instructions</label>
+              <Textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="e.g. Take 1 tablet twice a day after food"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Quantity</label>
+              <Input
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Chief Complaint</label>
+              <Input
+                value={chiefComplaint}
+                onChange={(e) => setChiefComplaint(e.target.value)}
+                placeholder="e.g. Headache, fever..."
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Investigation</label>
+              <Input
+                value={investigation}
+                onChange={(e) => setInvestigation(e.target.value)}
+                placeholder="e.g. Blood test, X-ray..."
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Avoid</label>
+              <Input
+                value={avoid}
+                onChange={(e) => setAvoid(e.target.value)}
+                placeholder="e.g. Spicy food, caffeine..."
+              />
             </div>
           </div>
-
-          {/* Prescription Details */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-natural">
-              <CardHeader className="border-b border-border">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-xl text-foreground">Prescription Details</CardTitle>
-                    <p className="text-muted-foreground">ID: {selectedAppointment.id}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => printTableWithHeaderFooter("prescription-table")} variant="outline" size="sm">
-                      <Printer className="h-4 w-4 mr-2" />
-                      Print
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-
-        <CardContent id="prescription-table" className="p-8 space-y-6">
-                {/* Header with Logo and Contact */}
-                <div className="flex justify-between items-start border-b-4 border-amber-500 pb-4">
-                  <div>
-                    <img src={IkshaLogo} alt="Iksha Logo" className="h-20 mb-2" />
-                    <p className="text-xs text-gray-600">Integrated Natural Healing system</p>
-                  </div>
-                  <div className="text-right text-xs space-y-1">
-                    <p>📞 +91 9343922950</p>
-                    <p>📧 admin@ikshanaturopathy.com</p>
-                    <p>📍 Indore, Madhya Pradesh</p>
-                  </div>
-                </div>
-
-                {/* Patient & Date Info */}
-                <div className="flex justify-between text-sm">
-                  <div>
-                    <p><strong>ID:</strong> {selectedPatient.id}</p>
-                    <p><strong>Patient:</strong> {selectedPatient.fullName} / {selectedPatient.age}Y / {selectedPatient.sex}</p>
-                    <p><strong>Mob. No.:</strong> {selectedPatient.mobileNumber || "N/A"}</p>
-                    <p><strong>Address:</strong> {selectedPatient.address || "N/A"}</p>
-                  </div>
-                  <div className="text-right">
-                    <p><strong>Date:</strong> {new Date(selectedAppointment.date).toLocaleDateString("en-IN")}</p>
-                  </div>
-                </div>
-
-                {/* Vitals */}
-                <div className="border-t border-b border-gray-300 py-3">
-                  <p className="text-sm">
-                    <strong>Vitals:</strong> Weight (Kg): {selectedPatient.weight || "N/A"}, 
-                    Height (Cm): {selectedPatient.height || "N/A"}, 
-                    BP: {selectedPatient.bloodPressure || "N/A"}, 
-                    Pulse: {selectedPatient.pulse || "N/A"}
-                  </p>
-                </div>
-
-                {/* Chief Complaints */}
-                <div>
-                  <h3 className="font-bold text-base mb-2 underline">Chief Complaints</h3>
-                  <p className="text-sm whitespace-pre-line">{selectedPatient.chiefComplaints || "Not specified"}</p>
-                </div>
-
-                {/* Clinical Findings */}
-                {selectedPatient.clinicalFindings && (
-                  <div>
-                    <h3 className="font-bold text-base mb-2 underline">Clinical Findings</h3>
-                    <p className="text-sm whitespace-pre-line">{selectedPatient.clinicalFindings}</p>
-                  </div>
-                )}
-
-                {/* Diagnosis */}
-                {selectedAppointment.diagnosis && (
-                  <div>
-                    <h3 className="font-bold text-base mb-2 underline">Diagnosis:</h3>
-                    <p className="text-sm">* {selectedAppointment.diagnosis}</p>
-                  </div>
-                )}
-
-                {/* Prescriptions Table */}
-                <div>
-                  <h3 className="font-bold text-base mb-3 underline">℞ Prescription</h3>
-                  {selectedAppointment.prescriptions.length === 0 ? (
-                    <p className="text-sm text-gray-600">No prescriptions available</p>
-                  ) : (
-                    <table className="w-full border border-gray-300 text-sm">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border border-gray-300 p-2 text-left">Medicine Name</th>
-                          <th className="border border-gray-300 p-2 text-left">Dosage</th>
-                          <th className="border border-gray-300 p-2 text-left">Duration</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedAppointment.prescriptions.map((presc: any, idx: number) => (
-                          <tr key={presc.id}>
-                            <td className="border border-gray-300 p-2">
-                              {idx + 1}) {presc.medicine.name}
-                              {presc.instructions && (
-                                <div className="text-xs text-gray-600 mt-1">{presc.instructions}</div>
-                              )}
-                            </td>
-                            <td className="border border-gray-300 p-2">{presc.quantity}</td>
-                            <td className="border border-gray-300 p-2">{presc.duration}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-                {/* Advice */}
-                {selectedAppointment.advice && (
-                  <div>
-                    <h3 className="font-bold text-base mb-2 underline">Advice:</h3>
-                    <p className="text-sm whitespace-pre-line">{selectedAppointment.advice}</p>
-                  </div>
-                )}
-
-                {/* Follow Up */}
-                {selectedAppointment.followUpDate && (
-                  <div>
-                    <p className="text-sm"><strong>Follow Up:</strong> {new Date(selectedAppointment.followUpDate).toLocaleDateString("en-IN")}</p>
-                  </div>
-                )}
-
-                {/* Footer Note */}
-                <div className="text-center text-xs text-gray-500 border-t pt-4 mt-6">
-                  <p className="italic">This is not for medico-legal purpose.</p>
-                  <p className="mt-2">📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com | 🌐 www.ikshanaturopathy.com</p>
-                  <p>© {new Date().getFullYear()} Iksha Naturopathy. All rights reserved.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
-      </div>
-    </div>
+
+        {/* Footer */}
+        <DialogFooter className="shrink-0 pt-4 border-t flex flex-row gap-2 justify-end">
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Close
+          </Button>
+
+          
+
+          <Button
+            onClick={handlePrescribeMedicine}
+            disabled={loading}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {loading ? "Sending..." : "Send Prescription"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-};
-
-export default Prescriptions;
-// import { useEffect, useState } from "react";
-// import { Search, User, Calendar, Printer, Plus, FileText } from "lucide-react";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { getPatients, getPatientById } from "@/lib/api";
-// import PrescriptionView from "@/components/PrescriptionView";
-// import AddPrescriptionForm from "@/components/AddPrescriptionView";
-
-// const Prescriptions = () => {
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [patients, setPatients] = useState<any[]>([]);
-//   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-//   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-//   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
-//   const [isAddingPrescription, setIsAddingPrescription] = useState(false);
-
-//   useEffect(() => {
-//     const fetchPatients = async () => {
-//       try {
-//         const res = await getPatients(searchTerm);
-//         setPatients(res.data || []);
-//         if (res.data.length > 0) setSelectedPatientId(res.data[0].id);
-//       } catch (err) {
-//         console.error("Error fetching patients:", err);
-//       }
-//     };
-//     fetchPatients();
-//   }, []);
-
-//   useEffect(() => {
-//     if (!selectedPatientId) return;
-
-//     const fetchPatient = async () => {
-//       try {
-//         const res = await getPatientById(selectedPatientId);
-//         const patient = res.data[0];
-//         setSelectedPatient(patient);
-//         setSelectedAppointment(patient.appointment?.[0] || null);
-//       } catch (err) {
-//         console.error("Error fetching patient:", err);
-//       }
-//     };
-
-//     fetchPatient();
-//   }, [selectedPatientId]);
-
-//   const filteredPatients = patients.filter(
-//     (patient) =>
-//       patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       patient.id.toLowerCase().includes(searchTerm.toLowerCase())
-//   );
-
-//   const handleSavePrescription = (prescriptionData: any) => {
-//     // In a real app, this would save to your backend
-//     console.log("Saving prescription:", prescriptionData);
-    
-//     // Mock: add to current patient's appointments
-//     if (selectedPatient) {
-//       const newAppointment = {
-//         id: `A${Date.now()}`,
-//         date: prescriptionData.date,
-//         paymentMethod: prescriptionData.paymentMethod,
-//         consultationType: prescriptionData.consultationType,
-//         status: "Completed",
-//         note: prescriptionData.note,
-//         prescriptions: prescriptionData.medicines.map((m: any, idx: number) => ({
-//           id: `PR${Date.now()}_${idx}`,
-//           ...m
-//         }))
-//       };
-      
-//       // Update selected appointment to show the new one
-//       setSelectedAppointment(newAppointment);
-//       setIsAddingPrescription(false);
-//     }
-//   };
-
-//   if (!selectedPatient || !selectedAppointment) {
-//     return (
-//       <div className="min-h-screen bg-background flex items-center justify-center">
-//         <p className="text-muted-foreground">Loading...</p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-background">
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="mb-8 flex items-center justify-between">
-//           <div>
-//             <h1 className="text-3xl font-bold text-foreground mb-2">Prescriptions</h1>
-//             <p className="text-muted-foreground">View and manage patient prescriptions</p>
-//           </div>
-//           {selectedPatient && !isAddingPrescription && (
-//             <Button 
-//               onClick={() => setIsAddingPrescription(true)} 
-//               className="bg-medical-green hover:bg-medical-green/90"
-//             >
-//               <FileText className="h-4 w-4 mr-2" />
-//               New Prescription
-//             </Button>
-//           )}
-//         </div>
-
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//           {/* Patient List */}
-//           <div className="lg:col-span-1 space-y-4">
-//             <div className="flex gap-2">
-//               <div className="relative flex-1">
-//                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                 <Input
-//                   placeholder="Search patients..."
-//                   value={searchTerm}
-//                   onChange={(e) => setSearchTerm(e.target.value)}
-//                   className="pl-10"
-//                 />
-//               </div>
-//               <Button className="bg-primary hover:bg-primary-dark">
-//                 <Plus className="h-4 w-4" />
-//               </Button>
-//             </div>
-
-//             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-//               {filteredPatients.map((patient) => (
-//                 <Card
-//                   key={patient.id}
-//                   className={`cursor-pointer transition-all shadow-natural hover:shadow-card-hover ${
-//                     selectedPatientId === patient.id ? "ring-2 ring-primary" : ""
-//                   }`}
-//                   onClick={() => setSelectedPatientId(patient.id)}
-//                 >
-//                   <CardContent className="p-4">
-//                     <div className="flex items-start justify-between mb-2">
-//                       <div>
-//                         <h3 className="font-semibold text-foreground">{patient.fullName}</h3>
-//                         <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
-//                       </div>
-//                       <Badge className="bg-medical-green text-white text-xs">
-//                         {patient.status || "active"}
-//                       </Badge>
-//                     </div>
-//                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-//                       <Calendar className="h-3 w-3" />
-//                       <span>{new Date(patient.formDate).toLocaleDateString("en-IN")}</span>
-//                     </div>
-//                   </CardContent>
-//                 </Card>
-//               ))}
-//             </div>
-//           </div>
-
-//           {/* Prescription View or Add Form */}
-//           <div className="lg:col-span-2">
-//             {isAddingPrescription ? (
-//               <AddPrescriptionForm
-//                 patient={selectedPatient}
-//                 onSave={handleSavePrescription}
-//                 onCancel={() => setIsAddingPrescription(false)}
-//               />
-//             ) : (
-//               <PrescriptionView
-//                 patient={selectedPatient}
-//                 appointment={selectedAppointment}
-//               />
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Prescriptions;
+}

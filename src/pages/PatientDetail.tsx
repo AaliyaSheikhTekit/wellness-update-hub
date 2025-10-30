@@ -47,12 +47,20 @@ import {
 } from "lucide-react";
 import { Scissors, Users, FileText } from "lucide-react";
 
-import { generatePDF, getMedicines, getPatient, postData, updatePatient } from "@/lib/api"; // <-- uses your Bearer token internally
+import {
+  generatePDF,
+  getMedicines,
+  getPatient,
+  postData,
+  updatePatient,
+} from "@/lib/api"; // <-- uses your Bearer token internally
 import PrescriptionPrint from "@/components/PrescriptionPrint";
 import { useReactToPrint } from "react-to-print";
 import DietChartView from "@/components/Dietician/DietChartView";
 import ConsultationHistory from "@/components/ConsultationHistory";
 import TreatmentSchedulerOneFile from "@/components/TreatmentPlanView";
+import PrescriptionDialog from "./Prescriptions";
+
 
 type ServerPatient = {
   id: string;
@@ -162,20 +170,14 @@ const PatientDetail = () => {
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
-  const [newPrescriptionOpen, setNewPrescriptionOpen] = useState(false);
 
-  const [naturopathyMedicines, setNaturopathyMedicines] = useState<
-    { id: string; name: string }[]
-  >([]);
-  const [selectedMedicine, setSelectedMedicine] = useState("");
-  const [duration, setDuration] = useState("");
-  const [instructions, setInstructions] = useState("");
+
   const printRef = useRef<HTMLDivElement>(null);
-  // react-to-print type definitions can differ between versions; cast options to any
-  // so the `content` callback is accepted without a TS error.
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-  } as any);
+ 
+const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+console.log("Selected Appointment for Prescription:", selectedAppointment);
+const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<string | null>(null);
 
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
@@ -214,17 +216,7 @@ const PatientDetail = () => {
     };
   }, [id]);
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const data = await getMedicines();
-        setNaturopathyMedicines(data.data || []);
-      } catch (error) {
-        console.error("Failed to load medicines:", error);
-      }
-    };
-    fetchMedicines();
-  }, []);
+  
   // ---- Safe state + helpers at top of component ----
   const appointments = useMemo(
     () => (patient?.appointment ?? []) as Array<any>,
@@ -419,47 +411,6 @@ const PatientDetail = () => {
     );
   }
 
-  const handlePrescribeMedicine = async () => {
-    if (!selectedMedicine) {
-      alert("Please select a medicine");
-      return;
-    }
-    if (!duration) {
-      alert("Please specify duration");
-      return;
-    }
-
-    try {
-      const payload = {
-        appointmentId:
-          patient.appointment && patient.appointment.length > 0
-            ? patient.appointment[0].id
-            : undefined,
-        medicineName: "TEST",
-
-        duration,
-        instructions,
-        quantity: 14, // you can make this dynamic
-      };
-
-      const result = await postData("/prescription/create", payload);
-      console.log("Prescription API result:", result);
-      toast({
-        title: "Prescription Sent",
-        description: "Prescription details sent to patient's WhatsApp",
-      });
-      handlePrint(); // Trigger print after successful prescription
-      setNewPrescriptionOpen(false);
-
-      // Reset form
-      setSelectedMedicine("");
-      setDuration("");
-      setInstructions("");
-    } catch (error: any) {
-      console.error("Error creating prescription:", error);
-      alert(error?.message || "Failed to send prescription");
-    }
-  };
   const VitalItem = ({
     icon: Icon,
     label,
@@ -616,9 +567,7 @@ const PatientDetail = () => {
   // Check if patient has any critical information
 
   const bmiStatus = getBMIStatus(patient.bmi);
-  const consentGiven = activeAppointment?.consent;
-  const signature = activeAppointment?.signature;
-  const prescriptions = patient.appointment?.[0]?.prescriptions ?? [];
+  
   const handleGeneratePdf = async () => {
     setIsGeneratingPdf(true);
     try {
@@ -631,17 +580,16 @@ const PatientDetail = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       setPdfUrl(url);
-       toast({
+      toast({
         title: "PDF generated successfully!",
         // description: "Prescription details sent to patient's WhatsApp",
-      })
-     
+      });
     } catch (error) {
       console.error("PDF generation error:", error);
       toast({
         title: "Please Try Again!",
         // description: "Prescription details sent to patient's WhatsApp",
-      })
+      });
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -655,7 +603,7 @@ const PatientDetail = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "PDF downloaded!",
         // description: "Prescription details sent to patient's WhatsApp",
@@ -731,35 +679,35 @@ const PatientDetail = () => {
                         </Button>
                       )}
                       <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleGeneratePdf}
-                      disabled={isGeneratingPdf}
-                      className="shadow-sm"
-                    >
-                      {isGeneratingPdf ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Generate PDF
-                        </>
-                      )}
-                    </Button>
-                    {pdfUrl && (
-                      <Button
                         size="sm"
-                        variant="secondary"
-                        onClick={handleDownloadPdf}
+                        variant="outline"
+                        onClick={handleGeneratePdf}
+                        disabled={isGeneratingPdf}
                         className="shadow-sm"
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
+                        {isGeneratingPdf ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Generate PDF
+                          </>
+                        )}
                       </Button>
-                    )}
+                      {pdfUrl && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={handleDownloadPdf}
+                          className="shadow-sm"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {patient.address || "—"}
@@ -794,30 +742,39 @@ const PatientDetail = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="appointments" className="space-y-6">
-          <TabsList className="flex flex-wrap gap-2">
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="history" disabled={!activeAppointment}>
-              Personal and lifestyle history
-            </TabsTrigger>
-            <TabsTrigger value="vitals" disabled={!activeAppointment}>
-              Vitals and antropometric measurment
-            </TabsTrigger>
-            <TabsTrigger value="consent" disabled={!activeAppointment}>
-              Consent & Signature
-            </TabsTrigger>
-            <TabsTrigger value="payments" disabled={!activeAppointment}>
-              UPI / Payments
-            </TabsTrigger>
+         <TabsList
+  className="
+    flex gap-1 sm:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent
+    border-b border-gray-200 bg-white sticky top-0 z-10
+    [&::-webkit-scrollbar]:h-1.5
+    [&::-webkit-scrollbar-thumb]:rounded-full
+    [&::-webkit-scrollbar-thumb]:bg-gray-300
+    [&::-webkit-scrollbar-track]:bg-transparent
+  "
+>
+  <TabsTrigger value="appointments">Appointments</TabsTrigger>
+  <TabsTrigger value="prescription">Prescription</TabsTrigger>
+  <TabsTrigger value="history" disabled={!activeAppointment}>
+    Personal and lifestyle history
+  </TabsTrigger>
+  <TabsTrigger value="vitals" disabled={!activeAppointment}>
+    Vitals and anthropometric measurement
+  </TabsTrigger>
+  <TabsTrigger value="consent" disabled={!activeAppointment}>
+    Consent & Signature
+  </TabsTrigger>
+  <TabsTrigger value="payments" disabled={!activeAppointment}>
+    UPI / Payments
+  </TabsTrigger>
+  <TabsTrigger value="dietchart" disabled={!activeAppointment}>
+    Diet Chart
+  </TabsTrigger>
+  <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
+    Treatment Plan
+  </TabsTrigger>
+  <TabsTrigger value="consultations">Consultations</TabsTrigger>
+</TabsList>
 
-            <TabsTrigger value="dietchart" disabled={!activeAppointment}>
-              Diet Chart
-            </TabsTrigger>
-            <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
-              Treatment Plan
-            </TabsTrigger>
-            {/* <TabsTrigger value="prescription">Prescription</TabsTrigger> */}
-            <TabsTrigger value="consultations">Consultations</TabsTrigger>
-          </TabsList>
 
           {/* Medical History */}
           <TabsContent value="history">
@@ -1510,83 +1467,123 @@ const PatientDetail = () => {
               </CardContent>
             </Card>
           </TabsContent>
+         <TabsContent value="prescription">
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center justify-between">
+        Prescriptions
+        <Badge variant="outline" className="text-sm">
+          {patient.appointment?.length || 0} Appointments
+        </Badge>
+      </CardTitle>
+    </CardHeader>
 
-          <TabsContent value="prescription">
-            <h3 className="font-semibold text-gray-700 mb-3">
-              Prescribed Medicines
-            </h3>
+<CardContent className="space-y-4">
+  {patient.appointment && patient.appointment.length > 0 ? (
+    patient.appointment.map((a, idx) => (
+      <div
+        key={a.id || idx}
+        className="border rounded-lg p-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+      >
+        {/* Left section: appointment details */}
+        <div>
+          <div className="font-semibold text-gray-800">
+            Appointment on{" "}
+            {new Date(a.date || a.createdAt).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </div>
+          <div className="text-sm text-gray-500">
+            {a.consultationType || "—"} · {a.status}
+          </div>
+        </div>
 
-            {prescriptions.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm border-collapse">
-                  <thead className="bg-gray-100 text-gray-700">
-                    <tr>
-                      <th className="border-b p-3 text-left font-medium">#</th>
-                      <th className="border-b p-3 text-left font-medium">
-                        Medicine
-                      </th>
-                      <th className="border-b p-3 text-left font-medium">
-                        Qty
-                      </th>
-                      <th className="border-b p-3 text-left font-medium">
-                        Duration
-                      </th>
-                      <th className="border-b p-3 text-left font-medium">
-                        Instructions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prescriptions.map((p: any, i: number) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="border-b p-3">{i + 1}</td>
-                        <td className="border-b p-3">
-                          {p.medicine?.name || "—"}
-                        </td>
-                        <td className="border-b p-3">{p.quantity || "—"}</td>
-                        <td className="border-b p-3">
-                          {p.duration ? `${p.duration} days` : "—"}
-                        </td>
-                        <td className="border-b p-3">
-                          {p.instructions || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No prescriptions available.
-              </p>
-            )}
+        {/* Right section: action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 🟢 Add Prescription Button */}
+          <button
+            onClick={() => {
+              setSelectedAppointment(a); // keep full object, not just ID
+              setPrescriptionDialogOpen(true);
+            }}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition"
+          >
+            + Add Prescription
+          </button>
 
-            {patient?.appointment?.[0]?.signature && (
-              <div className="text-center mt-6">
-                <img
-                  src={patient?.appointment?.[0].signature}
-                  alt="Signature"
-                  className="h-12 object-contain mx-auto"
-                />
-                <p className="text-xs text-gray-500">Doctor’s Signature</p>
-              </div>
-            )}
+          {/* 🧾 Generate PDF button (visible only if prescription created for this appointment) */}
+          {pdfReadyAppointmentId === a.id && (
+            <button
+              onClick={async () => {
+                try {
+                  console.log("🧾 Generating PDF for appointment:", a.id);
+                  const res = await generatePDF(a.id); // ✅ send the appointment ID only
+                  console.log("PDF generation response:", res);
+                } catch (err) {
+                  console.error("Error generating PDF:", err);
+                  alert("Failed to generate PDF. Check console for details.");
+                }
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
+            >
+              📄 Generate PDF
+            </button>
+          )}
+        </div>
+      </div>
+    ))
+  ) : (
+    <p className="text-sm text-muted-foreground">
+      No appointments available for prescriptions.
+    </p>
+  )}
+</CardContent>
 
-            <div className="text-center mt-6">
-              <Button variant="outline" onClick={() => window.print()}>
-                Print Prescription
-              </Button>
-            </div>
-          </TabsContent>
+{/* Prescription Dialog */}
+{selectedAppointment && (
+  <PrescriptionDialog
+    open={!!prescriptionDialogOpen}
+    onClose={() => {
+      setPrescriptionDialogOpen(false);
+      setSelectedAppointment(null);
+    }}
+    patient={{ ...patient, appointment: [selectedAppointment] }}
+    onPrescriptionCreated={() => {
+      // mark that this appointment now has a ready prescription
+      setPdfReadyAppointmentId(selectedAppointment.id);
+    }}
+  />
+)}
+
+  </Card>
+
+  {/* 🔹 Prescription Dialog (only opens when appointment is selected) */}
+  {selectedAppointment && (
+    <PrescriptionDialog
+      open={!!prescriptionDialogOpen}
+      onClose={() => {
+        setPrescriptionDialogOpen(false);
+        setSelectedAppointment(null);
+      }}
+      patient={{ ...patient, appointment: [selectedAppointment] }}
+
+      // 🧩 New callback to tell parent when prescription succeeds
+      onPrescriptionCreated={() => {
+        setPdfReadyAppointmentId(selectedAppointment.id);
+      }}
+    />
+  )}
+</TabsContent>
+
+
           <TabsContent value="dietchart">
             <DietChartView patient={patient} />
           </TabsContent>
           <TabsContent value="treatmentplan">
             <div>
-               <TreatmentSchedulerOneFile patient={patient as any} />
+              <TreatmentSchedulerOneFile patient={patient as any} />
             </div>
           </TabsContent>
           <TabsContent value="consultations">
