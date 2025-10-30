@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { postData, generatePDF } from "@/lib/api";
+import { postData, generatePDF, generatetPrescriptionPDF } from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, FileText, Download } from "lucide-react";
 
@@ -87,40 +87,40 @@ export default function PrescriptionDialog({
   };
 
   // 🧩 Generate PDF for appointment
-  const handleGeneratePDF = async () => {
-    try {
-      const appointmentId = patient?.appointment?.[0]?.id;
-      if (!appointmentId) {
-        toast({ title: "Missing appointment ID." });
-        return;
-      }
+  // const handleGeneratePDF = async () => {
+  //   try {
+  //     const appointmentId = patient?.appointment?.[0]?.id;
+  //     if (!appointmentId) {
+  //       toast({ title: "Missing appointment ID." });
+  //       return;
+  //     }
 
-      setPdfLoading(true);
-      const blob = await generatePDF(appointmentId); // 🧠 binary response
+  //     setPdfLoading(true);
+  //     const blob = await generatetPrescriptionPDF(appointmentId); // 🧠 binary response
 
-      // ✅ Create object URL from blob
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
+  //     // ✅ Create object URL from blob
+  //     const url = window.URL.createObjectURL(blob);
+  //     setPdfUrl(url);
 
-      // Auto-download file
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${patient.fullName.replace(/\s+/g, "_")}_prescription.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  //     // Auto-download file
+  //     const link = document.createElement("a");
+  //     link.href = url;
+  //     link.download = `${patient.fullName.replace(/\s+/g, "_")}_prescription.pdf`;
+  //     document.body.appendChild(link);
+  //     link.click();
+  //     document.body.removeChild(link);
 
-      toast({
-        title: "PDF Generated!",
-        description: "Your prescription PDF has been downloaded.",
-      });
-    } catch (error: any) {
-      console.error("Error generating PDF:", error);
-      toast({ title: "Failed to generate PDF" });
-    } finally {
-      setPdfLoading(false);
-    }
-  };
+  //     toast({
+  //       title: "PDF Generated!",
+  //       description: "Your prescription PDF has been downloaded.",
+  //     });
+  //   } catch (error: any) {
+  //     console.error("Error generating PDF:", error);
+  //     toast({ title: "Failed to generate PDF" });
+  //   } finally {
+  //     setPdfLoading(false);
+  //   }
+  // };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -205,7 +205,7 @@ export default function PrescriptionDialog({
           </Button>
 
           {/* ✅ Show Generate PDF only after prescription is created */}
-          {prescriptionCreated && (
+          {/* {prescriptionCreated && (
             <Button
               onClick={handleGeneratePDF}
               disabled={pdfLoading}
@@ -223,7 +223,7 @@ export default function PrescriptionDialog({
                 </>
               )}
             </Button>
-          )}
+          )} */}
 
           <Button
             onClick={handlePrescribeMedicine}

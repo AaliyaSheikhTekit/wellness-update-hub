@@ -49,12 +49,13 @@ import { Scissors, Users, FileText } from "lucide-react";
 
 import {
   generatePDF,
+  generatetPrescriptionPDF,
   getMedicines,
   getPatient,
   postData,
   updatePatient,
 } from "@/lib/api"; // <-- uses your Bearer token internally
-import PrescriptionPrint from "@/components/PrescriptionPrint";
+
 import { useReactToPrint } from "react-to-print";
 import DietChartView from "@/components/Dietician/DietChartView";
 import ConsultationHistory from "@/components/ConsultationHistory";
@@ -1515,8 +1516,25 @@ const handleGeneratePdf = async (appointmentId: string) => {
                                   "🧾 Generating PDF for appointment:",
                                   a.id
                                 );
-                                const res = await generatePDF(a.id); // ✅ send the appointment ID only
-                                console.log("PDF generation response:", res);
+                                const blob = await generatetPrescriptionPDF(a.id); 
+
+      // ✅ Create object URL from blob
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+
+      // Auto-download file
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${patient.fullName.replace(/\s+/g, "_")}_prescription.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "PDF Generated!",
+        description: "Your prescription PDF has been downloaded.",
+      });// ✅ send the appointment ID only
+                                console.log("PDF generation response:", blob);
                               } catch (err) {
                                 console.error("Error generating PDF:", err);
                                 alert(

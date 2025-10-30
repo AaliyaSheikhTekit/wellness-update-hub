@@ -150,7 +150,7 @@ const toINR = (n: number) =>
 /* ---------------- Component ---------------- */
 const Invoices = () => {
   const { toast } = useToast();
-  const printRef = useRef<HTMLDivElement>(null);
+
 
   // Left panel lists
   const [invoiceSearch, setInvoiceSearch] = useState("");

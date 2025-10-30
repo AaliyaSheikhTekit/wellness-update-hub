@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getTreatmentAll, getAllYoga } from "@/lib/api";
-import IkshaLogo from "../assets/iksha_logo.png";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ChevronDown } from "lucide-react";
 
@@ -11,8 +10,8 @@ type TreatmentRow = {
   id?: string;
   date: string;
   timeSlot: string;
-  yoga: string;
-  treatments: string[];
+  asanas: string[]; // ✅ Yoga IDs
+  treatments: string[]; // ✅ Treatment IDs
   duration: string;
 };
 
@@ -20,7 +19,7 @@ type ApiTreatmentPlanItem = {
   id?: string;
   timeSlot: string;
   treatments: string[];
-  yogaPlan?: string;
+  asanas?: string[];
   date: string;
   duration: string;
 };
@@ -52,15 +51,14 @@ export default function TreatmentPlanTable({
 }) {
   const [showYoga, setShowYoga] = useState(includeYoga);
   const [rows, setRows] = useState<TreatmentRow[]>([
-    { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
+    { date: "", timeSlot: "", asanas: [], treatments: [], duration: "" },
   ]);
   const [treatmentOptions, setTreatmentOptions] = useState<any[]>([]);
-
-  // Prevent infinite loops
+  const [yogaCategories, setYogaCategories] = useState<any[]>([]);
   const isHydratingRef = useRef(false);
   const fetchedRef = useRef(false);
-  const [yogaCategories, setYogaCategories] = useState([]);
 
+  // 🧘 Fetch Yoga
   useEffect(() => {
     const fetchYoga = async () => {
       try {
@@ -73,11 +71,10 @@ export default function TreatmentPlanTable({
     fetchYoga();
   }, []);
 
-  // Load treatment options once
+  // 💆 Fetch Treatments
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-
     (async () => {
       try {
         const data = await getTreatmentAll();
@@ -88,59 +85,57 @@ export default function TreatmentPlanTable({
     })();
   }, []);
 
-  // Hydrate rows from parent value (only when value changes externally)
+  // 🔁 Hydrate from parent value
   useEffect(() => {
     if (!Array.isArray(value)) return;
-
     isHydratingRef.current = true;
 
     if (value.length === 0) {
       setRows([
-        { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
+        { date: "", timeSlot: "", asanas: [], treatments: [], duration: "" },
       ]);
     } else {
       const mapped: TreatmentRow[] = value.map((it) => ({
         id: it.id,
         date: toInputDate(it.date),
         timeSlot: it.timeSlot || "",
-        yoga: it.yogaPlan || "",
+        asanas: Array.isArray(it.asanas) ? it.asanas : [],
         treatments: Array.isArray(it.treatments) ? it.treatments : [],
         duration: it.duration || "",
       }));
       setRows(mapped);
     }
 
-    // Reset flag after state update completes
     setTimeout(() => {
       isHydratingRef.current = false;
     }, 0);
   }, [value]);
 
-  // Update parent when rows change (but not during hydration)
+  // 🔼 Send updated rows to parent
   const updateParent = (newRows: TreatmentRow[]) => {
     if (isHydratingRef.current) return;
-
     const apiItems: ApiTreatmentPlanItem[] = newRows
       .filter(
         (r) =>
-          r.timeSlot || r.yoga || r.treatments.length || r.date || r.duration
+          r.timeSlot || r.asanas.length || r.treatments.length || r.date || r.duration
       )
       .map((r) => ({
         ...(r.id ? { id: r.id } : {}),
         timeSlot: r.timeSlot,
         treatments: r.treatments,
-        yogaPlan: r.yoga || undefined,
+        asanas: r.asanas?.length ? r.asanas : undefined,
         date: r.date ? toISODate(r.date) : "",
         duration: r.duration,
       }));
 
+    console.log("🧾 Sending payload:", apiItems);
     onChange(apiItems);
   };
 
   const handleAddRow = () => {
     const newRows = [
       ...rows,
-      { date: "", timeSlot: "", yoga: "", treatments: [], duration: "" },
+      { date: "", timeSlot: "", asanas: [], treatments: [], duration: "" },
     ];
     setRows(newRows);
     updateParent(newRows);
@@ -152,17 +147,12 @@ export default function TreatmentPlanTable({
     updateParent(newRows);
   };
 
-  const handleChange = (
-    index: number,
-    field: keyof TreatmentRow,
-    value: any
-  ) => {
+  const handleChange = (index: number, field: keyof TreatmentRow, value: any) => {
     const newRows = [...rows];
     (newRows[index] as any)[field] = value;
     setRows(newRows);
     updateParent(newRows);
   };
-
 
   return (
     <div className="space-y-4">
@@ -177,20 +167,22 @@ export default function TreatmentPlanTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table id="treatment-table" className="min-w-full border text-sm">
+        <table className="min-w-full border text-sm">
           <thead className="bg-gray-50">
             <tr>
               <th className="border px-3 py-2 text-left">Date</th>
               <th className="border px-3 py-2 text-left">Time Slot</th>
               {showYoga && <th className="border px-3 py-2 text-left">Yoga</th>}
               <th className="border px-3 py-2 text-left">Treatment</th>
-              <th className="border px-3 py-2 text-left">Durations</th>
+              <th className="border px-3 py-2 text-left">Duration</th>
               <th className="border px-3 py-2"></th>
             </tr>
           </thead>
+
           <tbody>
             {rows.map((row, i) => (
               <tr key={row.id ?? i}>
+                {/* 📅 Date */}
                 <td className="border px-2">
                   <Input
                     type="date"
@@ -198,67 +190,116 @@ export default function TreatmentPlanTable({
                     onChange={(e) => handleChange(i, "date", e.target.value)}
                   />
                 </td>
+
+                {/* ⏰ Time Slot */}
                 <td className="border px-2">
                   <Input
                     placeholder="Time slot"
                     value={row.timeSlot}
-                    onChange={(e) =>
-                      handleChange(i, "timeSlot", e.target.value)
-                    }
+                    onChange={(e) => handleChange(i, "timeSlot", e.target.value)}
                   />
                 </td>
+
+                {/* 🧘 Yoga Selection */}
                 {showYoga && (
                   <td className="border px-2">
-                    <select
-                      className="w-full border rounded-lg p-2"
-                      value={row.yoga}
-                      onChange={(e) => handleChange(i, "yoga", e.target.value)}
-                    >
-                      <option value="">— Select Yoga Plan —</option>
-                      {yogaCategories.map((cat) => (
-                        <optgroup key={cat.id} label={cat.name}>
-                          {cat.subCategories.flatMap((sub) =>
-                            sub.items.length > 0 ? (
-                              sub.items.map((item) => (
-                                <option
-                                  key={item.id}
-                                  value={`${cat.name} › ${sub.name} › ${item.name}`}
-                                >
-                                  {sub.name} › {item.name}
-                                </option>
-                              ))
-                            ) : (
-                              <option
-                                key={sub.id}
-                                value={`${cat.name} › ${sub.name}`}
-                              >
-                                {sub.name}
-                              </option>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span className="truncate">
+                            {row.asanas.length > 0
+                              ? `${row.asanas.length} yoga${row.asanas.length > 1 ? "s" : ""} selected`
+                              : "Select Yoga Asanas"}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-96 p-0" align="start">
+                        <div className="max-h-96 overflow-y-auto">
+                          {yogaCategories.map((cat: any) => (
+                            <div key={cat.id}>
+                              <div className="font-semibold px-3 py-2 bg-gray-100 border-b">
+                                {cat.name}
+                              </div>
+                              {cat.subCategories.map((sub: any) =>
+                                sub.items.map((item: any) => {
+                                  const yogaId = item.id;
+                                  const checked = row.asanas.includes(yogaId);
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
+                                        checked ? "bg-blue-50" : ""
+                                      }`}
+                                      onClick={() => {
+                                        const next = checked
+                                          ? row.asanas.filter((a) => a !== yogaId)
+                                          : [...row.asanas, yogaId];
+                                        handleChange(i, "asanas", next);
+                                      }}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <Checkbox checked={checked} />
+                                        <span>{item.name}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Show selected Yoga tags */}
+                    {row.asanas.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {row.asanas.map((asanaId) => {
+                          const yogaItem = yogaCategories
+                            .flatMap((cat: any) =>
+                              cat.subCategories.flatMap((sub: any) => sub.items || [])
                             )
-                          )}
-                        </optgroup>
-                      ))}
-                    </select>
+                            .find((item: any) => item.id === asanaId);
+
+                          return (
+                            <div
+                              key={asanaId}
+                              className="flex items-center justify-between gap-2 border rounded-md px-2 py-1.5 bg-gray-50 text-xs"
+                            >
+                              <span>{yogaItem ? yogaItem.name : asanaId}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleChange(i, "asanas", row.asanas.filter((a) => a !== asanaId));
+                                }}
+                                className="text-gray-400 hover:text-red-500"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </td>
                 )}
 
+                {/* 💆 Treatments */}
                 <td className="border px-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between"
-                      >
+                      <Button variant="outline" className="w-full justify-between">
                         <span className="truncate">
                           {row.treatments.length > 0
-                            ? `${row.treatments.length} treatment${
-                                row.treatments.length > 1 ? "s" : ""
-                              } selected`
+                            ? `${row.treatments.length} treatment${row.treatments.length > 1 ? "s" : ""} selected`
                             : "Select treatments"}
                         </span>
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
                       </Button>
                     </PopoverTrigger>
+
                     <PopoverContent className="w-96 p-0" align="start">
                       <div className="max-h-96 overflow-y-auto">
                         {treatmentOptions.map((opt) => {
@@ -277,35 +318,12 @@ export default function TreatmentPlanTable({
                               }}
                             >
                               <div className="flex items-start gap-2">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={() => {}}
-                                  className="mt-1"
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="font-semibold text-sm">
-                                      {opt.title}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      {opt.duration}
-                                    </span>
-                                  </div>
+                                <Checkbox checked={checked} />
+                                <div>
+                                  <div className="font-semibold text-sm">{opt.title}</div>
                                   {opt.subTitle && (
-                                    <div className="text-xs text-gray-600 mb-1">
-                                      {opt.subTitle}
-                                    </div>
+                                    <div className="text-xs text-gray-600">{opt.subTitle}</div>
                                   )}
-                                  {opt.treatment && (
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      {opt.treatment}
-                                    </div>
-                                  )}
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-500">
-                                      {opt.days}
-                                    </span>
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -315,39 +333,27 @@ export default function TreatmentPlanTable({
                     </PopoverContent>
                   </Popover>
 
+                  {/* Show selected Treatments */}
                   {row.treatments.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {row.treatments.map((treatmentId) => {
-                        const t = treatmentOptions.find(
-                          (opt) => opt.id === treatmentId
-                        );
-                        if (!t) return null;
+                        const t = treatmentOptions.find((opt) => opt.id === treatmentId);
                         return (
                           <div
-                            key={t.id}
+                            key={treatmentId}
                             className="flex items-center justify-between gap-2 border rounded-md px-2 py-1.5 bg-gray-50 text-xs"
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">
-                                {t.title}
-                              </div>
-                              {t.subTitle && (
-                                <div className="text-gray-500 truncate">
-                                  {t.subTitle}
-                                </div>
-                              )}
-                            </div>
+                            <span>{t ? t.title : treatmentId}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleChange(
                                   i,
                                   "treatments",
-                                  row.treatments.filter((tid) => tid !== t.id)
+                                  row.treatments.filter((tid) => tid !== treatmentId)
                                 );
                               }}
                               className="text-gray-400 hover:text-red-500"
-                              aria-label="Remove treatment"
                             >
                               ×
                             </button>
@@ -357,21 +363,19 @@ export default function TreatmentPlanTable({
                     </div>
                   )}
                 </td>
+
+                {/* ⏳ Duration */}
                 <td className="border px-2">
                   <Input
                     placeholder="Duration"
                     value={row.duration}
-                    onChange={(e) =>
-                      handleChange(i, "duration", e.target.value)
-                    }
+                    onChange={(e) => handleChange(i, "duration", e.target.value)}
                   />
                 </td>
+
+                {/* ❌ Remove Row */}
                 <td className="border px-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleRemoveRow(i)}
-                  >
+                  <Button variant="destructive" size="sm" onClick={() => handleRemoveRow(i)}>
                     Remove
                   </Button>
                 </td>
@@ -382,7 +386,6 @@ export default function TreatmentPlanTable({
       </div>
 
       <div className="flex gap-2">
-       
         <Button onClick={handleAddRow}>Add Row</Button>
       </div>
     </div>

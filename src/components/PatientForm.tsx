@@ -461,10 +461,7 @@ const PatientRegistrationForm = () => {
     }
   };
 
-  const handlePrint = () => {
-    setShowPrint(true);
-    setTimeout(() => window.print(), 100);
-  };
+
 
   const toISODate = (d: string) =>
     d ? new Date(d).toISOString().slice(0, 10) : "";
@@ -1836,13 +1833,7 @@ const PatientRegistrationForm = () => {
                   )}
                   {step === 5 && (
                     <div className="flex flex-wrap gap-4 mt-4">
-                      <Button
-                        onClick={handlePrint}
-                        className="bg-yellow-500 hover:bg-yellow-600"
-                        disabled={submitting}
-                      >
-                        🖨 Print Form
-                      </Button>
+                   
                       <Button
                         onClick={() => submitFinal()}
                         className="bg-green-600 hover:bg-green-700 disabled:opacity-60"

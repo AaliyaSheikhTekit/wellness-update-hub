@@ -55,25 +55,34 @@ export default function DoctorForm() {
   const navigate = useNavigate();
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
-  const [showPrint, setShowPrint] = useState(false);
+  
 
+  const sigCanvas = useRef<SignatureCanvas | null>(null);
  const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
-const sigCanvas = useRef<any>(null);
+  
 
-const clear = () => {
-  sigCanvas.current?.clear();
-  setSignature(""); // Reset to empty string
-};
+  // 🧹 Clear signature
+  const clear = () => {
+    sigCanvas.current?.clear();
+    setSignature("");
+  };
 
-const save = () => {
-  if (!sigCanvas.current?.isEmpty()) {
-    const base64 = sigCanvas.current
-      .getTrimmedCanvas()
-      .toDataURL("image/png");
-    setSignature(base64);
-    console.log("Signature Base64:", base64);
-  }
-};
+  // 💾 Save as Base64
+  const save = () => {
+    if (!sigCanvas.current?.isEmpty()) {
+      const base64 = sigCanvas.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png")
+        .replace(/^data:image\/png;base64,/, ""); // ✅ Only pure Base64 (optional)
+      setSignature(base64);
+
+      console.log("✅ Signature Base64:", base64);
+
+    
+    } else {
+      alert("Please sign before saving.");
+    }
+  };
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -111,7 +120,7 @@ const save = () => {
     fetchPatient();
   }, [id]);
 
-  const printRef = useRef(null);
+
   const [doctorData, setDoctorData] = useState({
     pastMedicalHistory: {
       chronicIllnesses: "",
@@ -1065,7 +1074,7 @@ const latestAppointmentId = latestAppointment?.id ?? null;
                           <div className="mt-4">
                             <p className="text-sm text-gray-600">Preview:</p>
                             <img
-                              src={signature}
+                              src={`data:image/png;base64,${signature}`}
                               alt="Signature preview"
                               className="mt-2 border rounded"
                             />

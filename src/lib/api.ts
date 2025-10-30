@@ -814,3 +814,22 @@ export const generatetInvoicePDF = async (invoiceId: string) => {
   const blob = await response.blob();
   return blob;
 };
+export const generatetPrescriptionPDF = async (prescriptionId: string) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/appointment/generate-prescription-pdf/${prescriptionId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+    // 🧠 Expect binary data (PDF), not JSON
+  const blob = await response.blob();
+  return blob;
+};
