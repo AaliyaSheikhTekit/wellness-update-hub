@@ -5,6 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import IkshaLogo from "../assets/iksha_logo.png";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -149,11 +155,17 @@ type ServerPatient = {
     createdAt?: string;
     updatedAt?: string;
     prescriptions?: {
+      chiefComplaint: string;
+      investigation: string;
+      avoid: string;
       id?: string;
       duration?: string;
       instructions?: string;
       quantity?: number;
-      medicine?: { name?: string };
+      medicine?: {
+        quantity: any;
+        name?: string;
+      };
     }[];
   }>;
 
@@ -170,8 +182,7 @@ const PatientDetail = () => {
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
-
-  const printRef = useRef<HTMLDivElement>(null);
+  const [openPrescription, setOpenPrescription] = useState(false);
 
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
@@ -181,7 +192,22 @@ const PatientDetail = () => {
   const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<
     string | null
   >(null);
+ const [activeTab, setActiveTab] = useState("appointments");
+  const tabsRef = useRef<HTMLDivElement>(null);
 
+useEffect(() => {
+  const activeEl = tabsRef.current?.querySelector(
+    "[data-state='active']"
+  ) as HTMLElement | null;
+  if (activeEl && tabsRef.current) {
+    // Smoothly scroll to show the active tab in view
+    const container = tabsRef.current;
+    const left =
+      activeEl.offsetLeft -
+      (container.clientWidth - activeEl.clientWidth) / 2;
+    container.scrollTo({ left, behavior: "smooth" });
+  }
+}, [activeTab]);
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
     return (
@@ -570,42 +596,40 @@ const PatientDetail = () => {
 
   const bmiStatus = getBMIStatus(patient.bmi);
 
-const handleGeneratePdf = async (appointmentId: string) => {
-  setIsGeneratingPdf(true);
-  try {
-    const blob = await generatePDF(appointmentId); // 🔥 now correctly returns blob
+  const handleGeneratePdf = async (appointmentId: string) => {
+    setIsGeneratingPdf(true);
+    try {
+      const blob = await generatePDF(appointmentId); // 🔥 now correctly returns blob
 
-    const url = window.URL.createObjectURL(blob);
-    setPdfUrl(url);
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
 
-    // Auto-download after generation
-    handleDownloadPdf(url);
+      // Auto-download after generation
+      handleDownloadPdf(url);
 
-    toast({
-      title: "PDF generated successfully!",
-    });
-  } catch (error) {
-    console.error("PDF generation error:", error);
-    toast({
-      title: "Please Try Again!",
-    });
-  } finally {
-    setIsGeneratingPdf(false);
-  }
-};
-
+      toast({
+        title: "PDF generated successfully!",
+      });
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({
+        title: "Please Try Again!",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleDownloadPdf = (url: string) => {
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${patient.fullName.replace(/\s+/g, "_")}_report.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${patient.fullName.replace(/\s+/g, "_")}_report.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-  toast({ title: "PDF downloaded!" });
-};
-
+    toast({ title: "PDF downloaded!" });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -674,7 +698,6 @@ const handleGeneratePdf = async (appointmentId: string) => {
                           Give Consultancy
                         </Button>
                       )}
-                   
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {patient.address || "—"}
@@ -709,38 +732,47 @@ const handleGeneratePdf = async (appointmentId: string) => {
 
         {/* Tabs */}
         <Tabs defaultValue="appointments" className="space-y-6">
-          <TabsList
-            className="
-    flex gap-1 sm:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent
-    border-b border-gray-200 bg-white sticky top-0 z-10
-    [&::-webkit-scrollbar]:h-1.5
-    [&::-webkit-scrollbar-thumb]:rounded-full
-    [&::-webkit-scrollbar-thumb]:bg-gray-300
-    [&::-webkit-scrollbar-track]:bg-transparent
-  "
-          >
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="prescription">Prescription</TabsTrigger>
-            <TabsTrigger value="history" disabled={!activeAppointment}>
-              Personal and lifestyle history
-            </TabsTrigger>
-            <TabsTrigger value="vitals" disabled={!activeAppointment}>
-              Vitals and anthropometric measurement
-            </TabsTrigger>
-            <TabsTrigger value="consent" disabled={!activeAppointment}>
-              Consent & Signature
-            </TabsTrigger>
-            <TabsTrigger value="payments" disabled={!activeAppointment}>
-              UPI / Payments
-            </TabsTrigger>
-            <TabsTrigger value="dietchart" disabled={!activeAppointment}>
-              Diet Chart
-            </TabsTrigger>
-            <TabsTrigger value="treatmentplan" disabled={!activeAppointment}>
-              Treatment Plan
-            </TabsTrigger>
-            <TabsTrigger value="consultations">Consultations</TabsTrigger>
-          </TabsList>
+           <TabsList
+      ref={tabsRef}
+      className="
+        flex items-center gap-3 sm:gap-4 overflow-x-auto
+        whitespace-nowrap
+        border-b border-gray-200 bg-white sticky top-0 z-10
+        px-2 sm:px-4 py-2
+        scrollbar-thin scrollbar-thumb-gray-400/60 scrollbar-track-transparent
+        shadow-sm
+        [&::-webkit-scrollbar]:h-2
+        [&::-webkit-scrollbar-thumb]:rounded-full
+        [&::-webkit-scrollbar-thumb]:bg-gray-400/60
+        [&::-webkit-scrollbar-track]:bg-transparent
+      "
+    >
+      {[
+        { value: "appointments", label: "Appointments" },
+        { value: "prescription", label: "Prescription" },
+        { value: "history", label: "Personal and lifestyle history" },
+        { value: "vitals", label: "Vitals and anthropometric measurement" },
+        { value: "consent", label: "Consent & Signature" },
+        { value: "payments", label: "UPI / Payments" },
+        { value: "dietchart", label: "Diet Chart" },
+        { value: "treatmentplan", label: "Treatment Plan" },
+        { value: "consultations", label: "Consultations" },
+      ].map((tab) => (
+        <TabsTrigger
+          key={tab.value}
+          value={tab.value}
+          onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
+          className="
+            text-sm sm:text-base font-medium px-3 py-1.5 rounded-md
+            data-[state=active]:border-b-2 data-[state=active]:border-amber-500
+            data-[state=active]:text-amber-600
+            hover:text-amber-600 transition-colors
+          "
+        >
+          {tab.label}
+        </TabsTrigger>
+      ))}
+    </TabsList>
 
           {/* Medical History */}
           <TabsContent value="history">
@@ -1376,85 +1408,86 @@ const handleGeneratePdf = async (appointmentId: string) => {
               </CardHeader>
 
               <CardContent className="space-y-3">
-              {patient.appointment && patient.appointment.length > 0 ? (
-  patient.appointment
-    .sort(
-      (a, b) =>
-        new Date(b.date || b.createdAt).getTime() -
-        new Date(a.date || a.createdAt).getTime()
-    )
-    .map((a, idx) => (
-      <div
-        key={a.id || idx}
-        onClick={() => setActiveAppointment(a)}
-        className={`p-4 border rounded cursor-pointer transition-all ${
-          activeAppointment?.id === a.id
-            ? "bg-blue-50 border-blue-400 shadow-sm"
-            : "hover:bg-muted/40"
-        }`}
-      >
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="font-medium">
-              {new Date(a.date || a.createdAt).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {a.consultationType || "—"}
-            </p>
-          </div>
-          <Badge
-            className={
-              a.status === "pending"
-                ? "bg-yellow-100 text-yellow-800"
-                : a.status === "confirmed"
-                ? "bg-green-100 text-green-800"
-                : a.status === "completed"
-                ? "bg-blue-100 text-blue-800"
-                : "bg-gray-100 text-gray-800"
-            }
-            variant="outline"
-          >
-            {a.status || "unknown"}
-          </Badge>
-        </div>
+                {patient.appointment && patient.appointment.length > 0 ? (
+                  patient.appointment
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date || b.createdAt).getTime() -
+                        new Date(a.date || a.createdAt).getTime()
+                    )
+                    .map((a, idx) => (
+                      <div
+                        key={a.id || idx}
+                        onClick={() => setActiveAppointment(a)}
+                        className={`p-4 border rounded cursor-pointer transition-all ${
+                          activeAppointment?.id === a.id
+                            ? "bg-blue-50 border-blue-400 shadow-sm"
+                            : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {new Date(
+                                a.date || a.createdAt
+                              ).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {a.consultationType || "—"}
+                            </p>
+                          </div>
+                          <Badge
+                            className={
+                              a.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : a.status === "confirmed"
+                                ? "bg-green-100 text-green-800"
+                                : a.status === "completed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }
+                            variant="outline"
+                          >
+                            {a.status || "unknown"}
+                          </Badge>
+                        </div>
 
-        {/* ✅ Generate PDF Button */}
-        <div className="mt-3 flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async (e) => {
-              e.stopPropagation(); // prevent triggering setActiveAppointment
-              await handleGeneratePdf(a.id);
-            }}
-            disabled={isGeneratingPdf}
-            className="shadow-sm"
-          >
-            {isGeneratingPdf ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Generate PDF
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    ))
-) : (
-  <p className="text-sm text-muted-foreground">
-    No appointments found for this patient.
-  </p>
-)}
-
+                        {/* ✅ Generate PDF Button */}
+                        <div className="mt-3 flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async (e) => {
+                              e.stopPropagation(); // prevent triggering setActiveAppointment
+                              await handleGeneratePdf(a.id);
+                            }}
+                            disabled={isGeneratingPdf}
+                            className="shadow-sm"
+                          >
+                            {isGeneratingPdf ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Generate PDF
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No appointments found for this patient.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1471,85 +1504,174 @@ const handleGeneratePdf = async (appointmentId: string) => {
 
               <CardContent className="space-y-4">
                 {patient.appointment && patient.appointment.length > 0 ? (
-                  patient.appointment.map((a, idx) => (
-                    <div
-                      key={a.id || idx}
-                      className="border rounded-lg p-4 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      {/* Left section: appointment details */}
-                      <div>
-                        <div className="font-semibold text-gray-800">
-                          Appointment on{" "}
-                          {new Date(a.date || a.createdAt).toLocaleDateString(
-                            "en-IN",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            }
-                          )}
+                  patient.appointment.map((a, idx) => {
+                    const hasPrescription =
+                      a.prescriptions && a.prescriptions.length > 0;
+
+                    return (
+                      <div
+                        key={a.id || idx}
+                        className="border rounded-lg p-4 bg-gray-50 space-y-2"
+                      >
+                        {/* Top: appointment info */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-gray-800">
+                              Appointment on{" "}
+                              {new Date(
+                                a.date || a.createdAt
+                              ).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {a.consultationType || "—"} · {a.status}
+                            </div>
+                          </div>
+
+                          {/* Buttons */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {!hasPrescription ? (
+                              // 🟢 Add Prescription Button
+                              <button
+                                onClick={() => {
+                                  setSelectedAppointment(a);
+                                  setPrescriptionDialogOpen(true);
+                                }}
+                                className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition"
+                              >
+                                + Add Prescription
+                              </button>
+                            ) : (
+                              // 📄 Generate PDF Button
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    console.log(
+                                      "🧾 Generating PDF for appointment:",
+                                      a.id
+                                    );
+                                    const blob = await generatetPrescriptionPDF(
+                                      a.id
+                                    );
+
+                                    // ✅ Create object URL from blob
+                                    const url =
+                                      window.URL.createObjectURL(blob);
+                                    setPdfUrl(url);
+
+                                    // Auto-download file
+                                    const link = document.createElement("a");
+                                    link.href = url;
+                                    link.download = `${patient.fullName.replace(
+                                      /\s+/g,
+                                      "_"
+                                    )}_prescription.pdf`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+
+                                    toast({
+                                      title: "PDF Generated!",
+                                      description:
+                                        "Your prescription PDF has been downloaded.",
+                                    });
+                                  } catch (err) {
+                                    console.error("Error generating PDF:", err);
+                                    alert(
+                                      "Failed to generate PDF. Check console for details."
+                                    );
+                                  }
+                                }}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
+                              >
+                                📄 Generate PDF
+                              </button>
+                            )}
+
+                            {/* 🔽 Toggle for Prescription Details */}
+                            {hasPrescription && (
+                              <button
+                                onClick={() =>
+                                  setOpenPrescription((prev) => !prev)
+                                }
+                                className="text-gray-600 flex items-center text-sm hover:text-gray-800"
+                              >
+                                {open ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4 mr-1" /> Hide
+                                    Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4 mr-1" />{" "}
+                                    View Details
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {a.consultationType || "—"} · {a.status}
-                        </div>
-                      </div>
 
-                      {/* Right section: action buttons */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* 🟢 Add Prescription Button */}
-                        <button
-                          onClick={() => {
-                            setSelectedAppointment(a); // keep full object, not just ID
-                            setPrescriptionDialogOpen(true);
-                          }}
-                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition"
-                        >
-                          + Add Prescription
-                        </button>
-
-                        {/* 🧾 Generate PDF button (visible only if prescription created for this appointment) */}
-                        {pdfReadyAppointmentId === a.id && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                console.log(
-                                  "🧾 Generating PDF for appointment:",
-                                  a.id
-                                );
-                                const blob = await generatetPrescriptionPDF(a.id); 
-
-      // ✅ Create object URL from blob
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
-
-      // Auto-download file
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${patient.fullName.replace(/\s+/g, "_")}_prescription.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast({
-        title: "PDF Generated!",
-        description: "Your prescription PDF has been downloaded.",
-      });// ✅ send the appointment ID only
-                                console.log("PDF generation response:", blob);
-                              } catch (err) {
-                                console.error("Error generating PDF:", err);
-                                alert(
-                                  "Failed to generate PDF. Check console for details."
-                                );
-                              }
-                            }}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
+                        {/* Collapsible Prescription Details */}
+                        {hasPrescription && (
+                          <Collapsible
+                            open={openPrescription}
+                            onOpenChange={setOpenPrescription}
                           >
-                            📄 Generate PDF
-                          </button>
+                            <CollapsibleContent>
+                              <div className="mt-3 border-t pt-3 space-y-3">
+                                {a.prescriptions?.map((p, i) => (
+                                  <div
+                                    key={p.id || i}
+                                    className="border border-gray-300 rounded-lg p-3 bg-white shadow-sm"
+                                  >
+                                    <h4 className="font-semibold text-gray-800 mb-2">
+                                      {p.medicine?.name || "Unnamed Medicine"}
+                                    </h4>
+                                    <div className="text-sm text-gray-700 space-y-1">
+                                      <p>
+                                        <strong>Duration:</strong>{" "}
+                                        {p.duration || "—"}
+                                      </p>
+                                      <p>
+                                        <strong>Instructions:</strong>{" "}
+                                        {p.instructions || "—"}
+                                      </p>
+                                      <p>
+                                        <strong>Chief Complaint:</strong>{" "}
+                                        {p.chiefComplaint || "—"}
+                                      </p>
+                                      <p>
+                                        <strong>Investigation:</strong>{" "}
+                                        {p.investigation || "—"}
+                                      </p>
+                                      <p>
+                                        <strong>Avoid:</strong> {p.avoid || "—"}
+                                      </p>
+                                      <p>
+                                        <strong>Quantity:</strong>{" "}
+                                        {p.quantity || "—"}
+                                      </p>
+                                      {p.medicine && (
+                                        <p>
+                                          <strong>Medicine:</strong>{" "}
+                                          {p.medicine.name} (
+                                          {p.medicine.quantity})
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     No appointments available for prescriptions.
