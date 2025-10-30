@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { postData, generatePDF, generatetPrescriptionPDF } from "@/lib/api";
+import { postData, } from "@/lib/api";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, FileText, Download } from "lucide-react";
+
 
 export default function PrescriptionDialog({
   open,
@@ -27,10 +27,8 @@ export default function PrescriptionDialog({
   const [investigation, setInvestigation] = useState("");
   const [avoid, setAvoid] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [prescriptionCreated, setPrescriptionCreated] = useState(false);
-
+  const [note, setNote] = useState("");
+  
   // 🩺 Create Prescription
   const handlePrescribeMedicine = async () => {
     if (!medicineName.trim() || !duration.trim() || !instructions.trim()) {
@@ -56,6 +54,7 @@ export default function PrescriptionDialog({
         chiefComplaint,
         investigation,
         avoid,
+        note
       };
 
       console.log("🧾 Prescription payload:", payload);
@@ -68,7 +67,7 @@ export default function PrescriptionDialog({
       });
 
       onPrescriptionCreated?.();
-      setPrescriptionCreated(true); // ✅ unlock the PDF button
+
 
       // Reset fields
       setMedicineName("");
@@ -78,6 +77,7 @@ export default function PrescriptionDialog({
       setChiefComplaint("");
       setInvestigation("");
       setAvoid("");
+      setNote("");
     } catch (error: any) {
       console.error("Error creating prescription:", error);
       toast({ title: "Failed to create prescription" });
@@ -193,6 +193,14 @@ export default function PrescriptionDialog({
                 value={avoid}
                 onChange={(e) => setAvoid(e.target.value)}
                 placeholder="e.g. Spicy food, caffeine..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Avoid</label>
+              <Input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Note..."
               />
             </div>
           </div>

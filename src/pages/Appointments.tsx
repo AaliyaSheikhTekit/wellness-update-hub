@@ -501,17 +501,7 @@ const Appointments = () => {
   );
 
   /* ------------------------ Validation ------------------------ */
-  const validateAppointment = () => {
-    const newErrors: Record<string, string> = {};
-    if (!patientName) newErrors.patientName = "Patient name is required";
-    if (!patientNumber) newErrors.patientNumber = "Mobile number is required";
-    if (!date) newErrors.date = "Date is required";
-    if (!time) newErrors.time = "Time is required";
-    if (!type) newErrors.type = "Appointment type is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+ 
 
   const refetchForActiveTab = async () => {
     if (activeTab === "all") {
@@ -525,6 +515,55 @@ const Appointments = () => {
       await fetchAppointmentsPage();
     }
   };
+
+
+const validateAppointment = () => {
+  const newErrors: any = {};
+
+  // ✅ Patient name: required + min 2 chars
+  if (!patientName.trim()) {
+    newErrors.patientName = "Patient name is required.";
+  } else if (patientName.trim().length < 2) {
+    newErrors.patientName = "Name must be at least 2 characters.";
+  }
+
+  // ✅ Patient number: must be valid 10-digit phone number
+  if (!patientNumber.trim()) {
+    newErrors.patientNumber = "Patient mobile number is required.";
+  } else if (!/^[6-9]\d{9}$/.test(patientNumber)) {
+    newErrors.patientNumber = "Enter a valid 10-digit Indian mobile number.";
+  }
+
+  // ✅ Date: required + not past date
+  if (!date) {
+    newErrors.date = "Date is required.";
+  } else {
+    const today = new Date();
+    const selected = new Date(date);
+    today.setHours(0, 0, 0, 0);
+    if (selected < today) {
+      newErrors.date = "Date cannot be in the past.";
+    }
+  }
+
+  // ✅ Time: required
+  if (!time) {
+    newErrors.time = "Time is required.";
+  }
+
+  // ✅ Doctor: required
+  if (!doctorId) {
+    newErrors.doctorId = "Please select a doctor.";
+  }
+
+  // ✅ Appointment type: required
+  if (!type) {
+    newErrors.type = "Appointment type is required.";
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   /* ------------------------ Handlers ------------------------ */
   const handleBookAppointment = async () => {
