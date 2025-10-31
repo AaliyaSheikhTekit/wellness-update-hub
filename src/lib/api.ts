@@ -408,7 +408,7 @@ export const getDietPlan = async (patientId: string, startDate?: string, endDate
   return await response.json();
 };
 
-// Batch create diet plans for the entire week (one entry per date)
+// ✅ Create a single weekly diet plan (one combined object)
 export const createWeeklyDietPlan = async (
   weeklyPlan: {
     appointmentId: string;
@@ -417,26 +417,32 @@ export const createWeeklyDietPlan = async (
     date: string;
     dietPlanItem: { time: string; dietItem: string[] }[];
     restrictions: string;
-  }[]
+  }
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
-  const promises = weeklyPlan.map((plan) =>
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/diet-plan`, {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/diet-plan`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${backendToken}`,
       },
-      body: JSON.stringify(plan),
-    }).then((res) => {
-      if (!res.ok) throw new Error("Failed to create diet plan");
-      return res.json();
-    })
-  );
+      body: JSON.stringify(weeklyPlan),
+    });
 
-  return await Promise.all(promises);
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to create diet plan: ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error creating weekly diet plan:", error);
+    throw error;
+  }
 };
 
 export const createDietPlan = async (
@@ -837,4 +843,67 @@ export const generatetPrescriptionPDF = async (prescriptionId: string) => {
     // 🧠 Expect binary data (PDF), not JSON
   const blob = await response.blob();
   return blob;
+};
+//feedback
+
+
+// feedback.api.ts
+export const createFeedback = async (feedbackData: {
+  otherSource?: string;
+  website?: boolean;
+  socialMedia?: boolean;
+  friendFamily?: boolean;
+  receptionRegistration?: number;
+  cleanlinessHygiene?: number;
+  staffBehavior?: number;
+  doctorsConsultation?: number;
+  treatmentQuality?: number;
+  overallExperience?: number;
+  reliefReceived?: string;
+  likedMost?: string;
+  improvements?: string;
+  recommendToOthers?: boolean;
+  additionalComments?: string;
+  patientId: string;
+  name: string;
+}) => {
+  const backendToken = getBackendToken(); // your existing token util
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/feedback/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+      body: JSON.stringify(feedbackData),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to submit feedback: ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error submitting feedback:", error);
+    throw error;
+  }
+};
+export const getFeedbackByPatientId = async (patientId: string) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token.");
+
+  const res = await fetch(`${API_BASE_URL}/feedback/get/${patientId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${backendToken}`,
+    },
+  });
+
+  if (!res.ok) return null;
+  return await res.json();
 };

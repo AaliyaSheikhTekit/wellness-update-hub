@@ -375,75 +375,85 @@ const DietTableView = ({
     });
   };
 
-  const saveWeeklyPlan = async () => {
-    setSaving(true);
-    try {
-      // build array of days with all their time slots
-      const groupedByDate = weekDays
-        .map((date) => {
-          const dateKey = getDateKey(date);
-          const dayPlan = mealPlans[dateKey];
-          if (!dayPlan) return null;
+const saveWeeklyPlan = async () => {
+  setSaving(true);
+  try {
+    // ✅ pick the active date or main plan date
+    const activeDate = weekDays[0]; // fallback to first day
 
-          // collect all time slots with diet items
-          const dietPlanItem = Object.entries(dayPlan)
-            .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
-            .map(([time, meal]) => ({
-              time,
-              dietItem: meal.itemIds,
-            }));
+    // ✅ collect all time slots and items for that date
+    const dateKey = getDateKey(activeDate);
+    const dayPlan = mealPlans[dateKey];
 
-          if (dietPlanItem.length === 0) return null;
-
-          // build one entry per date
-          return {
-            appointmentId: String(appointmentId),
-            consultationId: String(consultationId),
-            patientId,
-            date: new Date(date).toISOString(),
-            dietPlanItem,
-            restrictions: commonRestrictions,
-          };
-        })
-        .filter(Boolean); // remove nulls
-
-      if (groupedByDate.length === 0) {
-        toast({
-          title: "No Changes",
-          description: "No diet items to save.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!appointmentId || !consultationId) {
-        toast({
-          title: "Missing info",
-          description: "Appointment or consultation id is missing.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // send array of date-grouped objects to backend
-      await createWeeklyDietPlan(groupedByDate);
-
+    if (!dayPlan) {
       toast({
-        title: "Success",
-        description: `Successfully saved ${groupedByDate.length} daily plans!`,
-      });
-    } catch (error) {
-      console.error("Error saving diet plan:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to save diet plan.",
+        title: "No Plan Found",
+        description: "No meal plan data for the selected date.",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
+      return;
     }
-  };
+
+    // ✅ build dietPlanItem array
+    const dietPlanItem = Object.entries(dayPlan)
+      .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
+      .map(([time, meal]) => ({
+        time,
+        dietItem: meal.itemIds,
+      }));
+
+    if (dietPlanItem.length === 0) {
+      toast({
+        title: "No Changes",
+        description: "No diet items to save.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!appointmentId || !consultationId) {
+      toast({
+        title: "Missing info",
+        description: "Appointment or consultation id is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ build single plan object
+    const finalPayload = {
+      appointmentId: String(appointmentId),
+      consultationId: String(consultationId),
+      patientId,
+      date: new Date(activeDate).toISOString(),
+      dietPlanItem,
+      restrictions: commonRestrictions,
+    };
+
+    await createWeeklyDietPlan(finalPayload);
+
+    toast({
+      title: "Success",
+      description: "Diet plan saved successfully!",
+    });
+    // 🚀 Uncomment below after testing:
+    
+
+  } catch (error) {
+    console.error("❌ Error saving diet plan:", error);
+    toast({
+      title: "Error",
+      description:
+        error instanceof Error ? error.message : "Failed to save diet plan.",
+      variant: "destructive",
+    });
+  } finally {
+    setSaving(false);
+  }
+};
+
+
+
 
   const goToPreviousWeek = () =>
     setCurrentWeekStart((prev) => subWeeks(prev, 1));
