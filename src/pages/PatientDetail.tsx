@@ -192,22 +192,21 @@ const PatientDetail = () => {
   const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<
     string | null
   >(null);
- const [activeTab, setActiveTab] = useState("appointments");
+const [activeTab, setActiveTab] = useState("appointments");
   const tabsRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  const activeEl = tabsRef.current?.querySelector(
-    "[data-state='active']"
-  ) as HTMLElement | null;
-  if (activeEl && tabsRef.current) {
-    // Smoothly scroll to show the active tab in view
-    const container = tabsRef.current;
-    const left =
-      activeEl.offsetLeft -
-      (container.clientWidth - activeEl.clientWidth) / 2;
-    container.scrollTo({ left, behavior: "smooth" });
-  }
-}, [activeTab]);
+  useEffect(() => {
+    const activeEl = tabsRef.current?.querySelector(
+      "[data-state='active']"
+    ) as HTMLElement | null;
+    if (activeEl && tabsRef.current) {
+      const container = tabsRef.current;
+      const left =
+        activeEl.offsetLeft -
+        (container.clientWidth - activeEl.clientWidth) / 2;
+      container.scrollTo({ left, behavior: "smooth" });
+    }
+  }, [activeTab]);
   const initials = useMemo(() => {
     const name = patient?.fullName || "";
     return (
@@ -657,95 +656,90 @@ useEffect(() => {
       <div className="container mx-auto px-6 py-6">
         {/* Patient Header */}
         <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-6">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-indigo-50 text-indigo-700 text-2xl">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+      <CardContent className="p-3 sm:p-4 md:p-6">
+  <div className="flex flex-col lg:flex-row items-start justify-between gap-4 lg:gap-6">
+    {/* Left Section - Avatar and Main Info */}
+    <div className="flex items-start space-x-3 sm:space-x-4 md:space-x-6 w-full lg:w-auto">
+      <Avatar className="h-16 w-16 sm:h-18 sm:w-18 md:h-20 md:w-20 flex-shrink-0">
+        <AvatarFallback className="bg-indigo-50 text-indigo-700 text-xl sm:text-2xl">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
 
-                <div>
-                  <h2 className="text-3xl font-bold">{patient.fullName}</h2>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex items-center flex-wrap gap-4">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Age: {patient.age ?? "—"} • {patient.sex ?? "—"} •
-                          Blood: {patient.bloodType ?? "—"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {patient.contactNumber || "—"}
-                        </span>
-                      </div>
-                      {/* Conditionally render button */}
-                      {["Naturopathy Doctor", "SuperAdmin"].includes(
-                        localStorage.getItem("userName") || ""
-                      ) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            navigate(`/patient-form/${patient.id}`)
-                          }
-                          className="ml-2"
-                        >
-                          Give Consultancy
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {patient.address || "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right space-y-2">
-                <Badge variant="outline">
-                  {activeAppointment?.paymentMethod || "—"}
-                </Badge>
-                <div className="text-sm">
-                  <p>DOB: {fmtDate(patient.dateOfBirth)}</p>
-                  <p>
-                    Registered: {fmtDate(patient.formDate || patient.createdAt)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Father/Husband: {patient.fatherHusbandName || "—"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Occupation: {patient.occupation || "—"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Reference: {patient.reference || "—"}
-                  </p>
-                </div>
-              </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+          {patient.fullName}
+        </h2>
+        <div className="mt-2 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                Age: {patient.age ?? "—"} • {patient.sex ?? "—"} •
+                Blood: {patient.bloodType ?? "—"}
+              </span>
             </div>
-          </CardContent>
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                {patient.contactNumber || "—"}
+              </span>
+            </div>
+          </div>
+          
+          {/* Conditionally render button */}
+          {["Naturopathy Doctor", "SuperAdmin"].includes(
+            localStorage.getItem("userName") || ""
+          ) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                navigate(`/patient-form/${patient.id}`)
+              }
+              className="w-full sm:w-auto text-xs sm:text-sm"
+            >
+              Give Consultancy
+            </Button>
+          )}
+          
+          <p className="text-xs sm:text-sm text-muted-foreground break-words">
+            {patient.address || "—"}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Right Section - Additional Info */}
+    <div className="w-full lg:w-auto lg:text-right space-y-2 pt-2 lg:pt-0 border-t lg:border-t-0 lg:border-l lg:pl-6">
+      <Badge variant="outline" className="text-xs sm:text-sm">
+        {activeAppointment?.paymentMethod || "—"}
+      </Badge>
+      <div className="text-xs sm:text-sm space-y-1">
+        <p>DOB: {fmtDate(patient.dateOfBirth)}</p>
+        <p>
+          Registered: {fmtDate(patient.formDate || patient.createdAt)}
+        </p>
+        <p className="text-muted-foreground">
+          Father/Husband: {patient.fatherHusbandName || "—"}
+        </p>
+        <p className="text-muted-foreground">
+          Occupation: {patient.occupation || "—"}
+        </p>
+        <p className="text-muted-foreground">
+          Reference: {patient.reference || "—"}
+        </p>
+      </div>
+    </div>
+  </div>
+</CardContent>
         </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="appointments" className="space-y-6">
            <TabsList
       ref={tabsRef}
-      className="
-        flex items-center gap-3 sm:gap-4 overflow-x-auto
-        whitespace-nowrap
-        border-b border-gray-200 bg-white sticky top-0 z-10
-        px-2 sm:px-4 py-2
-        scrollbar-thin scrollbar-thumb-gray-400/60 scrollbar-track-transparent
-        shadow-sm
-        [&::-webkit-scrollbar]:h-2
-        [&::-webkit-scrollbar-thumb]:rounded-full
-        [&::-webkit-scrollbar-thumb]:bg-gray-400/60
-        [&::-webkit-scrollbar-track]:bg-transparent
-      "
+className="flex  overflow-x-auto w-full "
     >
       {[
         { value: "appointments", label: "Appointments" },
@@ -764,8 +758,8 @@ useEffect(() => {
           onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
           className="
             text-sm sm:text-base font-medium px-3 py-1.5 rounded-md
-            data-[state=active]:border-b-2 data-[state=active]:border-amber-500
-            data-[state=active]:text-amber-600
+            data-[state=active]:border-b-2 data-[state=active]:border-black-500
+            data-[state=active]:text-white 
             hover:text-amber-600 transition-colors
           "
         >
