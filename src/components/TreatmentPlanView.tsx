@@ -414,11 +414,14 @@ export const TreatmentUpdateDialog: React.FC<TreatmentUpdateDialogProps> = ({
   treatments,
   initial,
 }) => {
-  const [newTreatmentId, setNewTreatmentId] = useState("");
+  const [selectedTreatmentIds, setSelectedTreatmentIds] = useState<string[]>([]);
   const [currentTreatmentTitle, setCurrentTreatmentTitle] = useState("");
-  const [yogaCategories, setYogaCategories] = useState([]); // 🔹 New state for yoga list
-  const [selectedYoga, setSelectedYoga] = useState("");
-  // 🔹 Fetch yoga data on mount
+  const [yogaCategories, setYogaCategories] = useState<any[]>([]);
+  const [selectedAsanaIds, setSelectedAsanaIds] = useState<string[]>([]);
+  const [newDate, setNewDate] = useState("");
+  const [newTimeSlot, setNewTimeSlot] = useState("");
+
+  // 🔹 Fetch Yoga Categories
   useEffect(() => {
     const fetchYoga = async () => {
       try {
@@ -430,160 +433,171 @@ export const TreatmentUpdateDialog: React.FC<TreatmentUpdateDialogProps> = ({
     };
     fetchYoga();
   }, []);
-  // 🔹 Find current treatment info
+
+  // 🔹 Prefill current treatment info
   useEffect(() => {
     if (!open || !patient?.treatmentPlan) return;
 
-    const assign = patient.treatmentPlan
-      .flatMap((plan) => plan.treatmentAssign)
-      .find((a) => a.id === initial.treatmentAssignId);
+    const plan = patient.treatmentPlan.find(
+      (p) => p.id === initial.treatmentPlanId
+    );
+    const assign = plan?.treatmentAssign.find(
+      (a) => a.id === initial.treatmentAssignId
+    );
 
-    if (assign) {
-      setCurrentTreatmentTitle(assign.treatment.title);
+    if (assign) setCurrentTreatmentTitle(assign.treatment?.title || "");
+    if (plan) {
+      setNewDate(plan.date ? plan.date.split("T")[0] : "");
+      setNewTimeSlot(plan.timeSlot || "");
+      setSelectedTreatmentIds(
+        plan.treatmentAssign.map((t: any) => t.treatment?.id).filter(Boolean)
+      );
+      setSelectedAsanaIds(plan.asanas?.map((a: any) => (typeof a === "string" ? a : a.id)) || []);
     }
   }, [open, patient, initial]);
+
+  const toggleTreatment = (id: string) => {
+    setSelectedTreatmentIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAsana = (id: string) => {
+    setSelectedAsanaIds((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Update Treatment</h3>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Update Treatment Plan</h3>
           <button
-            className="text-gray-500 hover:text-gray-700"
             onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
           >
             ✕
           </button>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-sm text-gray-700">
-            Current treatment:{" "}
-            <strong>{currentTreatmentTitle || "Unknown"}</strong>
-          </p>
+        <p className="text-sm text-gray-700">
+          Current Treatment: <strong>{currentTreatmentTitle || "Unknown"}</strong>
+        </p>
+
+        {/* Date & Time */}
+        <div className="grid grid-cols-2 gap-4">
+          <label className="text-sm">
+            Date
+            <input
+              type="date"
+              className="mt-1 w-full border rounded-lg p-2"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+            />
+          </label>
 
           <label className="text-sm">
-            New Treatment
-            <select
+            Time Slot
+            <input
+              type="text"
+              placeholder="07:00PM - 08:00PM"
               className="mt-1 w-full border rounded-lg p-2"
-              value={newTreatmentId}
-              onChange={(e) => setNewTreatmentId(e.target.value)}
-            >
-              <option value="">— Select New Treatment —</option>
-              {treatments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title} — {t.subTitle}
-                </option>
-              ))}
-            </select>
-          </label>
-          {/* 🔹 Yoga Dropdown */}
-          <label className="text-sm">
-            Yoga / Asana Plan
-            <select
-              className="mt-1 w-full border rounded-lg p-2"
-              value={selectedYoga}
-              onChange={(e) => setSelectedYoga(e.target.value)}
-            >
-              <option value="">— Select Yoga Plan —</option>
-              {yogaCategories.map((cat) => (
-                <optgroup key={cat.id} label={cat.name}>
-                  {cat.subCategories.flatMap((sub) =>
-                    sub.items.length > 0 ? (
-                      sub.items.map((item) => (
-                        <option
-                          key={item.id}
-                          value={`${cat.name} › ${sub.name} › ${item.name}`}
-                        >
-                          {sub.name} › {item.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option key={sub.id} value={`${cat.name} › ${sub.name}`}>
-                        {sub.name}
-                      </option>
-                    )
-                  )}
-                </optgroup>
-              ))}
-            </select>
+              value={newTimeSlot}
+              onChange={(e) => setNewTimeSlot(e.target.value)}
+            />
           </label>
         </div>
 
-        <div className="flex justify-end gap-2 mt-5">
-          <button className="px-3 py-2 rounded-lg border" onClick={onClose}>
+        {/* Treatments */}
+        <div>
+          <label className="text-sm font-medium">Select Treatments</label>
+          <div className="border rounded-lg p-2 max-h-40 overflow-y-auto mt-2">
+            {treatments.map((t) => (
+              <label key={t.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedTreatmentIds.includes(t.id)}
+                  onChange={() => toggleTreatment(t.id)}
+                />
+                {t.title} — {t.subTitle}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Yoga / Asanas */}
+        <div>
+          <label className="text-sm font-medium">Select Asanas</label>
+          <div className="border rounded-lg p-2 max-h-40 overflow-y-auto mt-2">
+            {yogaCategories.map((cat) => (
+              <div key={cat.id}>
+                <p className="font-semibold text-gray-700 mt-2">{cat.name}</p>
+                {cat.subCategories.map((sub) => (
+                  <div key={sub.id} className="ml-3">
+                    <p className="text-gray-600 font-medium mt-1">{sub.name}</p>
+                    {sub.items.map((item: any) => (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-2 text-sm ml-4"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAsanaIds.includes(item.id)}
+                          onChange={() => toggleAsana(item.id)}
+                        />
+                        {item.name}
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 pt-4">
+          <button
+            onClick={onClose}
+            className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+          >
             Cancel
           </button>
 
           <button
-            className="px-3 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-300"
-            disabled={!newTreatmentId && !selectedYoga}
+            disabled={!newDate || !newTimeSlot || selectedTreatmentIds.length === 0}
             onClick={async () => {
               try {
-                // ✅ 1. Update local structure
-                const updatedPlans = patient.treatmentPlan.map((plan) =>
-                  plan.id === initial.treatmentPlanId
-                    ? {
-                        ...plan,
-                        yogaPlan: selectedYoga, // update yoga
-                        treatmentAssign: plan.treatmentAssign.map((ta) =>
-                          ta.id === initial.treatmentAssignId
-                            ? {
-                                ...ta,
-                                treatment: treatments.find(
-                                  (t) => t.id === newTreatmentId
-                                ),
-                              }
-                            : ta
-                        ),
-                      }
-                    : plan
-                );
-
-                // ✅ 2. Build payload for backend
-                const treatmentPlanData = updatedPlans.map((plan) => ({
-                  id: plan.id,
-                  date: plan.date,
-                  timeSlot: plan.timeSlot,
-                  yogaPlan: plan.yogaPlan || "",
-                  asanas: plan.asanas?.map((a) =>
-                    typeof a === "string" ? a : a.id
-                  ),
-                  treatmentAssign: plan.treatmentAssign.map((ta) => ({
-                    id: ta.id,
-                    treatment: ta.treatment?.id,
-                    therapist: ta.therapist?.id,
-                  })),
-                }));
-
                 const payload = {
-                  treatmentPlan:
-                    treatmentPlanData.length > 0
-                      ? treatmentPlanData
-                      : undefined,
+                  timeSlot: newTimeSlot,
+                  treatments: selectedTreatmentIds,
+                  asanas: selectedAsanaIds,
+                  date: new Date(newDate).toISOString(),
                 };
 
-                console.log("🧘 Updating consultation with payload:", payload);
+                console.log("🧘 Payload for update:", payload);
 
-                // ✅ 3. Send update request
                 await updatePatient(patient.id, payload);
-onSave();
-              
+                onSave();
                 onClose();
               } catch (err) {
                 console.error("Error updating treatment:", err);
               }
             }}
+            className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-300"
           >
-            Save
+            Save Changes
           </button>
         </div>
       </div>
     </div>
   );
 };
+
 
 export const SessionEditor: React.FC<SessionEditorProps> = ({
   open,

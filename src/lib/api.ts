@@ -896,7 +896,7 @@ export const getFeedbackByPatientId = async (patientId: string) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token.");
 
-  const res = await fetch(`${API_BASE_URL}/feedback/get/${patientId}`, {
+  const res = await fetch(`${API_BASE_URL}/feedback/get/patient/${patientId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
