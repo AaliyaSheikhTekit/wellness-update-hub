@@ -55,6 +55,7 @@ import { Scissors, Users, FileText } from "lucide-react";
 
 import {
   generatePDF,
+  generatetInvoicePDF,
   generatetPrescriptionPDF,
   getMedicines,
   getPatient,
@@ -67,8 +68,10 @@ import DietChartView from "@/components/Dietician/DietChartView";
 import ConsultationHistory from "@/components/ConsultationHistory";
 import TreatmentSchedulerOneFile from "@/components/TreatmentPlanView";
 import PrescriptionDialog from "./Prescriptions";
+import FeedbackForm from "@/components/FeedbackForm";
 
 type ServerPatient = {
+  invoice: any[];
   id: string;
   fullName: string;
   age?: number | string;
@@ -314,6 +317,9 @@ const [activeTab, setActiveTab] = useState("appointments");
     heightCm: "",
     bmi: "",
   });
+
+  // Add this: derive invoices from patient if available, otherwise empty array
+  const invoices = useMemo(() => patient?.invoice ?? [], [patient]);
   // --- Latest appointment (by date/createdAt) ---
   const latestAppointment = useMemo(() => {
     const list = patient?.appointment ?? [];
@@ -751,6 +757,8 @@ className="flex  overflow-x-auto w-full "
         { value: "dietchart", label: "Diet Chart" },
         { value: "treatmentplan", label: "Treatment Plan" },
         { value: "consultations", label: "Consultations" },
+        { value: "invoices", label: "Invoices" },
+        { value: "feedback", label: "Feedback Form" },
       ].map((tab) => (
         <TabsTrigger
           key={tab.value}
@@ -1724,6 +1732,99 @@ className="flex  overflow-x-auto w-full "
               embedded={true}
             />
           </TabsContent>
+          <TabsContent value="invoices">
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center justify-between">
+        Invoices
+        <Badge variant="outline" className="text-sm">
+          {invoices.length} Total
+        </Badge>
+      </CardTitle>
+    </CardHeader>
+
+    <CardContent className="space-y-3">
+      {invoices.length > 0 ? (
+        invoices.map((invoice) => (
+          <div
+            key={invoice.id}
+            className="p-4 border rounded-lg hover:bg-gray-50 transition-all"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-semibold text-lg">Invoice #{invoice.id.slice(0, 6)}</p>
+                <p className="text-sm text-gray-600">
+                  Date: {new Date(invoice.invoiceDate).toLocaleDateString()} <br />
+                  Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Status: <Badge>{invoice.status}</Badge>
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="font-bold text-xl">
+                  ₹{Number(invoice.finalTotal).toLocaleString()}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const blob = await generatetInvoicePDF(invoice.id);
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `invoice_${invoice.id}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast({ title: "Invoice PDF downloaded!" });
+                    } catch (err) {
+                      console.error("Invoice PDF error:", err);
+                      toast({ title: "Error generating PDF", description: String(err) });
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" /> PDF
+                </Button>
+              </div>
+            </div>
+
+            {/* Invoice items */}
+            <div className="mt-3 border-t pt-3 space-y-1 text-sm text-gray-700">
+              {invoice.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between border-b border-gray-100 py-1"
+                >
+                  <span>{item.name}</span>
+                  <span>
+                    ₹{item.rate} × {item.qty} = ₹{item.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-right mt-2 text-sm">
+              <span className="text-gray-600">Subtotal: ₹{invoice.subTotal}</span>
+              <br />
+              <span className="text-gray-600">
+                Tax: ₹{invoice.tax} | Discount: {invoice.discount}%
+              </span>
+            </div>
+          </div>
+        ))
+      ) : (
+        <p className="text-sm text-gray-500">No invoices found for this patient.</p>
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
+<TabsContent value="feedback">
+  <FeedbackForm patient={patient} />
+</TabsContent>
+
         </Tabs>
       </div>
     </div>

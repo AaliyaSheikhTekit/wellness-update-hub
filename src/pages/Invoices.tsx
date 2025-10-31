@@ -44,7 +44,8 @@ import {
   createInvoice,
   getAllInvoices,
   getInvoiceById,
-  updateInvoice, // (payload) -> {id: string, ...}
+  updateInvoice,
+  getPatient, // (payload) -> {id: string, ...}
   // updateInvoice,             // (id, payload) -> {id: string, ...}
   // recordInvoicePayment,      // (id, {amount, method, note}) -> {...}
 } from "@/lib/api";
@@ -61,6 +62,9 @@ import {
 type DiscountType = "percentage" | "fixed";
 
 type ServiceItem = {
+  validity: any;
+  duration: string;
+  category: any;
   id: string;
   title: string;
   subTitle?: string;
@@ -84,6 +88,13 @@ type Patient = {
   fullName: string;
   contactNumber?: string;
   email?: string;
+  treatmentPlan?: Array<{
+    serviceId?: string;
+    name: string;
+    rate: number;
+    amount: number;
+    selected?: boolean;
+  }>;
 };
 
 type ApiInvoice = {
@@ -150,7 +161,6 @@ const toINR = (n: number) =>
 /* ---------------- Component ---------------- */
 const Invoices = () => {
   const { toast } = useToast();
-
 
   // Left panel lists
   const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -274,6 +284,51 @@ const Invoices = () => {
     };
     loadPatients();
   }, [patientSearch, toast]);
+useEffect(() => {
+  const loadPatientPlan = async () => {
+    if (!selectedPatient?.id) return;
+
+    try {
+      const res = await getPatient(selectedPatient.id);
+      const data = res?.data || res;
+
+      // 🧠 Get the treatmentPlan array from first object
+      const plan = data?.[0]?.treatmentPlan || [];
+      console.log("Fetched patient treatmentPlan:", plan);
+
+      // 🧩 Flatten all treatmentAssign arrays
+      const allAssignments = plan.flatMap((p: any) => p.treatmentAssign || []);
+
+      console.log("Extracted allAssignments:", allAssignments);
+
+      if (allAssignments.length > 0) {
+        const mapped = allAssignments.map((assign: any) => {
+          const t = assign?.treatment || {};
+          return {
+            serviceId: t.id,
+            name: t.title || "Treatment",
+            quantity: 1,
+            rate: Number(t.price || 0),
+            amount: Number(t.price || 0),
+          };
+        });
+
+        console.log("Mapped treatment lines:", mapped);
+        setLines(mapped);
+      } else {
+        setLines([]);
+      }
+    } catch (error) {
+      console.error("Error fetching patient plan:", error);
+    }
+  };
+
+  loadPatientPlan();
+}, [selectedPatient]);
+
+
+
+
 
   /* ---------------- Fetch: services/treatments catalog ---------------- */
   useEffect(() => {
@@ -281,27 +336,27 @@ const Invoices = () => {
       setServicesLoading(true);
       try {
         const res = await getTreatmentAll();
-        // normalize a price/rate
-        const data: ServiceItem[] = (res?.data ?? []).map((s: any) => ({
-          id: s.id,
-          title: s.title || s.name || "Service",
-          subTitle: s.subTitle,
-          price:
-            typeof s.price === "number"
-              ? s.price
-              : typeof s.rate === "number"
-              ? s.rate
-              : 0,
-          rate:
-            typeof s.rate === "number"
-              ? s.rate
-              : typeof s.price === "number"
-              ? s.price
-              : 0,
-        }));
+
+        // ✅ normalize price, rate, and include category info
+        const data: ServiceItem[] = (res?.data ?? []).map((s: any) => {
+          const parsedPrice = Number(s.price) || Number(s.rate) || 0;
+          return {
+            id: s.id,
+            title: s.title || s.name || "Service",
+            subTitle: s.subTitle || "",
+            category: s.category?.name || "Uncategorized",
+            treatment: s.treatment || "",
+            duration: s.duration || "",
+            validity: s.validity || "",
+            days: s.days || "",
+            price: parsedPrice,
+            rate: parsedPrice,
+          };
+        });
+
         setServices(data);
       } catch (e) {
-        console.error(e);
+        console.error("Error loading services:", e);
       } finally {
         setServicesLoading(false);
       }
@@ -396,18 +451,19 @@ const Invoices = () => {
     else setSelectedInvoice(null);
   };
 
-  const addLineFromService = (svc: ServiceItem) => {
-    setLines((prev) => [
-      ...prev,
-      {
-        serviceId: svc.id,
-        name: svc.title,
-        quantity: 1,
-        rate: svc.rate ?? svc.price ?? 0,
-        amount: svc.rate ?? svc.price ?? 0,
-      },
-    ]);
-  };
+const addLineFromService = (s: any) => {
+  const rate = Number(s.rate ?? s.price ?? 0);
+  setLines((prev) => [
+    ...prev,
+    {
+      serviceId: s.id,
+      name: s.title,
+      quantity: 1,
+      rate,
+      amount: rate,
+    },
+  ]);
+};
 
   const addCustomLine = () => {
     setLines((prev) => [
@@ -561,7 +617,9 @@ const Invoices = () => {
   );
 
   const catalogFiltered = services.filter((s) =>
-    (s.title?.toLowerCase() ?? "").includes(serviceQuery.toLowerCase())
+    [s.title, s.category]
+      .filter(Boolean)
+      .some((field) => field.toLowerCase().includes(serviceQuery.toLowerCase()))
   );
   const downloadInvoicePDF = async (invoiceId: string) => {
     try {
@@ -937,6 +995,59 @@ const Invoices = () => {
             </div>
           </div>
         </div>
+        {/* 🧘 Auto-fetched Treatment Plan from Consultation */}
+        {selectedPatient?.treatmentPlan?.length > 0 && (
+          <div className="border border-green-200 rounded-md bg-green-50 p-4 space-y-2">
+            <h4 className="font-semibold text-green-800 mb-2">
+              Treatment Plan from Consultation
+            </h4>
+            {selectedPatient.treatmentPlan.map((t: any, i: number) => (
+              <div
+                key={i}
+                className="flex justify-between items-center py-1 border-b border-green-100 last:border-0 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={t.selected}
+                    onChange={(e) => {
+                      setSelectedPatient((prev: any) => ({
+                        ...prev,
+                        treatmentPlan: prev.treatmentPlan.map(
+                          (tp: any, j: number) =>
+                            j === i ? { ...tp, selected: e.target.checked } : tp
+                        ),
+                      }));
+                    }}
+                  />
+                  <span>{t.name}</span>
+                </div>
+                <span className="font-medium">₹{t.rate}</span>
+              </div>
+            ))}
+
+            <Button
+              className="mt-3 w-full bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                const selected = selectedPatient.treatmentPlan.filter(
+                  (tp: any) => tp.selected
+                );
+                setLines((prev) => [
+                  ...prev,
+                  ...selected.map((tp: any) => ({
+                    serviceId: tp.serviceId,
+                    name: tp.name,
+                    quantity: 1,
+                    rate: tp.rate,
+                    amount: tp.amount,
+                  })),
+                ]);
+              }}
+            >
+              ➕ Add Selected to Invoice
+            </Button>
+          </div>
+        )}
 
         {/* Items */}
         <div className="space-y-3">
@@ -966,20 +1077,31 @@ const Invoices = () => {
                       ) : catalogFiltered.length ? (
                         catalogFiltered.map((s) => (
                           <div
-                            key={s.id}
-                            className="p-2 hover:bg-muted/50 cursor-pointer border-b"
-                            onClick={() => addLineFromService(s)}
-                          >
-                            <div className="font-medium">{s.title}</div>
-                            {s.subTitle && (
-                              <div className="text-xs text-muted-foreground">
-                                {s.subTitle}
-                              </div>
-                            )}
-                            <div className="text-xs mt-1">
-                              Default Rate: ₹{toINR(s.rate ?? s.price ?? 0)}
-                            </div>
-                          </div>
+    key={s.id}
+    className="p-3 hover:bg-muted/50 cursor-pointer border-b text-sm"
+    onClick={() => addLineFromService(s)}
+  >
+    <div className="flex justify-between items-center">
+      <div>
+        <div className="font-medium text-foreground">{s.title}</div>
+        {s.subTitle && (
+          <div className="text-xs text-muted-foreground">{s.subTitle}</div>
+        )}
+        <div className="text-xs text-gray-600 mt-1">
+          🕒 {s.duration || "N/A"}{" "}
+          {s.validity && <> | ⏳ {s.validity}</>}
+        </div>
+        {s.category && (
+          <div className="text-xs text-amber-700 font-semibold mt-1">
+            🏷️ {s.category}
+          </div>
+        )}
+      </div>
+      <div className="font-bold text-green-700 text-right">
+        ₹{toINR(s.price ?? 0)}
+      </div>
+    </div>
+  </div>
                         ))
                       ) : (
                         <div className="p-3 text-sm text-muted-foreground">

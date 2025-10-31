@@ -10,9 +10,72 @@ import {
   getPatientById,
   createPatientConsult,
   getBackendToken,
+  getAllYoga,
 } from "@/lib/api";
 import SignatureCanvas from "react-signature-canvas";
+import SignatureStep from "./ConsentStep";
+import { Checkbox } from "./ui/checkbox";
 const API_BASE_URL = "https://api.ikshanaturopathy.com/v1";
+interface TreatmentItem {
+  title: string;
+  timeSlot: string;
+  date: string;
+  duration: string;
+}
+
+interface DoctorData {
+  pastMedicalHistory: {
+    chronicIllnesses: string;
+    surgeries: string;
+    allergies: string;
+    familyHistory: string;
+  };
+  medicineChart: {
+    medicineName: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    remarks: string;
+  }[];
+  generalPhysicalExam: {
+    pallor: string;
+    cyanosis: string;
+    icterus: string;
+    lymphadinopathy: string;
+    oedema: string;
+    clubbing: string;
+    eye: string;
+    ear: string;
+    nostrils: string;
+    lips: string;
+    hair: string;
+    head: string;
+    throat: string;
+    teeth: string;
+    mouth: string;
+    genitals: string;
+  };
+  systemicExam: {
+    respiratory: string;
+    cardiovascular: string;
+    gastrointestinal: string;
+    nervous: string;
+    musculoskeletal: string;
+  };
+  investigations: string;
+  investigationsUrl: string;
+  provisionalDiagnosis: string;
+  provisionalDiagnosisUrl: string;
+  doctorName: string;
+  signature: string;
+
+  // 👇 Here’s the fix: allow partial treatment items
+  treatment: {
+    treatmentPlan: Partial<TreatmentItem>;
+    dietChart: Partial<TreatmentItem>;
+    yogaChart: Partial<TreatmentItem>;
+  };
+}
 
 // API function for updating consultation
 const updatePatientConsult = async (consultationId: string, payload: any) => {
@@ -55,33 +118,13 @@ export default function DoctorForm() {
   const navigate = useNavigate();
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
-  
 
-  const sigCanvas = useRef<SignatureCanvas | null>(null);
- const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
-  
-
-  // 🧹 Clear signature
-  const clear = () => {
-    sigCanvas.current?.clear();
-    setSignature("");
-  };
-
-  // 💾 Save as Base64
-  const save = () => {
-    if (!sigCanvas.current?.isEmpty()) {
-      const base64 = sigCanvas.current
-        .getTrimmedCanvas()
-        .toDataURL("image/png")
-        .replace(/^data:image\/png;base64,/, ""); // ✅ Only pure Base64 (optional)
-      setSignature(base64);
-
-      console.log("✅ Signature Base64:", base64);
-
-    
-    } else {
-      alert("Please sign before saving.");
-    }
+  const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
+const [catOpen, setCatOpen] =useState(false);
+  const handleSignatureSave = (dataUrl: string) => {
+    console.log("✅ Signature captured:", dataUrl);
+    setSignature(dataUrl);
+    alert("Signature saved successfully!");
   };
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -97,7 +140,20 @@ export default function DoctorForm() {
   const [diagnosisFile, setDiagnosisFile] = useState<File | null>(null);
 
   console.log("Patient ID from params:", patient, id);
+  const [yogaCategories, setYogaCategories] = useState<any[]>([]);
+  const [selectedAsanas, setSelectedAsanas] = useState<string[]>([]);
 
+  useEffect(() => {
+    const fetchYoga = async () => {
+      try {
+        const res = await getAllYoga();
+        setYogaCategories(res.data || []);
+      } catch (err) {
+        console.error("Error fetching yoga data:", err);
+      }
+    };
+    fetchYoga();
+  }, []);
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -120,8 +176,7 @@ export default function DoctorForm() {
     fetchPatient();
   }, [id]);
 
-
-  const [doctorData, setDoctorData] = useState({
+  const [doctorData, setDoctorData] = useState<DoctorData>({
     pastMedicalHistory: {
       chronicIllnesses: "",
       surgeries: "",
@@ -164,19 +219,16 @@ export default function DoctorForm() {
     investigationsUrl: "",
     provisionalDiagnosis: "",
     provisionalDiagnosisUrl: "",
-    treatmentPlan: "",
-    dietChart: "",
-    yogaChart: "",
     doctorName: "",
     signature: "",
-      treatment: {
-        treatmentPlan:"",
-        dietChart: "",
-        yogaChart: ""
+    treatment: {
+      treatmentPlan: { title: "", timeSlot: "", date: "", duration: "" },
+      dietChart: { title: "", timeSlot: "", date: "", duration: "" },
+      yogaChart: { title: "", timeSlot: "", date: "", duration: "" },
     },
   });
 
-    const [medicineChart, setMedicineChart] = useState([
+  const [medicineChart, setMedicineChart] = useState([
     { medicineName: "", dosage: "", frequency: "", remarks: "" },
   ]);
 
@@ -187,14 +239,16 @@ export default function DoctorForm() {
   };
 
   const addRow = () => {
-    setMedicineChart([...medicineChart, { medicineName: "", dosage: "", frequency: "", remarks: "" }]);
+    setMedicineChart([
+      ...medicineChart,
+      { medicineName: "", dosage: "", frequency: "", remarks: "" },
+    ]);
   };
 
   const deleteRow = (index) => {
     const updatedChart = medicineChart.filter((_, i) => i !== index);
     setMedicineChart(updatedChart);
   };
-
 
   const handleNext = async () => {
     // If completing step 1, create the consultation
@@ -209,16 +263,16 @@ export default function DoctorForm() {
 
     if (step < 7) setStep(step + 1);
   };
-const latestAppointment = Array.isArray(patient?.appointment) && patient.appointment.length > 0
-  ? patient.appointment.reduce((latest, current) => {
-      const latestDate = new Date(latest.date);
-      const currentDate = new Date(current.date);
-      return currentDate > latestDate ? current : latest;
-    })
-  : null;
+  const latestAppointment =
+    Array.isArray(patient?.appointment) && patient.appointment.length > 0
+      ? patient.appointment.reduce((latest, current) => {
+          const latestDate = new Date(latest.date);
+          const currentDate = new Date(current.date);
+          return currentDate > latestDate ? current : latest;
+        })
+      : null;
 
-const latestAppointmentId = latestAppointment?.id ?? null;
-
+  const latestAppointmentId = latestAppointment?.id ?? null;
 
   // Step 1: Create initial consultation
   const handleStep1Submit = async () => {
@@ -363,9 +417,26 @@ const latestAppointmentId = latestAppointment?.id ?? null;
           provisionalDiagnosisUrl: doctorData.provisionalDiagnosisUrl,
         },
         treatment: {
-          treatmentPlan: doctorData.treatmentPlan,
-          dietChart: doctorData.dietChart,
-          yogaChart: doctorData.yogaChart,
+          treatmentPlan: {
+            title: doctorData.treatment?.treatmentPlan?.title || "",
+            timeSlot: doctorData.treatment?.treatmentPlan?.timeSlot || "",
+            date: doctorData.treatment?.treatmentPlan?.date || "",
+            duration: doctorData.treatment?.treatmentPlan?.duration || "",
+          },
+          dietChart: {
+            title: doctorData.treatment?.dietChart?.title || "",
+            timeSlot: doctorData.treatment?.dietChart?.timeSlot || "",
+            date: doctorData.treatment?.dietChart?.date || "",
+            duration: doctorData.treatment?.dietChart?.duration || "",
+          },
+          yogaChart: {
+            title:
+              doctorData.treatment?.yogaChart?.title ||
+              selectedAsanas.join(", "),
+            timeSlot: doctorData.treatment?.yogaChart?.timeSlot || "",
+            date: doctorData.treatment?.yogaChart?.date || "",
+            duration: doctorData.treatment?.yogaChart?.duration || "",
+          },
         },
         doctorName: doctorData.doctorName,
         signature: signature,
@@ -395,6 +466,29 @@ const latestAppointmentId = latestAppointment?.id ?? null;
       setSubmitting(false);
     }
   };
+  useEffect(() => {
+    // Update yogaChart title based on selected asanas
+    const yogaNames = yogaCategories
+      .flatMap((cat) =>
+        cat.subCategories.flatMap((sub) =>
+          sub.items
+            .filter((item) => selectedAsanas.includes(item.id))
+            .map((item) => item.name)
+        )
+      )
+      .join(", ");
+
+    setDoctorData((prev) => ({
+      ...prev,
+      treatment: {
+        ...prev.treatment,
+        yogaChart: {
+          ...prev.treatment.yogaChart,
+          title: yogaNames,
+        },
+      },
+    }));
+  }, [selectedAsanas, yogaCategories]);
 
   if (loading) {
     return (
@@ -656,77 +750,118 @@ const latestAppointmentId = latestAppointment?.id ?? null;
 
               {/* Step 2: Medicine Chart */}
               {step === 2 && (
-            <div className="space-y-4">
-      <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
-        Medicine History Chart
-      </h3>
+                <div className="space-y-4">
+                  <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
+                    Medicine History Chart
+                  </h3>
 
-      <div className="flex justify-end gap-2 mb-2">
-        <Button onClick={addRow} className="bg-green-500 hover:bg-green-600 text-white">
-          + Add Row
-        </Button>
-      </div>
+                  <div className="flex justify-end gap-2 mb-2">
+                    <Button
+                      onClick={addRow}
+                      className="bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      + Add Row
+                    </Button>
+                  </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-amber-100">
-              <th className="border border-amber-300 p-2 text-left">Sr. No.</th>
-              <th className="border border-amber-300 p-2 text-left">Medicine Name (Optional)</th>
-              <th className="border border-amber-300 p-2 text-left">Dosage (mg/ml)</th>
-              <th className="border border-amber-300 p-2 text-left">Frequency</th>
-              <th className="border border-amber-300 p-2 text-left">Remarks</th>
-              <th className="border border-amber-300 p-2 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {medicineChart.map((med, index) => (
-              <tr key={index}>
-                <td className="border border-amber-200 p-2 font-semibold">{index + 1}</td>
-                <td className="border border-amber-200 p-1">
-                  <Input
-                    placeholder="Medicine Name"
-                    value={med.medicineName}
-                    onChange={(e) => handleMedicineChange(index, "medicineName", e.target.value)}
-                  />
-                </td>
-                <td className="border border-amber-200 p-1">
-                  <Input
-                    placeholder="Dosage"
-                    value={med.dosage}
-                    onChange={(e) => handleMedicineChange(index, "dosage", e.target.value)}
-                  />
-                </td>
-                <td className="border border-amber-200 p-1">
-                  <Input
-                    placeholder="Frequency"
-                    value={med.frequency}
-                    onChange={(e) => handleMedicineChange(index, "frequency", e.target.value)}
-                  />
-                </td>
-                <td className="border border-amber-200 p-1">
-                  <Input
-                    placeholder="Remarks"
-                    value={med.remarks}
-                    onChange={(e) => handleMedicineChange(index, "remarks", e.target.value)}
-                  />
-                </td>
-                <td className="border border-amber-200 p-2 text-center">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteRow(index)}
-                    className="bg-red-500 hover:bg-red-600 text-white"
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-amber-100">
+                          <th className="border border-amber-300 p-2 text-left">
+                            Sr. No.
+                          </th>
+                          <th className="border border-amber-300 p-2 text-left">
+                            Medicine Name (Optional)
+                          </th>
+                          <th className="border border-amber-300 p-2 text-left">
+                            Dosage (mg/ml)
+                          </th>
+                          <th className="border border-amber-300 p-2 text-left">
+                            Frequency
+                          </th>
+                          <th className="border border-amber-300 p-2 text-left">
+                            Remarks
+                          </th>
+                          <th className="border border-amber-300 p-2 text-center">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {medicineChart.map((med, index) => (
+                          <tr key={index}>
+                            <td className="border border-amber-200 p-2 font-semibold">
+                              {index + 1}
+                            </td>
+                            <td className="border border-amber-200 p-1">
+                              <Input
+                                placeholder="Medicine Name"
+                                value={med.medicineName}
+                                onChange={(e) =>
+                                  handleMedicineChange(
+                                    index,
+                                    "medicineName",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border border-amber-200 p-1">
+                              <Input
+                                placeholder="Dosage"
+                                value={med.dosage}
+                                onChange={(e) =>
+                                  handleMedicineChange(
+                                    index,
+                                    "dosage",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border border-amber-200 p-1">
+                              <Input
+                                placeholder="Frequency"
+                                value={med.frequency}
+                                onChange={(e) =>
+                                  handleMedicineChange(
+                                    index,
+                                    "frequency",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border border-amber-200 p-1">
+                              <Input
+                                placeholder="Remarks"
+                                value={med.remarks}
+                                onChange={(e) =>
+                                  handleMedicineChange(
+                                    index,
+                                    "remarks",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border border-amber-200 p-2 text-center">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteRow(index)}
+                                className="bg-red-500 hover:bg-red-600 text-white"
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
 
               {/* Step 3: General Physical Examination */}
@@ -951,61 +1086,473 @@ const latestAppointmentId = latestAppointment?.id ?? null;
                     Treatment Plan
                   </h3>
                   <div className="space-y-4">
-                    <div>
+                    {/* 🔹 Yoga / Lifestyle Recommendations */}
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-blue-800 text-lg">
+                        🧘 Yoga / Lifestyle Recommendations
+                      </h3>
                       <label className="font-semibold text-gray-700 block mb-2">
-                        Yoga Chart
+                        Title
                       </label>
-                      <Textarea
-                        placeholder="Enter yoga recommendations..."
-                        value={doctorData.treatment.treatmentPlan}
+                      {/* Yoga Chart Title */}
+                      <Input
+                        placeholder="e.g. Morning Yoga Routine, Relaxation Plan..."
+                        value={doctorData.treatment?.yogaChart?.title || ""}
                         onChange={(e) =>
                           setDoctorData({
                             ...doctorData,
-                            treatmentPlan: e.target.value,
+                            treatment: {
+                              ...doctorData.treatment,
+                              yogaChart: {
+                                ...(doctorData.treatment?.yogaChart || {}),
+                                title: e.target.value,
+                              },
+                            },
                           })
                         }
-                        rows={4}
                       />
-                    </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Treatment Plan
-                      </label>
 
-                      <TreatmentPlanTable
-                        value={treatmentPlanData}
-                        onChange={setTreatmentPlanData}
-                        includeYoga={true} // or a state you already have
-                      />
+                      {/* Yoga Chart Fields */}
+                     <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 md:p-6 shadow-sm">
+  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
+    {/* Date */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Date
+      </label>
+      <Input
+        type="date"
+        value={doctorData.treatment?.yogaChart?.date || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              yogaChart: {
+                ...(doctorData.treatment?.yogaChart || {}),
+                date: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+      />
+    </div>
+
+    {/* Time Slot */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Time Slot
+      </label>
+      <Input
+        placeholder="e.g. Morning / Evening"
+        value={doctorData.treatment?.yogaChart?.timeSlot || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              yogaChart: {
+                ...(doctorData.treatment?.yogaChart || {}),
+                timeSlot: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+      />
+    </div>
+
+    {/* Duration */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Duration
+      </label>
+      <Input
+        placeholder="e.g. 30 mins daily"
+        value={doctorData.treatment?.yogaChart?.duration || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              yogaChart: {
+                ...(doctorData.treatment?.yogaChart || {}),
+                duration: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+      />
+    </div>
+  </div>
+</div>
+
+
+                      {/* Yoga Category List */}
+                      <div className="mt-6 border-t border-blue-200 pt-4">
+                        <h4 className="text-sm font-semibold text-blue-700 mb-3">
+                          Select Recommended Yoga Asanas
+                        </h4>
+
+                        {yogaCategories.length === 0 ? (
+                          <p className="text-gray-500 text-sm italic">
+                            Loading yoga list...
+                          </p>
+                        ) : (
+                          <div className="border border-gray-200 rounded-lg overflow-hidden divide-y">
+                            {yogaCategories.map((cat) => {
+                              
+                              return (
+                                <div key={cat.id}>
+                                  {/* Category Header */}
+                                  <div
+                                    className="bg-blue-50 px-3 py-2 text-sm font-semibold text-gray-700 flex justify-between items-center cursor-pointer hover:bg-blue-100 transition"
+                                    onClick={() => setCatOpen(!catOpen)}
+                                  >
+                                    <span>{cat.name}</span>
+                                    <svg
+                                      className={`w-4 h-4 transition-transform ${
+                                        catOpen ? "rotate-180" : ""
+                                      }`}
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                  </div>
+
+                                  {/* Subcategories inside Category */}
+                                  {catOpen && (
+                                    <div className="bg-white">
+                                      {cat.subCategories.map((sub) => {
+                                        const [subOpen, setSubOpen] =
+                                          React.useState(false);
+                                        return (
+                                          <div
+                                            key={sub.id}
+                                            className="border-t border-gray-100"
+                                          >
+                                            {/* Subcategory Header */}
+                                            <div
+                                              className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
+                                              onClick={() =>
+                                                setSubOpen(!subOpen)
+                                              }
+                                            >
+                                              <span>{sub.name}</span>
+                                              <svg
+                                                className={`w-3.5 h-3.5 transition-transform ${
+                                                  subOpen ? "rotate-180" : ""
+                                                }`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M19 9l-7 7-7-7"
+                                                />
+                                              </svg>
+                                            </div>
+
+                                            {/* Items inside Subcategory */}
+                                            {subOpen && (
+                                              <div className="pl-5 divide-y divide-gray-100">
+                                                {sub.items.map((item) => {
+                                                  const yogaId = item.id;
+                                                  const checked =
+                                                    selectedAsanas.includes(
+                                                      yogaId
+                                                    );
+                                                  return (
+                                                    <div
+                                                      key={item.id}
+                                                      className={`p-3 text-sm flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition ${
+                                                        checked
+                                                          ? "bg-green-50"
+                                                          : ""
+                                                      }`}
+                                                      onClick={() => {
+                                                        setSelectedAsanas(
+                                                          (prev) =>
+                                                            checked
+                                                              ? prev.filter(
+                                                                  (a) =>
+                                                                    a !== yogaId
+                                                                )
+                                                              : [
+                                                                  ...prev,
+                                                                  yogaId,
+                                                                ]
+                                                        );
+                                                      }}
+                                                    >
+                                                      <Checkbox
+                                                        checked={checked}
+                                                      />
+                                                      <span>{item.name}</span>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Diet Chart
-                      </label>
-                      {patient && (
-                        <DietTableView
-                          patientId={patient.id}
-                          patientName={patient.fullName}
-                          latestAppointmentId={latestAppointmentId}
-                          consultationId={consultationId}
+                    <div className="space-y-6 border-t pt-6 mt-6">
+                      <h2 className="text-xl font-bold text-amber-700 flex items-center gap-2">
+                        🩺 Treatment Details
+                      </h2>
+
+                      {/* 🔹 Treatment Plan */}
+                      <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                        <h3 className="font-semibold text-amber-800 text-lg">
+                          Treatment Plan
+                        </h3>
+                        <label className="font-semibold text-gray-700 block mb-2">
+                          Title
+                        </label>
+                        <Input
+                          placeholder="e.g. Detox Package, General Treatment Plan..."
+                          value={
+                            doctorData.treatment?.treatmentPlan?.title || ""
+                          }
+                          onChange={(e) =>
+                            setDoctorData({
+                              ...doctorData,
+                              treatment: {
+                                ...doctorData.treatment,
+                                treatmentPlan: {
+                                  ...(doctorData.treatment?.treatmentPlan ||
+                                    {}),
+                                  title: e.target.value,
+                                },
+                              },
+                            })
+                          }
                         />
-                      )}
-                    </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Yoga Chart
-                      </label>
-                      <Textarea
-                        placeholder="Enter yoga recommendations..."
-                        value={doctorData.yogaChart}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            yogaChart: e.target.value,
-                          })
-                        }
-                        rows={4}
-                      />
+
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 md:p-6 shadow-sm">
+  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
+    {/* Date */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Date
+      </label>
+      <Input
+        type="date"
+        value={doctorData.treatment?.treatmentPlan?.date || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              treatmentPlan: {
+                ...(doctorData.treatment?.treatmentPlan || {}),
+                date: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+      />
+    </div>
+
+    {/* Time Slot */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Time Slot
+      </label>
+      <Input
+        placeholder="e.g. Morning / 9AM"
+        value={doctorData.treatment?.treatmentPlan?.timeSlot || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              treatmentPlan: {
+                ...(doctorData.treatment?.treatmentPlan || {}),
+                timeSlot: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+      />
+    </div>
+
+    {/* Duration */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Duration
+      </label>
+      <Input
+        placeholder="e.g. 7 days / 60 mins"
+        value={doctorData.treatment?.treatmentPlan?.duration || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              treatmentPlan: {
+                ...(doctorData.treatment?.treatmentPlan || {}),
+                duration: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+      />
+    </div>
+  </div>
+</div>
+
+                      </div>
+
+                      {/* 🔹 Diet Chart */}
+                      <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h3 className="font-semibold text-green-800 text-lg">
+                          Diet Chart
+                        </h3>
+
+                        <Input
+                          placeholder="e.g. High-protein vegetarian diet"
+                          value={doctorData.treatment?.dietChart?.title || ""}
+                          onChange={(e) =>
+                            setDoctorData({
+                              ...doctorData,
+                              treatment: {
+                                ...doctorData.treatment,
+                                dietChart: {
+                                  ...(doctorData.treatment?.dietChart || {}),
+                                  title: e.target.value,
+                                },
+                              },
+                            })
+                          }
+                        />
+
+                       <div className="bg-green-50 border border-green-100 rounded-xl p-4 md:p-6 shadow-sm">
+  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
+    {/* Date */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Date
+      </label>
+      <Input
+        type="date"
+        value={doctorData.treatment?.dietChart?.date || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              dietChart: {
+                ...(doctorData.treatment?.dietChart || {}),
+                date: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
+      />
+    </div>
+
+    {/* Time Slot */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Time Slot
+      </label>
+      <Input
+        placeholder="e.g. After breakfast / Evening"
+        value={doctorData.treatment?.dietChart?.timeSlot || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              dietChart: {
+                ...(doctorData.treatment?.dietChart || {}),
+                timeSlot: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
+      />
+    </div>
+
+    {/* Duration */}
+    <div className="flex flex-col space-y-2">
+      <label className="font-semibold text-gray-700 flex items-center gap-2">
+        Duration
+      </label>
+      <Input
+        placeholder="e.g. 7 days / 2 weeks"
+        value={doctorData.treatment?.dietChart?.duration || ""}
+        onChange={(e) =>
+          setDoctorData({
+            ...doctorData,
+            treatment: {
+              ...doctorData.treatment,
+              dietChart: {
+                ...(doctorData.treatment?.dietChart || {}),
+                duration: e.target.value,
+              },
+            },
+          })
+        }
+        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
+      />
+    </div>
+  </div>
+</div>
+
+                      </div>
+                      <div>
+                        <label className="font-semibold text-gray-700 block mb-2">
+                          Treatment Plan
+                        </label>
+
+                        <TreatmentPlanTable
+                          value={treatmentPlanData}
+                          onChange={setTreatmentPlanData}
+                          includeYoga={true} // or a state you already have
+                        />
+                      </div>
+                      <div>
+                        <label className="font-semibold text-gray-700 block mb-2">
+                          Diet Chart
+                        </label>
+                        {patient && (
+                          <DietTableView
+                            patientId={patient.id}
+                            patientName={patient.fullName}
+                            latestAppointmentId={latestAppointmentId}
+                            consultationId={consultationId}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1046,37 +1593,21 @@ const latestAppointmentId = latestAppointment?.id ?? null;
                     </label>
                     <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
                       <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
-                        <SignatureCanvas
-                          ref={sigCanvas}
-                          penColor="black"
-                          canvasProps={{
-                            className: "w-full h-[150px] bg-white rounded-lg",
-                          }}
+                        <SignatureStep
+                          onSaveSignature={handleSignatureSave}
+                          height={180}
+                          strokeWidth={2}
                         />
-                        <div className="flex justify-between mt-2">
-                          <button
-                            type="button"
-                            onClick={clear}
-                            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                          >
-                            Clear
-                          </button>
-                          <button
-                            type="button"
-                            onClick={save}
-                            className="px-3 py-1 bg-amber-400 text-white rounded hover:bg-amber-500"
-                          >
-                            Save
-                          </button>
-                        </div>
 
                         {signature && (
-                          <div className="mt-4">
-                            <p className="text-sm text-gray-600">Preview:</p>
+                          <div className="mt-4 p-3 bg-green-50 border-2 border-green-300 rounded-lg">
+                            <p className="text-sm text-green-700 font-semibold mb-2">
+                              ✓ Signature Saved
+                            </p>
                             <img
-                              src={`data:image/png;base64,${signature}`}
-                              alt="Signature preview"
-                              className="mt-2 border rounded"
+                              src={signature}
+                              alt="Doctor's signature"
+                              className="border border-gray-300 rounded max-w-full h-auto"
                             />
                           </div>
                         )}

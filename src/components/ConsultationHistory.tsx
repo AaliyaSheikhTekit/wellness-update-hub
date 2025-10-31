@@ -408,7 +408,11 @@ const ConsultationHistory = ({
                           <div className="mt-6 pt-6 border-t">
                             <p className="text-sm text-muted-foreground mb-2">Doctor's Signature</p>
                             <div className="p-4 bg-muted/30 rounded-lg">
-                              <p className="text-sm font-medium">{consultation.signature}</p>
+                             <img
+        src={consultation.signature}
+        alt="Doctor's Signature"
+        className="h-20 object-contain"
+      />
                             </div>
                           </div>
                         )}

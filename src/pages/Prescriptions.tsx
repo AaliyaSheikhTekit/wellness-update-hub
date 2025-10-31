@@ -196,7 +196,7 @@ export default function PrescriptionDialog({
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Avoid</label>
+              <label className="text-sm font-medium">Note</label>
               <Input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}

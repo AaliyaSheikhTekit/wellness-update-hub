@@ -408,27 +408,32 @@ export const getDietPlan = async (patientId: string, startDate?: string, endDate
   return await response.json();
 };
 
-// Batch create diet plans for the entire week
+// Batch create diet plans for the entire week (one entry per date)
 export const createWeeklyDietPlan = async (
-  patientId: string,
-  appointmentId: string,
-  consultationId: string,
-  weeklyPlan: { date: string; time: string; dietItemIds: string[] }[],
-  restrictions:string,
+  weeklyPlan: {
+    appointmentId: string;
+    consultationId: string;
+    patientId: string;
+    date: string;
+    dietPlanItem: { time: string; dietItem: string[] }[];
+    restrictions: string;
+  }[]
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
   const promises = weeklyPlan.map((plan) =>
-    createDietPlan(
-      plan.date,
-      patientId,
-      appointmentId,
-      consultationId,
-      plan.time,
-      plan.dietItemIds,
-      restrictions
-    )
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/diet-plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+      body: JSON.stringify(plan),
+    }).then((res) => {
+      if (!res.ok) throw new Error("Failed to create diet plan");
+      return res.json();
+    })
   );
 
   return await Promise.all(promises);
@@ -800,7 +805,7 @@ export const generatetInvoicePDF = async (invoiceId: string) => {
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
   const response = await fetch(
-    `${API_BASE_URL}/generate-invoice/${invoiceId}`,
+    `${API_BASE_URL}/invoice/generate-invoice/${invoiceId}`,
     {
       method: "GET",
       headers: {

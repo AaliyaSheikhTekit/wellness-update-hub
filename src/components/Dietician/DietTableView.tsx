@@ -36,6 +36,7 @@ import {
   getDietPlan,
   getBackendToken,
   appointmentPost,
+  getAllYoga,
 } from "@/lib/api";
 
 // NEW: shadcn Select for dropdowns in timing headers
@@ -124,8 +125,8 @@ const COMMON_TIME_OPTIONS = [
 
 const CATEGORY_RULES: Record<string, string[]> = {
   "Early Morning": ["Medicated Waters", "Quath & Teas", "Juices"],
-  "Yoga Time": ["Medicated Waters", "Quath & Teas"],
-  "Breakfast": [
+  "Yoga Time": ["Yoga"],
+  Breakfast: [
     "Cooked Breakfast",
     "Sprouts",
     "Fruits",
@@ -185,11 +186,9 @@ const isAllowedForTiming = (timingLabel: string, categoryName: string) => {
   const allowed = CATEGORY_RULES[timingLabel] ?? [];
   if (allowed.length === 0) return false;
   return allowed.some(
-    (a) =>
-      a.trim().toLowerCase() === (categoryName || "").trim().toLowerCase()
+    (a) => a.trim().toLowerCase() === (categoryName || "").trim().toLowerCase()
   );
 };
-
 
 const DietTableView = ({
   patientId,
@@ -200,7 +199,11 @@ const DietTableView = ({
   latestAppointmentId: appointmentId,
   consultationId,
 }: DietTableViewProps) => {
-  console.log("DietTableView rendered with appointmentId:", appointmentId,consultationId);
+  console.log(
+    "DietTableView rendered with appointmentId:",
+    appointmentId,
+    consultationId
+  );
   const { toast } = useToast();
   const [currentWeekStart, setCurrentWeekStart] = useState(
     startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -271,49 +274,6 @@ const DietTableView = ({
     };
     loadDietItems();
   }, [toast]);
-
-  useEffect(() => {
-    const loadWeeklyPlan = async () => {
-      if (!patientId) return;
-      setLoading(true);
-      try {
-        const startDate = format(currentWeekStart, "yyyy-MM-dd");
-        const endDate = format(addDays(currentWeekStart, 6), "yyyy-MM-dd");
-        const response = await getDietPlan(patientId, startDate, endDate);
-
-        if (response.data) {
-          const transformed: MealPlan = {};
-          response.data.forEach((plan: any) => {
-            const dateKey = format(new Date(plan.date), "yyyy-MM-dd");
-            if (!transformed[dateKey]) transformed[dateKey] = {};
-            if (plan.dietPlanItem) {
-              const ids: string[] = plan.dietPlanItem.dietItem.map(
-                (item: any) => item.id
-              );
-              const text = plan.dietPlanItem.dietItem
-                .map((item: any) => item.name || item.shortForm)
-                .join(", ");
-              transformed[dateKey][plan.dietPlanItem.time] = {
-                text,
-                itemIds: ids,
-              };
-            }
-          });
-          setMealPlans(transformed);
-        }
-      } catch (error) {
-        console.error("Error loading diet plan:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load existing diet plan",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadWeeklyPlan();
-  }, [patientId, currentWeekStart, toast]);
 
   const updateMealPlanText = (
     date: Date,
@@ -415,69 +375,78 @@ const DietTableView = ({
     });
   };
 
-const saveWeeklyPlan = async () => {
-  setSaving(true);
-  try {
-    const weeklyPlan = weekDays.flatMap((date) => {
-      const dateKey = getDateKey(date);
-      const dayPlan = mealPlans[dateKey];
-      if (!dayPlan) return [];
+  const saveWeeklyPlan = async () => {
+    setSaving(true);
+    try {
+      // build array of days with all their time slots
+      const groupedByDate = weekDays
+        .map((date) => {
+          const dateKey = getDateKey(date);
+          const dayPlan = mealPlans[dateKey];
+          if (!dayPlan) return null;
 
-      return Object.entries(dayPlan)
-        .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
-        .map(([time, meal]) => ({
-          date: new Date(date).toISOString(),
-          time,
-          dietItemIds: meal.itemIds,
-        }));
-    });
+          // collect all time slots with diet items
+          const dietPlanItem = Object.entries(dayPlan)
+            .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
+            .map(([time, meal]) => ({
+              time,
+              dietItem: meal.itemIds,
+            }));
 
-    if (weeklyPlan.length === 0) {
+          if (dietPlanItem.length === 0) return null;
+
+          // build one entry per date
+          return {
+            appointmentId: String(appointmentId),
+            consultationId: String(consultationId),
+            patientId,
+            date: new Date(date).toISOString(),
+            dietPlanItem,
+            restrictions: commonRestrictions,
+          };
+        })
+        .filter(Boolean); // remove nulls
+
+      if (groupedByDate.length === 0) {
+        toast({
+          title: "No Changes",
+          description: "No diet items to save.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!appointmentId || !consultationId) {
+        toast({
+          title: "Missing info",
+          description: "Appointment or consultation id is missing.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // send array of date-grouped objects to backend
+      await createWeeklyDietPlan(groupedByDate);
+
       toast({
-        title: "No Changes",
-        description: "No diet items to save",
+        title: "Success",
+        description: `Successfully saved ${groupedByDate.length} daily plans!`,
+      });
+    } catch (error) {
+      console.error("Error saving diet plan:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to save diet plan.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSaving(false);
     }
+  };
 
-    if (!appointmentId || !consultationId) {
-      toast({
-        title: "Missing info",
-        description: "Appointment or consultation id is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // IMPORTANT: argument order -> (patientId, appointmentId, consultationId, weeklyPlan)
-    await createWeeklyDietPlan(
-      patientId,
-      String(appointmentId),
-      String(consultationId),
-      weeklyPlan,
-      commonRestrictions
-    );
-
-    toast({
-      title: "Success",
-      description: `Successfully saved ${weeklyPlan.length} diet plan entries!`,
-    });
-  } catch (error) {
-    console.error("Error saving diet plan:", error);
-    toast({
-      title: "Error",
-      description:
-        error instanceof Error ? error.message : "Failed to save diet plan.",
-      variant: "destructive",
-    });
-  } finally {
-    setSaving(false);
-  }
-};
-
-
-  const goToPreviousWeek = () => setCurrentWeekStart((prev) => subWeeks(prev, 1));
+  const goToPreviousWeek = () =>
+    setCurrentWeekStart((prev) => subWeeks(prev, 1));
   const goToNextWeek = () => setCurrentWeekStart((prev) => addWeeks(prev, 1));
   const goToToday = () =>
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -509,8 +478,31 @@ const saveWeeklyPlan = async () => {
       return cloned;
     });
   };
+  const [yogaCategories, setYogaCategories] = useState<any[]>([]);
+   useEffect(() => {
+  const fetched = { current: false }; // mutable reference without useRef
 
+  const fetchYoga = async () => {
+    if (fetched.current) return;
+    fetched.current = true;
+
+    try {
+      const res = await getAllYoga();
+      if (res?.data) {
+        console.log("✅ Yoga data loaded:", res.data);
+        setYogaCategories(res.data || res.data || []);
+      } else {
+        console.warn("⚠️ No yoga data returned");
+      }
+    } catch (err) {
+      console.error("Error fetching yoga data:", err);
+    }
+  };
+
+  fetchYoga();
+}, []);
   /** QuickAddDialog stays the same (unchanged) */
+  /** Enhanced QuickAddDialog (UI improved, logic unchanged) */
   const QuickAddDialog = ({
     date,
     time,
@@ -523,6 +515,8 @@ const saveWeeklyPlan = async () => {
     const [open, setOpen] = useState(false);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+  
+
 
     const allItems: (DietItem & {
       categoryName: string;
@@ -546,11 +540,33 @@ const saveWeeklyPlan = async () => {
       return arr;
     }, [dietItems]);
 
-    const gated = useMemo(
-      () => allItems.filter((i) => isAllowedForTiming(timeLabel, i.categoryName)),
-      [allItems, timeLabel]
-    );
+    // ✅ if Yoga Time → use yogaCategories instead of dietItems
+const gated = useMemo(() => {
+  if (timeLabel === "Yoga Time") {
+    const yogaArr: any[] = [];
 
+    // 🧘 Include all yoga categories (Low Back Pain, Diabetes, etc.)
+    yogaCategories.forEach((cat: any) => {
+      cat.subCategories?.forEach((sub: any) => {
+        sub.items?.forEach((item: any) => {
+          yogaArr.push({
+            id: item.id,
+            name: item.name,
+            categoryName: cat.name,       // e.g., "Hypertension"
+            subCategoryName: sub.name,    // e.g., "Asanas"
+          });
+        });
+      });
+    });
+
+    return yogaArr;
+  }
+
+  // 🥗 Normal diet filtering
+  return allItems.filter((i) => isAllowedForTiming(timeLabel, i.categoryName));
+}, [allItems, timeLabel, yogaCategories]);
+
+console.log("yogaCategories",yogaCategories)
     const filtered = useMemo(() => {
       const q = searchQuery.toLowerCase();
       return gated.filter(
@@ -577,7 +593,10 @@ const saveWeeklyPlan = async () => {
       setOpen(false);
     };
 
-    const grouped: Record<string, Record<string, typeof gated>> = useMemo(() => {
+    const grouped: Record<
+      string,
+      Record<string, typeof gated>
+    > = useMemo(() => {
       const base: Record<string, Record<string, typeof gated>> = {};
       (searchQuery ? filtered : gated).forEach((item) => {
         base[item.categoryName] ??= {};
@@ -590,128 +609,153 @@ const saveWeeklyPlan = async () => {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Add items">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 w-6 p-0 border border-gray-300 hover:bg-blue-50"
+            title="Add items"
+          >
             <Plus className="h-3 w-3" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-4xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>
-              Add Items • {format(date, "MMM d")} • {timeLabel}
-            </DialogTitle>
-          </DialogHeader>
 
-          <div className="space-y-4">
-            <Input
-              placeholder="Search by item / short form / category / subcategory…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <DialogContent className="max-w-4xl w-full max-h-[90vh] rounded-xl border border-gray-200 bg-white shadow-lg flex flex-col">
+  {/* Header */}
+  <DialogHeader className="pb-2 flex-shrink-0">
+    <DialogTitle>
+      {timeLabel === "Yoga Time" ? "🧘 Select Yoga Asanas" : "Add Items"} •{" "}
+      {format(date, "MMM d")} • {timeLabel}
+    </DialogTitle>
+  </DialogHeader>
 
-            {selectedItems.length > 0 && (
-              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 p-3 rounded-md">
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedItems.length} selected
-                </span>
-                <Button size="sm" onClick={addSelectedItems}>
-                  Add Selected
-                </Button>
-              </div>
-            )}
+  {/* Search Bar */}
+  <div className="relative flex-shrink-0">
+    <Input
+      placeholder="Search by item / short form / category / subcategory…"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="w-full border-gray-300 focus-visible:ring-blue-500"
+    />
+  </div>
 
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-6">
-                {Object.entries(grouped).map(([cat, subs]) => (
-                  <div key={cat} className="border rounded-lg p-4 bg-gray-50">
-                    <h3 className="font-bold text-base text-gray-800 mb-4">
-                      📂 {cat}
-                    </h3>
-                    <div className="space-y-4">
-                      {Object.entries(subs).map(([subName, items]) => (
-                        <div key={subName} className="ml-2">
-                          <h4 className="font-semibold text-sm text-gray-700 mb-2">
-                            {subName}{" "}
-                            <span className="text-xs text-gray-500 font-normal">
-                              ({items.length} items)
-                            </span>
-                          </h4>
+  {/* Selected Count Bar */}
+  {selectedItems.length > 0 && (
+    <div className="flex-shrink-0 flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 rounded-md mt-3">
+      <span className="text-sm font-medium text-blue-900">
+        {selectedItems.length} selected
+      </span>
+      <Button
+        size="sm"
+        onClick={addSelectedItems}
+        className="bg-blue-600 text-white"
+      >
+        Add Selected
+      </Button>
+    </div>
+  )}
 
-                          <div className="grid grid-cols-2 gap-2 ml-4">
-                            {items.map((item) => {
-                              const checked = selectedItems.includes(item.id);
-                              return (
-                                <div
-                                  key={item.id}
-                                  onClick={() => toggleItem(item.id)}
-                                  className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
-                                    checked
-                                      ? "bg-blue-50 border-blue-400 shadow-sm"
-                                      : "bg-white hover:bg-gray-50"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => toggleItem(item.id)}
-                                    className="w-4 h-4 mt-0.5"
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm truncate">
-                                      {item.name}
-                                    </div>
-                                    {item.subForm && (
-                                      <div className="text-xs text-blue-600 font-medium mt-1">
-                                        {item.subForm}
-                                      </div>
-                                    )}
-                                  </div>
+  {/* Scrollable Content */}
+          <ScrollArea className="h-[55vh] mt-4 pr-3">
+            <div className="space-y-6">
+              {Object.entries(grouped).map(([cat, subs]) => (
+                <div
+                  key={cat}
+                  className="border rounded-lg p-4 bg-gray-50 shadow-sm"
+                >
+                  <h3 className="font-bold text-base text-gray-800 mb-3 flex items-center gap-1">
+                    <span className="text-yellow-600">📂</span> {cat}
+                  </h3>
+
+                  {Object.entries(subs).map(([subName, items]) => (
+                    <div key={subName} className="ml-2 mb-4">
+                      <h4 className="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1">
+                        <span>{subName}</span>
+                        <span className="text-xs text-gray-500 font-normal">
+                          ({items.length} items)
+                        </span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 ml-2">
+                        {items.map((item) => {
+                          const checked = selectedItems.includes(item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => toggleItem(item.id)}
+                              className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                                checked
+                                  ? "bg-blue-50 border-blue-400 shadow-sm"
+                                  : "bg-white hover:bg-gray-50"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleItem(item.id)}
+                                className="w-4 h-4 mt-0.5 accent-blue-600"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate text-gray-800">
+                                  {item.name}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                                {item.subForm && (
+                                  <div className="text-xs text-blue-600 font-medium mt-1 truncate">
+                                    {item.subForm}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              ))}
 
-                {Object.keys(grouped).length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="text-4xl mb-2">🔍</div>
-                    <div className="font-medium">
-                      No diet items for this time slot
-                    </div>
-                    <div className="text-sm mt-1">
-                      Try a different slot or adjust rules
-                    </div>
+              {Object.keys(grouped).length === 0 && (
+                <div className="text-center py-16 text-gray-500">
+                  <div className="text-4xl mb-2">🔍</div>
+                  <div className="font-medium text-gray-700">
+                    No diet items for this time slot
                   </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+                  <div className="text-sm mt-1 text-gray-500">
+                    Try another slot or adjust your category rules
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
 
-          <div className="flex justify-between items-center pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setOpen(false);
-                setSelectedItems([]);
-                setSearchQuery("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={addSelectedItems} disabled={selectedItems.length === 0}>
-              Add {selectedItems.length > 0 && `(${selectedItems.length})`}
-            </Button>
+          {/* Footer */}
+          {/* Footer (Fixed at bottom) */}
+  <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t mt-4 bg-white">
+    <Button
+      variant="outline"
+      onClick={() => {
+        setOpen(false);
+        setSelectedItems([]);
+        setSearchQuery("");
+      }}
+      className="border-gray-300"
+    >
+      Cancel
+    </Button>
+    <Button
+      onClick={addSelectedItems}
+      disabled={selectedItems.length === 0}
+      className="bg-blue-600 text-white"
+    >
+      {selectedItems.length > 0
+        ? `Add (${selectedItems.length})`
+        : "Add"}
+    </Button>
           </div>
         </DialogContent>
       </Dialog>
     );
   };
-
-
 
   if (loading) {
     return (
@@ -932,7 +976,8 @@ const saveWeeklyPlan = async () => {
                           />
 
                           {/* QUICK ADD, gated by timing label */}
-                          {CATEGORY_RULES[mt.label]?.length ? (
+                          {mt.label === "Yoga Time" ||
+                          CATEGORY_RULES[mt.label]?.length ? (
                             <div className="flex justify-end mt-1">
                               <QuickAddDialog
                                 date={date}
@@ -959,7 +1004,9 @@ const saveWeeklyPlan = async () => {
       {/* NEW: Common restrictions/notes under the table */}
       <Card className="wellness-card">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Common Restrictions / Notes</CardTitle>
+          <CardTitle className="text-base">
+            Common Restrictions / Notes
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
@@ -987,11 +1034,6 @@ const saveWeeklyPlan = async () => {
               )}
               {saving ? "Saving..." : "Save Weekly Plan"}
             </Button>
-
-        
-
-           
-
           </div>
         </CardContent>
       </Card>
