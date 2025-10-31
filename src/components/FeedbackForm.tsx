@@ -4,19 +4,32 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
-import { createFeedback , getFeedbackByPatientId} from "@/lib/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import {
+  createFeedback,
+  getFeedbackByPatientId,
+} from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const FeedbackForm = ({ patient }: { patient: any }) => {
-  const [feedback, setFeedback] = useState<any>(null);
+  const [feedbackList, setFeedbackList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
   const [form, setForm] = useState({
     heardFrom: "",
     otherSource: "",
@@ -37,17 +50,15 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
     overall: 0,
   });
 
-  // ---------------------------
-  // 🔹 Fetch existing feedback
-  // ---------------------------
+  // Fetch all feedbacks
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
         const res = await getFeedbackByPatientId(patient.id);
-        if (res && res.data) {
-          setFeedback(res.data);
+        if (res?.data) {
+          setFeedbackList(Array.isArray(res.data) ? res.data : [res.data]);
         } else {
-          setFeedback(null);
+          setFeedbackList([]);
         }
       } catch (err) {
         console.error("Error fetching feedback:", err);
@@ -58,44 +69,6 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
     fetchFeedback();
   }, [patient]);
 
-  // ---------------------------
-  // 🔹 Prefill if editing
-  // ---------------------------
-  useEffect(() => {
-    if (feedback) {
-      setForm({
-        heardFrom: feedback.website
-          ? "Website"
-          : feedback.socialMedia
-          ? "Social Media"
-          : feedback.friendFamily
-          ? "Friend/Family"
-          : feedback.otherSource
-          ? "Other"
-          : "",
-        otherSource: feedback.otherSource || "",
-        relief: feedback.reliefReceived || "",
-        likes: feedback.likedMost || "",
-        improvements: feedback.improvements || "",
-        recommend: feedback.recommendToOthers ? "Yes" : "No",
-        comments: feedback.additionalComments || "",
-        name: feedback.name || patient?.fullName || "",
-      });
-
-      setRatings({
-        reception: feedback.receptionRegistration || 0,
-        cleanliness: feedback.cleanlinessHygiene || 0,
-        staff: feedback.staffBehavior || 0,
-        doctor: feedback.doctorsConsultation || 0,
-        treatment: feedback.treatmentQuality || 0,
-        overall: feedback.overallExperience || 0,
-      });
-    }
-  }, [feedback]);
-
-  // ---------------------------
-  // 🔹 Submit handler
-  // ---------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -119,8 +92,6 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
       name: form.name,
     };
 
-    console.log("🧾 Payload:", payload);
-
     try {
       setSubmitting(true);
       const res = await createFeedback(payload);
@@ -128,8 +99,26 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
         title: "Feedback Submitted!",
         description: "Thank you for your response.",
       });
-      setFeedback(res.data || payload);
+      setFeedbackList((prev) => [res.data || payload, ...prev]);
       setOpen(false);
+      setForm({
+        heardFrom: "",
+        otherSource: "",
+        relief: "",
+        likes: "",
+        improvements: "",
+        recommend: "",
+        comments: "",
+        name: patient?.fullName || "",
+      });
+      setRatings({
+        reception: 0,
+        cleanliness: 0,
+        staff: 0,
+        doctor: 0,
+        treatment: 0,
+        overall: 0,
+      });
     } catch (err: any) {
       toast({
         title: "Error",
@@ -159,13 +148,10 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
     </tr>
   );
 
-  // ---------------------------
-  // 🔹 UI
-  // ---------------------------
   if (loading)
     return (
       <Card className="p-8 text-center text-gray-500">
-        Loading feedback details...
+        Loading feedback...
       </Card>
     );
 
@@ -173,70 +159,89 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
     <Card className="shadow-lg border-0 overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
         <CardTitle className="text-2xl font-bold text-center">
-          {feedback ? "Patient Feedback Summary" : "Patient Feedback"}
+          Patient Feedbacks
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-6 space-y-4">
-        {/* Feedback View */}
-        {feedback ? (
-          <div className="space-y-3 text-gray-800">
-            <p>
-              <strong>Heard From:</strong>{" "}
-              {feedback.website
-                ? "Website"
-                : feedback.socialMedia
-                ? "Social Media"
-                : feedback.friendFamily
-                ? "Friend/Family"
-                : feedback.otherSource || "N/A"}
-            </p>
-            <p>
-              <strong>Relief:</strong> {feedback.reliefReceived || "N/A"}
-            </p>
-            <p>
-              <strong>Liked Most:</strong> {feedback.likedMost || "—"}
-            </p>
-            <p>
-              <strong>Improvements:</strong> {feedback.improvements || "—"}
-            </p>
-            <p>
-              <strong>Recommend:</strong>{" "}
-              {feedback.recommendToOthers ? "Yes" : "No"}
-            </p>
-            <p>
-              <strong>Comments:</strong> {feedback.additionalComments || "—"}
-            </p>
-            <p>
-              <strong>Ratings:</strong>{" "}
-              {`Reception: ${feedback.receptionRegistration || 0}, Cleanliness: ${feedback.cleanlinessHygiene || 0}, Staff: ${feedback.staffBehavior || 0}, Doctor: ${feedback.doctorsConsultation || 0}, Treatment: ${feedback.treatmentQuality || 0}, Overall: ${feedback.overallExperience || 0}`}
-            </p>
-          </div>
+      <CardContent className="p-6 space-y-6">
+        {/* Feedback Accordion */}
+        {feedbackList.length > 0 ? (
+          <Accordion type="single" collapsible className="w-full">
+            {feedbackList.map((fb, index) => (
+              <AccordionItem
+                key={fb.id || index}
+                value={`item-${index}`}
+                className="border rounded-lg mb-2 bg-gray-50"
+              >
+                <AccordionTrigger className="px-4 py-3 text-left">
+                  <div className="flex justify-between w-full items-center">
+                    <div>
+                      <h3 className="font-semibold text-lg">{fb.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {new Date(fb.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="text-sm font-medium text-indigo-600">
+                      Overall: {fb.overallExperience || 0} ★
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-3 space-y-2 text-gray-800">
+                  <p>
+                    <strong>Heard From:</strong>{" "}
+                    {fb.website
+                      ? "Website"
+                      : fb.socialMedia
+                      ? "Social Media"
+                      : fb.friendFamily
+                      ? "Friend/Family"
+                      : fb.otherSource || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Relief:</strong> {fb.reliefReceived || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Liked Most:</strong> {fb.likedMost || "—"}
+                  </p>
+                  <p>
+                    <strong>Improvements:</strong> {fb.improvements || "—"}
+                  </p>
+                  <p>
+                    <strong>Recommend:</strong>{" "}
+                    {fb.recommendToOthers ? "Yes" : "No"}
+                  </p>
+                  <p>
+                    <strong>Comments:</strong> {fb.additionalComments || "—"}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <strong>Ratings:</strong>{" "}
+                    {`Reception: ${fb.receptionRegistration || 0}, Cleanliness: ${fb.cleanlinessHygiene || 0}, Staff: ${fb.staffBehavior || 0}, Doctor: ${fb.doctorsConsultation || 0}, Treatment: ${fb.treatmentQuality || 0}, Overall: ${fb.overallExperience || 0}`}
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         ) : (
           <p className="text-gray-500 text-center">
             No feedback submitted yet.
           </p>
         )}
 
-        {/* Button to open form */}
+        {/* Add Feedback Button */}
         <div className="flex justify-center pt-4">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 text-white">
-                {feedback ? "Edit Feedback" : "Add Feedback"}
-              </Button>
+              <Button className="bg-blue-600 text-white">Add Feedback</Button>
             </DialogTrigger>
 
             {/* Feedback Form */}
             <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-xl">
               <DialogHeader className="border-b pb-2 mb-3">
-                <DialogTitle>
-                  {feedback ? "Edit Your Feedback" : "Submit Feedback"}
-                </DialogTitle>
+                <DialogTitle>Submit New Feedback</DialogTitle>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* How did you hear about us */}
+                {/* Heard From */}
                 <div>
                   <Label className="font-semibold text-lg">
                     How did you come to know about us?
@@ -306,7 +311,7 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
                   </div>
                 </div>
 
-                {/* Other text fields */}
+                {/* Other Fields */}
                 <Textarea
                   placeholder="What did you like the most..."
                   value={form.likes}
@@ -351,5 +356,3 @@ const FeedbackForm = ({ patient }: { patient: any }) => {
 };
 
 export default FeedbackForm;
-
-
