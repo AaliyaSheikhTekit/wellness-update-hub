@@ -175,7 +175,7 @@ const [catOpen, setCatOpen] =useState(false);
 
     fetchPatient();
   }, [id]);
-
+      const [subOpen, setSubOpen] = useState(false);
   const [doctorData, setDoctorData] = useState<DoctorData>({
     pastMedicalHistory: {
       chronicIllnesses: "",
@@ -466,6 +466,7 @@ const [catOpen, setCatOpen] =useState(false);
       setSubmitting(false);
     }
   };
+  
   useEffect(() => {
     // Update yogaChart title based on selected asanas
     const yogaNames = yogaCategories
@@ -1233,8 +1234,7 @@ const [catOpen, setCatOpen] =useState(false);
                                   {catOpen && (
                                     <div className="bg-white">
                                       {cat.subCategories.map((sub) => {
-                                        const [subOpen, setSubOpen] =
-                                          React.useState(false);
+                                  
                                         return (
                                           <div
                                             key={sub.id}

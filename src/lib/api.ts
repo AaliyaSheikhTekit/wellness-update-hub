@@ -410,39 +410,28 @@ export const getDietPlan = async (patientId: string, startDate?: string, endDate
 
 // ✅ Create a single weekly diet plan (one combined object)
 export const createWeeklyDietPlan = async (
-  weeklyPlan: {
-    appointmentId: string;
-    consultationId: string;
-    patientId: string;
-    date: string;
-    dietPlanItem: { time: string; dietItem: string[] }[];
-    restrictions: string;
-  }
+  patientId: string,
+  appointmentId: string,
+  consultationId: string,
+  weeklyPlan: { date: string; time: string; dietItemIds: string[] }[],
+  restrictions:string,
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/diet-plan`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${backendToken}`,
-      },
-      body: JSON.stringify(weeklyPlan),
-    });
+  const promises = weeklyPlan.map((plan) =>
+    createDietPlan(
+      plan.date,
+      patientId,
+      appointmentId,
+      consultationId,
+      plan.time,
+      plan.dietItemIds,
+      restrictions
+    )
+  );
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Failed to create diet plan: ${errorText}`);
-    }
-
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    console.error("❌ Error creating weekly diet plan:", error);
-    throw error;
-  }
+  return await Promise.all(promises);
 };
 
 export const createDietPlan = async (

@@ -378,34 +378,24 @@ const DietTableView = ({
 const saveWeeklyPlan = async () => {
   setSaving(true);
   try {
-    // ✅ pick the active date or main plan date
-    const activeDate = weekDays[0]; // fallback to first day
+    const weeklyPlan = weekDays.flatMap((date) => {
+      const dateKey = getDateKey(date);
+      const dayPlan = mealPlans[dateKey];
+      if (!dayPlan) return [];
 
-    // ✅ collect all time slots and items for that date
-    const dateKey = getDateKey(activeDate);
-    const dayPlan = mealPlans[dateKey];
+      return Object.entries(dayPlan)
+        .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
+        .map(([time, meal]) => ({
+          date: new Date(date).toISOString(),
+          time,
+          dietItemIds: meal.itemIds,
+        }));
+    });
 
-    if (!dayPlan) {
-      toast({
-        title: "No Plan Found",
-        description: "No meal plan data for the selected date.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // ✅ build dietPlanItem array
-    const dietPlanItem = Object.entries(dayPlan)
-      .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
-      .map(([time, meal]) => ({
-        time,
-        dietItem: meal.itemIds,
-      }));
-
-    if (dietPlanItem.length === 0) {
+    if (weeklyPlan.length === 0) {
       toast({
         title: "No Changes",
-        description: "No diet items to save.",
+        description: "No diet items to save",
         variant: "destructive",
       });
       return;
@@ -420,27 +410,21 @@ const saveWeeklyPlan = async () => {
       return;
     }
 
-    // ✅ build single plan object
-    const finalPayload = {
-      appointmentId: String(appointmentId),
-      consultationId: String(consultationId),
+    // IMPORTANT: argument order -> (patientId, appointmentId, consultationId, weeklyPlan)
+    await createWeeklyDietPlan(
       patientId,
-      date: new Date(activeDate).toISOString(),
-      dietPlanItem,
-      restrictions: commonRestrictions,
-    };
-
-    await createWeeklyDietPlan(finalPayload);
+      String(appointmentId),
+      String(consultationId),
+      weeklyPlan,
+      commonRestrictions
+    );
 
     toast({
       title: "Success",
-      description: "Diet plan saved successfully!",
+      description: `Successfully saved ${weeklyPlan.length} diet plan entries!`,
     });
-    // 🚀 Uncomment below after testing:
-    
-
   } catch (error) {
-    console.error("❌ Error saving diet plan:", error);
+    console.error("Error saving diet plan:", error);
     toast({
       title: "Error",
       description:
@@ -451,9 +435,6 @@ const saveWeeklyPlan = async () => {
     setSaving(false);
   }
 };
-
-
-
 
   const goToPreviousWeek = () =>
     setCurrentWeekStart((prev) => subWeeks(prev, 1));
@@ -739,28 +720,27 @@ console.log("yogaCategories",yogaCategories)
           </ScrollArea>
 
           {/* Footer */}
-          {/* Footer (Fixed at bottom) */}
-  <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t mt-4 bg-white">
-    <Button
-      variant="outline"
-      onClick={() => {
-        setOpen(false);
-        setSelectedItems([]);
-        setSearchQuery("");
-      }}
-      className="border-gray-300"
-    >
-      Cancel
-    </Button>
-    <Button
-      onClick={addSelectedItems}
-      disabled={selectedItems.length === 0}
-      className="bg-blue-600 text-white"
-    >
-      {selectedItems.length > 0
-        ? `Add (${selectedItems.length})`
-        : "Add"}
-    </Button>
+          <div className="flex justify-between items-center pt-4 border-t mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                setSelectedItems([]);
+                setSearchQuery("");
+              }}
+              className="border-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={addSelectedItems}
+              disabled={selectedItems.length === 0}
+              className="bg-blue-600 text-white"
+            >
+              {selectedItems.length > 0
+                ? `Add (${selectedItems.length})`
+                : "Add"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
