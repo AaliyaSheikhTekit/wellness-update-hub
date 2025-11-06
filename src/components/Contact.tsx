@@ -106,7 +106,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   {
     icon: Clock,
     title: "Clinic Hours",
-    details: ["Tuesday - Sat: 9:00 AM - 6:00 PM", "Sunday: 9:00 AM - 6:00 PM"],
+    details: ["Tuesday: 9:00 AM - 6:00 PM", "Sunday: 9:00 AM - 6:00 PM"],
     color: "text-wellness-sage",
   },
 ];
