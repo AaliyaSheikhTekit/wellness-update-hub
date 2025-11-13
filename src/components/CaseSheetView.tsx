@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { getPatientById } from "@/lib/api";
 
 interface Patient {
   id: string;
@@ -46,11 +48,24 @@ interface Patient {
   treatmentPlan: any[];
 }
 
-export default function CaseSheetView({ patient }: { patient: Patient }) {
-  const [open, setOpen] = useState(false);
+export default function CaseSheetView({ open, onOpenChange, patient }) {
 
-  const handleViewCaseSheet = () => setOpen(true);
+console.log("CaseSheetDialog patient:", patient);
+  useEffect(() => {
+    if (!patient?.id) return;
+    const fetchPatient = async () => {
+      try {
+        const res = await getPatientById(patient?.id);
+        console.log("Fetched patient response:", res);
+        // const p = Array.isArray(res?.data) ? res.data[0] : res?.data || res;
+        // setPatient(p || null);
+      } catch (e: any) {
+        console.error("Error fetching patient:", e);
+      }
+    };
 
+    fetchPatient();
+  }, [patient?.id]);
   // Get the latest appointment with consultation data
   const latestAppointment = patient.appointment?.[0];
   const latestConsultation = latestAppointment?.consultation?.find((c: any) => c.systemic && c.investigationsOrDiagnosis);
@@ -88,12 +103,12 @@ export default function CaseSheetView({ patient }: { patient: Patient }) {
 
   return (
     <>
-      <DropdownMenuItem onClick={handleViewCaseSheet}>
-        🩺 View Case Sheet
-      </DropdownMenuItem>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto bg-white text-black p-0">
+      
+            <DialogTitle>Patient Case Sheet - {patient.fullName}</DialogTitle>
+     
           <div className="p-8 space-y-6">
             {/* HEADER */}
             <div className="text-center border-b-2 border-[#8B6F47] pb-3">

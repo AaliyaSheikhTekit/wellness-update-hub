@@ -138,6 +138,8 @@ const DoctorDashboard: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [patientFullData, setPatientFullData] = useState<any | null>(null); // fetched patient details
   const [patient, setPatient] = useState<any | null>(null);
+  console.log("DoctorDashboard selectedPatient:", selectedPatient);
+  const [dialogOpen, setDialogOpen] = useState(false);      
   // doctor form data (keeps minimal fields used here)
   const [doctorData, setDoctorData] = useState<any>({
     treatment: {
@@ -673,7 +675,9 @@ const DoctorDashboard: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                          <CaseSheetView  patient={patient || ""} />
+                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+  View Case Sheet
+</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleOpenAddTreatment(apt)}
@@ -1201,6 +1205,14 @@ const DoctorDashboard: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
+       {/* ✅ Dialog at parent level */}
+     {dialogOpen && patient && (
+        <CaseSheetView
+          open={dialogOpen} 
+          onOpenChange={setDialogOpen}
+          patient={patient} 
+        />)}
+      
     </div>
   );
 };
