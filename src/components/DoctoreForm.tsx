@@ -11,74 +11,16 @@ import {
   createPatientConsult,
   getBackendToken,
   getAllYoga,
+  getTherapyList,
 } from "@/lib/api";
 import SignatureCanvas from "react-signature-canvas";
 import SignatureStep from "./ConsentStep";
 import { Checkbox } from "./ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 const API_BASE_URL = "https://api.ikshanaturopathy.com/v1";
-interface TreatmentItem {
-  title: string;
-  timeSlot: string;
-  date: string;
-  duration: string;
-}
 
-interface DoctorData {
-  pastMedicalHistory: {
-    chronicIllnesses: string;
-    surgeries: string;
-    allergies: string;
-    familyHistory: string;
-  };
-  medicineChart: {
-    medicineName: string;
-    name: string;
-    dosage: string;
-    frequency: string;
-    remarks: string;
-  }[];
-  generalPhysicalExam: {
-    pallor: string;
-    cyanosis: string;
-    icterus: string;
-    lymphadinopathy: string;
-    oedema: string;
-    clubbing: string;
-    eye: string;
-    ear: string;
-    nostrils: string;
-    lips: string;
-    hair: string;
-    head: string;
-    throat: string;
-    teeth: string;
-    mouth: string;
-    genitals: string;
-  };
-  systemicExam: {
-    respiratory: string;
-    cardiovascular: string;
-    gastrointestinal: string;
-    nervous: string;
-    musculoskeletal: string;
-  };
-  investigations: string;
-  investigationsUrl: string;
-  provisionalDiagnosis: string;
-  provisionalDiagnosisUrl: string;
-  doctorName: string;
-  signature: string;
-
-  // 👇 Here’s the fix: allow partial treatment items
-  treatment: {
-    treatmentPlan: Partial<TreatmentItem>;
-    dietChart: Partial<TreatmentItem>;
-    yogaChart: Partial<TreatmentItem>;
-  };
-}
-
-// API function for updating consultation
-const updatePatientConsult = async (consultationId: string, payload: any) => {
+export const updatePatientConsult = async (consultationId: string, payload: any) => {
   const backendToken = getBackendToken();
   const response = await fetch(
     `${API_BASE_URL}/consultation/update/${consultationId}`,
@@ -96,7 +38,7 @@ const updatePatientConsult = async (consultationId: string, payload: any) => {
 };
 
 // API function for uploading report files
-const uploadConsultationReport = async (file: File) => {
+export const uploadConsultationReport = async (file: File) => {
   const backendToken = getBackendToken();
   const formData = new FormData();
   formData.append("report", file);
@@ -120,7 +62,7 @@ export default function DoctorForm() {
   const [step, setStep] = useState(1);
 
   const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
-const [catOpen, setCatOpen] =useState(false);
+  const [catOpen, setCatOpen] = useState(false);
   const handleSignatureSave = (dataUrl: string) => {
     console.log("✅ Signature captured:", dataUrl);
     setSignature(dataUrl);
@@ -142,6 +84,40 @@ const [catOpen, setCatOpen] =useState(false);
   console.log("Patient ID from params:", patient, id);
   const [yogaCategories, setYogaCategories] = useState<any[]>([]);
   const [selectedAsanas, setSelectedAsanas] = useState<string[]>([]);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const [openSubcategory, setOpenSubcategory] = useState<string | null>(null);
+  const [selectedPranayama, setSelectedPranayama] = useState<string[]>([]);
+  const [language, setLanguage] = useState("en");
+  const [therapyList, setTherapyList] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getTherapyList();
+        setTherapyList(data.data || []);
+      } catch (err) {
+        console.error("Error fetching therapies:", err);
+      }
+    })();
+  }, []);
+
+  const [opentherapies, setOpenTherapies] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedTherapies, setSelectedTherapies] = useState([]);
+  const filtered = therapyList.filter((t: any) =>
+    t.treatment.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggleTherapy = (therapy: any) => {
+    const exists = selectedTherapies.some((t: any) => t.id === therapy.id);
+    if (exists) {
+      setSelectedTherapies(
+        selectedTherapies.filter((t: any) => t.id !== therapy.id)
+      );
+    } else {
+      setSelectedTherapies([...selectedTherapies, therapy]);
+    }
+  };
 
   useEffect(() => {
     const fetchYoga = async () => {
@@ -175,57 +151,103 @@ const [catOpen, setCatOpen] =useState(false);
 
     fetchPatient();
   }, [id]);
-      const [subOpen, setSubOpen] = useState(false);
-  const [doctorData, setDoctorData] = useState<DoctorData>({
+  const [consentGiven, setConsentGiven] = useState(false);
+  // const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [signaturePatient, setSignaturePatient] = useState("");
+  const [uploadingSignature, setUploadingSignature] = useState(false);
+  const [subOpen, setSubOpen] = useState(false);
+  const [doctorData, setDoctorData] = useState<any>({
     pastMedicalHistory: {
-      chronicIllnesses: "",
-      surgeries: "",
+      chronicIllnesses: [],
+      surgeriesOrInjuries: "",
       allergies: "",
       familyHistory: "",
+      chiefComplaints: "",
+      knowCase: {
+        diabetes: false,
+        hypertension: false,
+        cad: false,
+        asthma: false,
+        others: false,
+        otherDescription: "",
+      },
+      otherChronicIllness: "",
     },
-    medicineChart: Array.from({ length: 5 }, () => ({
-      medicineName: "",
-      name: "",
-      dosage: "",
-      frequency: "",
-      remarks: "",
-    })),
-    generalPhysicalExam: {
-      pallor: "",
-      cyanosis: "",
-      icterus: "",
-      lymphadinopathy: "",
-      oedema: "",
-      clubbing: "",
-      eye: "",
-      ear: "",
-      nostrils: "",
-      lips: "",
-      hair: "",
-      head: "",
-      throat: "",
-      teeth: "",
-      mouth: "",
-      genitals: "",
+    medicineHistory: [
+      { medicineId: "", dosage: "", frequency: "", remarks: "" },
+    ],
+    physical: {
+      pallor: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      cyanosis: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      icterus: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      lymphadinopathy: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      oedema: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      clubbing: {
+        absent: false,
+        present: false,
+        other: false,
+        otherDescription: "",
+      },
+      eye: { nad: false, ad: false, adDescription: "" },
+      ear: { nad: false, ad: false, adDescription: "" },
+      nostrils: { nad: false, ad: false, adDescription: "" },
+      lips: { nad: false, ad: false, adDescription: "" },
+      hair: { nad: false, ad: false, adDescription: "" },
+      head: { nad: false, ad: false, adDescription: "" },
+      throat: { nad: false, ad: false, adDescription: "" },
+      teeth: { nad: false, ad: false, adDescription: "" },
+      mouth: { nad: false, ad: false, adDescription: "" },
+      genitals: { nad: false, ad: false, adDescription: "" },
     },
-    systemicExam: {
-      respiratory: "",
-      cardiovascular: "",
-      gastrointestinal: "",
-      nervous: "",
-      musculoskeletal: "",
+    systemic: {
+      respiratorySystem: { nad: false, ad: false, adDescription: "" },
+      cardioVascularSystem: { nad: false, ad: false, adDescription: "" },
+      gastroIntestinalSystem: { nad: false, ad: false, adDescription: "" },
+      nrvousSystem: { nad: false, ad: false, adDescription: "" },
+      musculoskeletalSystem: { nad: false, ad: false, adDescription: "" },
     },
-    investigations: "",
-    investigationsUrl: "",
-    provisionalDiagnosis: "",
-    provisionalDiagnosisUrl: "",
+    investigationsOrDiagnosis: {
+      investigations: "",
+      provisionalDiagnosis: "",
+      investigationsUrl: "",
+      provisionalDiagnosisUrl: "",
+    },
+    treatment: {
+      recommendation: { title: [], duration: "" },
+      dietChart: { title: "" },
+      yogaChart: { title: "" },
+    },
+    treatmentPlan: [],
+    includeYoga: true,
+    consent: true,
+    patientSignature: "",
     doctorName: "",
     signature: "",
-    treatment: {
-      treatmentPlan: { title: "", timeSlot: "", date: "", duration: "" },
-      dietChart: { title: "", timeSlot: "", date: "", duration: "" },
-      yogaChart: { title: "", timeSlot: "", date: "", duration: "" },
-    },
   });
 
   const [medicineChart, setMedicineChart] = useState([
@@ -273,7 +295,94 @@ const [catOpen, setCatOpen] =useState(false);
       : null;
 
   const latestAppointmentId = latestAppointment?.id ?? null;
+  // Handle Physical Exam description changes
+  const handlePhysicalExamDescChange = (field, value) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      physical: {
+        ...prev.physical,
+        [field]: {
+          ...prev.physical[field],
+          otherDescription: value,
+        },
+      },
+    }));
+  };
 
+  // Handle Sense Organ checkbox changes
+  const handleSenseOrganChange = (field, type) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      physical: {
+        ...prev.physical,
+        [field]: {
+          nad: type === "nad",
+          ad: type === "ad",
+          adDescription:
+            type === "ad" ? prev.physical[field].adDescription : "",
+        },
+      },
+    }));
+  };
+
+  // Handle Sense Organ description changes
+  const handleSenseOrganDescChange = (field, value) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      physical: {
+        ...prev.physical,
+        [field]: {
+          ...prev.physical[field],
+          adDescription: value,
+        },
+      },
+    }));
+  };
+
+  // Handle Systemic Exam changes
+  const handleSystemicExamChange = (field, type) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      systemic: {
+        ...prev.systemic,
+        [field]: {
+          nad: type === "nad",
+          ad: type === "ad",
+          adDescription:
+            type === "ad" ? prev.systemic[field].adDescription : "",
+        },
+      },
+    }));
+  };
+
+  // Handle Systemic Exam description changes
+  const handleSystemicExamDescChange = (field, value) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      systemic: {
+        ...prev.systemic,
+        [field]: {
+          ...prev.systemic[field],
+          adDescription: value,
+        },
+      },
+    }));
+  };
+  const handlePhysicalExamChange = (field, type) => {
+    setDoctorData((prev) => ({
+      ...prev,
+      physical: {
+        ...prev.physical,
+        [field]: {
+          absent: type === "absent",
+          present: type === "present",
+          other: type === "other",
+          otherDescription:
+            type === "other" ? prev.physical[field].otherDescription : "",
+        },
+      },
+    }));
+  };
   // Step 1: Create initial consultation
   const handleStep1Submit = async () => {
     if (!patient?.id) {
@@ -292,6 +401,8 @@ const [catOpen, setCatOpen] =useState(false);
         familyHistory: doctorData.pastMedicalHistory.familyHistory,
         patientId: patient.id,
         appointmentId: latestAppointmentId,
+        cheifCompaints: doctorData.pastMedicalHistory.cheifCompaints,
+        knowCase: doctorData.pastMedicalHistory.knowCase,
       };
 
       const result = await createPatientConsult(payload);
@@ -416,29 +527,26 @@ const [catOpen, setCatOpen] =useState(false);
           investigationsUrl: doctorData.investigationsUrl,
           provisionalDiagnosisUrl: doctorData.provisionalDiagnosisUrl,
         },
-        treatment: {
+
+        recommandation: {
           treatmentPlan: {
             title: doctorData.treatment?.treatmentPlan?.title || "",
-            timeSlot: doctorData.treatment?.treatmentPlan?.timeSlot || "",
-            date: doctorData.treatment?.treatmentPlan?.date || "",
+
             duration: doctorData.treatment?.treatmentPlan?.duration || "",
           },
           dietChart: {
             title: doctorData.treatment?.dietChart?.title || "",
-            timeSlot: doctorData.treatment?.dietChart?.timeSlot || "",
-            date: doctorData.treatment?.dietChart?.date || "",
-            duration: doctorData.treatment?.dietChart?.duration || "",
           },
           yogaChart: {
             title:
               doctorData.treatment?.yogaChart?.title ||
               selectedAsanas.join(", "),
-            timeSlot: doctorData.treatment?.yogaChart?.timeSlot || "",
-            date: doctorData.treatment?.yogaChart?.date || "",
-            duration: doctorData.treatment?.yogaChart?.duration || "",
           },
         },
+
         doctorName: doctorData.doctorName,
+        consent: consentGiven,
+        patientSignature: signaturePatient,
         signature: signature,
         medicineHistory:
           medicineHistory.length > 0 ? medicineHistory : undefined,
@@ -466,7 +574,7 @@ const [catOpen, setCatOpen] =useState(false);
       setSubmitting(false);
     }
   };
-  
+
   useEffect(() => {
     // Update yogaChart title based on selected asanas
     const yogaNames = yogaCategories
@@ -613,7 +721,7 @@ const [catOpen, setCatOpen] =useState(false);
                     <div key={s} className="flex flex-col items-center">
                       <button
                         onClick={() => setStep(s)}
-                        disabled={s > 1 && !consultationId}
+                        // disabled={s > 1 && !consultationId}
                         className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 ${
                           step >= s
                             ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/50"
@@ -653,7 +761,7 @@ const [catOpen, setCatOpen] =useState(false);
                         {s === 3 && "Physical"}
                         {s === 4 && "Systemic"}
                         {s === 5 && "Reports"}
-                        {s === 6 && "Treatment"}
+                        {s === 6 && "Suggestions"}
                         {s === 7 && "Complete"}
                       </span>
                     </div>
@@ -670,23 +778,95 @@ const [catOpen, setCatOpen] =useState(false);
                   <div className="space-y-4">
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
-                        Chronic Illnesses (Diabetes / BP / CAD / Asthma /
-                        Others)
+                        Chief Complaints
                       </label>
                       <Textarea
-                        placeholder="Enter chronic illnesses..."
-                        value={doctorData.pastMedicalHistory.chronicIllnesses}
+                        placeholder="Enter Chief Complaints..."
+                        value={
+                          doctorData.pastMedicalHistory.chiefComplaints || ""
+                        }
                         onChange={(e) =>
                           setDoctorData({
                             ...doctorData,
                             pastMedicalHistory: {
                               ...doctorData.pastMedicalHistory,
-                              chronicIllnesses: e.target.value,
+                              chiefComplaints: e.target.value,
                             },
                           })
                         }
                         rows={3}
                       />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-gray-700 block mb-2">
+                        Known Case
+                      </label>
+                      {/* Checkboxes */}
+                      <div className="flex flex-wrap gap-4 mb-3">
+                        {[
+                          "Diabetes",
+                          "Hypertension",
+                          "CAD",
+                          "Asthma",
+                          "Others",
+                        ].map((illness) => (
+                          <label
+                            key={illness}
+                            className="flex items-center gap-2 text-sm text-gray-800"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-blue-600"
+                              checked={doctorData.pastMedicalHistory.chronicIllnesses?.includes(
+                                illness
+                              )}
+                              onChange={(e) => {
+                                const selected =
+                                  doctorData.pastMedicalHistory
+                                    .chronicIllnesses || [];
+                                const newIllnesses = e.target.checked
+                                  ? [...selected, illness]
+                                  : Array.isArray(selected)
+                                  ? selected.filter((i: any) => i !== illness)
+                                  : [];
+
+                                setDoctorData({
+                                  ...doctorData,
+                                  pastMedicalHistory: {
+                                    ...doctorData.pastMedicalHistory,
+                                    chronicIllnesses: newIllnesses,
+                                  },
+                                });
+                              }}
+                            />
+                            {illness}
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Conditional "Others" Text Field */}
+                      {doctorData.pastMedicalHistory.chronicIllnesses?.includes(
+                        "Others"
+                      ) && (
+                        <Textarea
+                          placeholder="Please specify other chronic illnesses..."
+                          value={
+                            doctorData.pastMedicalHistory.otherChronicIllness ||
+                            ""
+                          }
+                          onChange={(e) =>
+                            setDoctorData({
+                              ...doctorData,
+                              pastMedicalHistory: {
+                                ...doctorData.pastMedicalHistory,
+                                otherChronicIllness: e.target.value,
+                              },
+                            })
+                          }
+                          rows={2}
+                          className="mt-2"
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
@@ -872,28 +1052,113 @@ const [catOpen, setCatOpen] =useState(false);
                     General Physical Examination
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
-                    {Object.entries(doctorData.generalPhysicalExam).map(
-                      ([key, value]) => (
-                        <div key={key}>
-                          <label className="font-semibold text-gray-700 capitalize block mb-1">
-                            {key.replace(/([A-Z])/g, " $1").trim()}:
+                    {/* General findings */}
+                    {[
+                      "pallor",
+                      "cyanosis",
+                      "icterus",
+                      "lymphadinopathy",
+                      "oedema",
+                      "clubbing",
+                    ].map((field) => (
+                      <div key={field} className="mb-4">
+                        <label className="font-semibold text-gray-700 capitalize block mb-1">
+                          {field.replace(/([A-Z])/g, " $1").trim()}:
+                        </label>
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-800">
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={doctorData.physical[field].absent}
+                              onCheckedChange={() =>
+                                handlePhysicalExamChange(field, "absent")
+                              }
+                            />
+                            Absent
                           </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={doctorData.physical[field].present}
+                              onCheckedChange={() =>
+                                handlePhysicalExamChange(field, "present")
+                              }
+                            />
+                            Present
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={doctorData.physical[field].other}
+                              onCheckedChange={() =>
+                                handlePhysicalExamChange(field, "other")
+                              }
+                            />
+                            Other
+                          </label>
+                        </div>
+                        {doctorData.physical[field].other && (
                           <Input
-                            placeholder={`Absent/Present/Other`}
-                            value={value}
+                            className="mt-2"
+                            placeholder="Specify other findings..."
+                            value={doctorData.physical[field].otherDescription}
                             onChange={(e) =>
-                              setDoctorData({
-                                ...doctorData,
-                                generalPhysicalExam: {
-                                  ...doctorData.generalPhysicalExam,
-                                  [key]: e.target.value,
-                                },
-                              })
+                              handlePhysicalExamDescChange(
+                                field,
+                                e.target.value
+                              )
                             }
                           />
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Sense organs */}
+                    {[
+                      "eye",
+                      "ear",
+                      "nostrils",
+                      "lips",
+                      "hair",
+                      "head",
+                      "throat",
+                      "teeth",
+                      "mouth",
+                      "genitals",
+                    ].map((field) => (
+                      <div key={field} className="mb-4">
+                        <label className="font-semibold text-gray-700 capitalize block mb-1">
+                          {field}:
+                        </label>
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-800">
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={doctorData.physical[field].nad}
+                              onCheckedChange={() =>
+                                handleSenseOrganChange(field, "nad")
+                              }
+                            />
+                            NAD
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={doctorData.physical[field].ad}
+                              onCheckedChange={() =>
+                                handleSenseOrganChange(field, "ad")
+                              }
+                            />
+                            AD
+                          </label>
                         </div>
-                      )
-                    )}
+                        {doctorData.physical[field].ad && (
+                          <Input
+                            className="mt-2"
+                            placeholder="Enter AD details..."
+                            value={doctorData.physical[field].adDescription}
+                            onChange={(e) =>
+                              handleSenseOrganDescChange(field, e.target.value)
+                            }
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -904,98 +1169,59 @@ const [catOpen, setCatOpen] =useState(false);
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Systemic Examination
                   </h3>
-                  <div className="space-y-4">
-                    <div>
+
+                  {[
+                    { key: "respiratorySystem", label: "Respiratory System" },
+                    {
+                      key: "cardioVascularSystem",
+                      label: "Cardio Vascular System",
+                    },
+                    {
+                      key: "gastroIntestinalSystem",
+                      label: "Gastro Intestinal System",
+                    },
+                    { key: "nrvousSystem", label: "Nervous System" },
+                    {
+                      key: "musculoskeletalSystem",
+                      label: "Musculoskeletal System",
+                    },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
                       <label className="font-semibold text-gray-700 block mb-2">
-                        Respiratory System
+                        {label}
                       </label>
-                      <Input
-                        placeholder="NAD / Enter findings..."
-                        value={doctorData.systemicExam.respiratory}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            systemicExam: {
-                              ...doctorData.systemicExam,
-                              respiratory: e.target.value,
-                            },
-                          })
-                        }
-                      />
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-800">
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={doctorData.systemic[key].nad}
+                            onCheckedChange={() =>
+                              handleSystemicExamChange(key, "nad")
+                            }
+                          />
+                          NAD
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={doctorData.systemic[key].ad}
+                            onCheckedChange={() =>
+                              handleSystemicExamChange(key, "ad")
+                            }
+                          />
+                          AD
+                        </label>
+                      </div>
+                      {doctorData.systemic[key].ad && (
+                        <Input
+                          className="mt-2"
+                          placeholder="Enter AD findings..."
+                          value={doctorData.systemic[key].adDescription}
+                          onChange={(e) =>
+                            handleSystemicExamDescChange(key, e.target.value)
+                          }
+                        />
+                      )}
                     </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Cardio Vascular System
-                      </label>
-                      <Input
-                        placeholder="NAD / Enter findings..."
-                        value={doctorData.systemicExam.cardiovascular}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            systemicExam: {
-                              ...doctorData.systemicExam,
-                              cardiovascular: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Gastro Intestinal System
-                      </label>
-                      <Input
-                        placeholder="NAD / Enter findings..."
-                        value={doctorData.systemicExam.gastrointestinal}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            systemicExam: {
-                              ...doctorData.systemicExam,
-                              gastrointestinal: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Nervous System
-                      </label>
-                      <Input
-                        placeholder="NAD / Enter findings..."
-                        value={doctorData.systemicExam.nervous}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            systemicExam: {
-                              ...doctorData.systemicExam,
-                              nervous: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="font-semibold text-gray-700 block mb-2">
-                        Musculoskeletal System
-                      </label>
-                      <Input
-                        placeholder="NAD / Enter findings..."
-                        value={doctorData.systemicExam.musculoskeletal}
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            systemicExam: {
-                              ...doctorData.systemicExam,
-                              musculoskeletal: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
               )}
 
@@ -1113,84 +1339,7 @@ const [catOpen, setCatOpen] =useState(false);
                         }
                       />
 
-                      {/* Yoga Chart Fields */}
-                     <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 md:p-6 shadow-sm">
-  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
-    {/* Date */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Date
-      </label>
-      <Input
-        type="date"
-        value={doctorData.treatment?.yogaChart?.date || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              yogaChart: {
-                ...(doctorData.treatment?.yogaChart || {}),
-                date: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-      />
-    </div>
-
-    {/* Time Slot */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Time Slot
-      </label>
-      <Input
-        placeholder="e.g. Morning / Evening"
-        value={doctorData.treatment?.yogaChart?.timeSlot || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              yogaChart: {
-                ...(doctorData.treatment?.yogaChart || {}),
-                timeSlot: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-      />
-    </div>
-
-    {/* Duration */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Duration
-      </label>
-      <Input
-        placeholder="e.g. 30 mins daily"
-        value={doctorData.treatment?.yogaChart?.duration || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              yogaChart: {
-                ...(doctorData.treatment?.yogaChart || {}),
-                duration: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-      />
-    </div>
-  </div>
-</div>
-
-
+                      {/* Yoga Category List */}
                       {/* Yoga Category List */}
                       <div className="mt-6 border-t border-blue-200 pt-4">
                         <h4 className="text-sm font-semibold text-blue-700 mb-3">
@@ -1204,18 +1353,46 @@ const [catOpen, setCatOpen] =useState(false);
                         ) : (
                           <div className="border border-gray-200 rounded-lg overflow-hidden divide-y">
                             {yogaCategories.map((cat) => {
-                              
+                              const isOpen = openCategory === cat.id;
+                              const allAsanaIds = cat.subCategories.flatMap(
+                                (sub) => sub.items.map((item) => item.id)
+                              );
+
+                              const allSelected = allAsanaIds.every((id) =>
+                                selectedAsanas.includes(id)
+                              );
+
+                              const handleToggleSelectAll = () => {
+                                setSelectedAsanas((prev) =>
+                                  allSelected
+                                    ? prev.filter(
+                                        (id) => !allAsanaIds.includes(id)
+                                      )
+                                    : [...new Set([...prev, ...allAsanaIds])]
+                                );
+                              };
+
+                              const handleTogglePranayama = () => {
+                                setSelectedPranayama((prev) =>
+                                  prev.includes(cat.id)
+                                    ? prev.filter((id) => id !== cat.id)
+                                    : [...prev, cat.id]
+                                );
+                              };
+
                               return (
                                 <div key={cat.id}>
                                   {/* Category Header */}
                                   <div
                                     className="bg-blue-50 px-3 py-2 text-sm font-semibold text-gray-700 flex justify-between items-center cursor-pointer hover:bg-blue-100 transition"
-                                    onClick={() => setCatOpen(!catOpen)}
+                                    onClick={() =>
+                                      setOpenCategory(isOpen ? null : cat.id)
+                                    }
                                   >
                                     <span>{cat.name}</span>
                                     <svg
                                       className={`w-4 h-4 transition-transform ${
-                                        catOpen ? "rotate-180" : ""
+                                        isOpen ? "rotate-180" : ""
                                       }`}
                                       fill="none"
                                       stroke="currentColor"
@@ -1231,84 +1408,110 @@ const [catOpen, setCatOpen] =useState(false);
                                   </div>
 
                                   {/* Subcategories inside Category */}
-                                  {catOpen && (
-                                    <div className="bg-white">
-                                      {cat.subCategories.map((sub) => {
-                                  
-                                        return (
-                                          <div
-                                            key={sub.id}
-                                            className="border-t border-gray-100"
-                                          >
-                                            {/* Subcategory Header */}
-                                            <div
-                                              className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
-                                              onClick={() =>
-                                                setSubOpen(!subOpen)
-                                              }
-                                            >
-                                              <span>{sub.name}</span>
-                                              <svg
-                                                className={`w-3.5 h-3.5 transition-transform ${
-                                                  subOpen ? "rotate-180" : ""
-                                                }`}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M19 9l-7 7-7-7"
-                                                />
-                                              </svg>
-                                            </div>
+                                  {isOpen && (
+                                    <div className="bg-white border-t border-gray-100">
+                                      {/* Extra Options (Select All / Pranayama) */}
+                                      <div className="flex items-center gap-6 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                                          <input
+                                            type="checkbox"
+                                            className="h-4 w-4 accent-green-600"
+                                            checked={allSelected}
+                                            onChange={handleToggleSelectAll}
+                                          />
+                                          Select All Asanas
+                                        </label>
 
-                                            {/* Items inside Subcategory */}
-                                            {subOpen && (
-                                              <div className="pl-5 divide-y divide-gray-100">
-                                                {sub.items.map((item) => {
-                                                  const yogaId = item.id;
-                                                  const checked =
-                                                    selectedAsanas.includes(
-                                                      yogaId
-                                                    );
-                                                  return (
-                                                    <div
-                                                      key={item.id}
-                                                      className={`p-3 text-sm flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition ${
-                                                        checked
-                                                          ? "bg-green-50"
-                                                          : ""
-                                                      }`}
-                                                      onClick={() => {
-                                                        setSelectedAsanas(
-                                                          (prev) =>
-                                                            checked
-                                                              ? prev.filter(
-                                                                  (a) =>
-                                                                    a !== yogaId
-                                                                )
-                                                              : [
-                                                                  ...prev,
-                                                                  yogaId,
-                                                                ]
-                                                        );
-                                                      }}
-                                                    >
-                                                      <Checkbox
-                                                        checked={checked}
-                                                      />
-                                                      <span>{item.name}</span>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                                          <input
+                                            type="checkbox"
+                                            className="h-4 w-4 accent-blue-600"
+                                            checked={selectedPranayama?.includes(
+                                              cat.id
                                             )}
+                                            onChange={handleTogglePranayama}
+                                          />
+                                          Include Pranayama
+                                        </label>
+                                      </div>
+
+                                      {/* Subcategory + Items */}
+                                      {cat.subCategories.map((sub) => (
+                                        <div
+                                          key={sub.id}
+                                          className="border-t border-gray-100"
+                                        >
+                                          {/* Subcategory Header */}
+                                          <div
+                                            className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition"
+                                            onClick={() =>
+                                              setOpenSubcategory(
+                                                openSubcategory === sub.id
+                                                  ? null
+                                                  : sub.id
+                                              )
+                                            }
+                                          >
+                                            <span>{sub.name}</span>
+                                            <svg
+                                              className={`w-3.5 h-3.5 transition-transform ${
+                                                openSubcategory === sub.id
+                                                  ? "rotate-180"
+                                                  : ""
+                                              }`}
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                              />
+                                            </svg>
                                           </div>
-                                        );
-                                      })}
+
+                                          {/* Items */}
+                                          {openSubcategory === sub.id && (
+                                            <div className="pl-5 divide-y divide-gray-100">
+                                              {sub.items.map((item) => {
+                                                const yogaId = item.id;
+                                                const checked =
+                                                  selectedAsanas.includes(
+                                                    yogaId
+                                                  );
+                                                return (
+                                                  <div
+                                                    key={item.id}
+                                                    className={`p-3 text-sm flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition ${
+                                                      checked
+                                                        ? "bg-green-50"
+                                                        : ""
+                                                    }`}
+                                                    onClick={() =>
+                                                      setSelectedAsanas(
+                                                        (prev) =>
+                                                          checked
+                                                            ? prev.filter(
+                                                                (a) =>
+                                                                  a !== yogaId
+                                                              )
+                                                            : [...prev, yogaId]
+                                                      )
+                                                    }
+                                                  >
+                                                    <Checkbox
+                                                      checked={checked}
+                                                    />
+                                                    <span>{item.name}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
                                   )}
                                 </div>
@@ -1325,108 +1528,87 @@ const [catOpen, setCatOpen] =useState(false);
 
                       {/* 🔹 Treatment Plan */}
                       <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                        <h3 className="font-semibold text-amber-800 text-lg">
-                          Treatment Plan
-                        </h3>
                         <label className="font-semibold text-gray-700 block mb-2">
-                          Title
+                          Select Therapies
                         </label>
-                        <Input
-                          placeholder="e.g. Detox Package, General Treatment Plan..."
-                          value={
-                            doctorData.treatment?.treatmentPlan?.title || ""
-                          }
-                          onChange={(e) =>
-                            setDoctorData({
-                              ...doctorData,
-                              treatment: {
-                                ...doctorData.treatment,
-                                treatmentPlan: {
-                                  ...(doctorData.treatment?.treatmentPlan ||
-                                    {}),
-                                  title: e.target.value,
-                                },
-                              },
-                            })
-                          }
-                        />
-
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 md:p-6 shadow-sm">
-  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
-    {/* Date */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Date
-      </label>
-      <Input
-        type="date"
-        value={doctorData.treatment?.treatmentPlan?.date || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              treatmentPlan: {
-                ...(doctorData.treatment?.treatmentPlan || {}),
-                date: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-      />
-    </div>
-
-    {/* Time Slot */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Time Slot
-      </label>
-      <Input
-        placeholder="e.g. Morning / 9AM"
-        value={doctorData.treatment?.treatmentPlan?.timeSlot || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              treatmentPlan: {
-                ...(doctorData.treatment?.treatmentPlan || {}),
-                timeSlot: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-      />
-    </div>
-
-    {/* Duration */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Duration
-      </label>
-      <Input
-        placeholder="e.g. 7 days / 60 mins"
-        value={doctorData.treatment?.treatmentPlan?.duration || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              treatmentPlan: {
-                ...(doctorData.treatment?.treatmentPlan || {}),
-                duration: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-      />
-    </div>
-  </div>
-</div>
-
+                        <Popover
+                          open={opentherapies}
+                          onOpenChange={setOpenTherapies}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between"
+                            >
+                              {selectedTherapies.length > 0
+                                ? selectedTherapies
+                                    .map((t: any) => t.treatment)
+                                    .join(", ")
+                                : "Select therapies"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-2">
+                            <Input
+                              placeholder="Search therapy..."
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              className="mb-2"
+                            />
+                            <div className="max-h-48 overflow-y-auto space-y-1">
+                              {filtered.map((therapy: any) => {
+                                const selected = selectedTherapies.some(
+                                  (t: any) => t.id === therapy.id
+                                );
+                                return (
+                                  <div
+                                    key={therapy.id}
+                                    onClick={() => toggleTherapy(therapy)}
+                                    className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer hover:bg-amber-100 ${
+                                      selected ? "bg-amber-200" : ""
+                                    }`}
+                                  >
+                                    {therapy.treatment}
+                                    {selected && (
+                                      <Check className="h-4 w-4 text-amber-600" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {filtered.length === 0 && (
+                                <div className="text-sm text-gray-500 px-2 py-2">
+                                  No results
+                                </div>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        {/* 🔹 Duration Inputs for selected therapies */}
+                        <div className="mt-4 space-y-3">
+                          <h4 className="font-semibold text-gray-800">
+                            Therapy Durations
+                          </h4>
+                          <Input
+                            placeholder="Duration (e.g. 60 min)"
+                            value={
+                              selectedTherapies.length > 0
+                                ? `${selectedTherapies.reduce(
+                                    (sum: number, t: any) =>
+                                      sum + (parseInt(t.duration) || 0),
+                                    0
+                                  )} min`
+                                : doctorData.recommandationduration || ""
+                            }
+                            onChange={(e) =>
+                              setDoctorData({
+                                ...doctorData,
+                                recommandationduration: e.target.value,
+                              })
+                            }
+                            readOnly={selectedTherapies.length > 0}
+                          />
+                        </div>
                       </div>
 
                       {/* 🔹 Diet Chart */}
@@ -1451,83 +1633,6 @@ const [catOpen, setCatOpen] =useState(false);
                             })
                           }
                         />
-
-                       <div className="bg-green-50 border border-green-100 rounded-xl p-4 md:p-6 shadow-sm">
-  <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
-    {/* Date */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Date
-      </label>
-      <Input
-        type="date"
-        value={doctorData.treatment?.dietChart?.date || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              dietChart: {
-                ...(doctorData.treatment?.dietChart || {}),
-                date: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
-      />
-    </div>
-
-    {/* Time Slot */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Time Slot
-      </label>
-      <Input
-        placeholder="e.g. After breakfast / Evening"
-        value={doctorData.treatment?.dietChart?.timeSlot || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              dietChart: {
-                ...(doctorData.treatment?.dietChart || {}),
-                timeSlot: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
-      />
-    </div>
-
-    {/* Duration */}
-    <div className="flex flex-col space-y-2">
-      <label className="font-semibold text-gray-700 flex items-center gap-2">
-        Duration
-      </label>
-      <Input
-        placeholder="e.g. 7 days / 2 weeks"
-        value={doctorData.treatment?.dietChart?.duration || ""}
-        onChange={(e) =>
-          setDoctorData({
-            ...doctorData,
-            treatment: {
-              ...doctorData.treatment,
-              dietChart: {
-                ...(doctorData.treatment?.dietChart || {}),
-                duration: e.target.value,
-              },
-            },
-          })
-        }
-        className="bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-green-400 focus:border-green-400"
-      />
-    </div>
-  </div>
-</div>
-
                       </div>
                       <div>
                         <label className="font-semibold text-gray-700 block mb-2">
@@ -1544,7 +1649,7 @@ const [catOpen, setCatOpen] =useState(false);
                         <label className="font-semibold text-gray-700 block mb-2">
                           Diet Chart
                         </label>
-                        {patient && (
+                   {patient && (
                           <DietTableView
                             patientId={patient.id}
                             patientName={patient.fullName}
@@ -1563,6 +1668,242 @@ const [catOpen, setCatOpen] =useState(false);
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Final Review & Signature
                   </h3>
+                  <div className="space-y-4">
+                    {/* Language Toggle */}
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-lg">
+                        {language === "en"
+                          ? "Informed Consent Form"
+                          : "सूचित सहमति प्रपत्र"}
+                      </h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setLanguage(language === "en" ? "hi" : "en")
+                        }
+                      >
+                        {language === "en"
+                          ? "हिंदी में देखें"
+                          : "View in English"}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2 max-h-96 overflow-y-auto p-4 border rounded bg-gray-50 text-gray-800">
+                      {language === "en" ? (
+                        <>
+                          <p className="font-semibold">Treatment Details:</p>
+                          <p>
+                            The procedure may include Naturopathy treatments
+                            such as dietary changes, fasting therapy,
+                            hydrotherapy, mud therapy, yoga, pranayama, massage,
+                            colon hydrotherapy, acupuncture, physiotherapy,
+                            chromotherapy, magneto therapy, reflexology, and
+                            cupping therapy. It may also involve Panchakarma
+                            procedures such as Shirodhara, Nasya (Nasal
+                            Therapy), External Basti, Akshitarpan, Raktamokshana
+                            (bloodletting, if needed), Abhyanga (oil massage),
+                            and Swedana (steam therapy). These therapies will be
+                            prescribed specifically based on your condition and
+                            requirements.
+                          </p>
+
+                          <p className="font-semibold">Expected Benefits:</p>
+                          <p>
+                            These therapies aim to detoxify and cleanse the
+                            body, rejuvenate the body and mind, improve
+                            digestion and metabolism, increase energy and
+                            vitality, relieve stress, enhance mental clarity,
+                            reduce pain and stiffness, strengthen the immune
+                            system, and promote overall well-being.
+                          </p>
+
+                          <p className="font-semibold">
+                            Risks and Limitations:
+                          </p>
+                          <p>
+                            I understand that possible risks include mild
+                            nausea, dizziness, fatigue, headache, skin
+                            irritation, temporary digestive changes, and
+                            emotional fluctuations. Unforeseen complications may
+                            occur, which can include serious conditions. The
+                            management reserves the right to transfer me to an
+                            appropriate medical facility if required and will
+                            not be held liable for any adverse reactions. I also
+                            understand that results may vary depending on
+                            adherence to protocol and advice given by the doctor
+                            and no guarantee of success is provided.
+                          </p>
+
+                          <p className="font-semibold">
+                            Conditions & Policies:
+                          </p>
+                          <p>
+                            I have been informed that there will be no refund
+                            for the treatment under any circumstances. The
+                            management reserves the right to discontinue the
+                            treatment at any time if necessary. I agree to
+                            follow all instructions given by the doctor and
+                            their team to ensure the success of the treatment.
+                          </p>
+
+                          <p className="font-semibold">Medical Information:</p>
+                          <p>
+                            I have shared my complete medical history, including
+                            allergies, medications, and any pre-existing
+                            conditions. I confirm that I do not have pregnancy,
+                            severe heart disease, active infections, or unstable
+                            psychiatric issues. I will inform the practitioner
+                            immediately if any such condition exists or
+                            develops. I affirm that I have read the basic rules
+                            and answered all the above questions in absolute
+                            honesty. I hereby declare that the above information
+                            is complete and accurate to the best of my knowledge
+                            and I undertake the treatment at my own risk and
+                            responsibility.
+                          </p>
+
+                          <p className="font-semibold">Final Declaration:</p>
+                          <p>
+                            I have been given sufficient time to ask questions,
+                            consider alternative options, and make an informed
+                            decision. I understand that I can withdraw my
+                            consent at any time. I am giving this consent
+                            voluntarily, without any pressure or influence,
+                            after understanding all details of the proposed
+                            treatments to undergo Panchakarma and Naturopathy
+                            therapies as a holistic wellness approach.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold">उपचार विवरण:</p>
+                          <p>
+                            प्रक्रिया में प्राकृतिक चिकित्सा उपचार जैसे आहार में
+                            परिवर्तन, उपवास चिकित्सा, जल चिकित्सा, मिट्टी
+                            चिकित्सा, योग, प्राणायाम, मालिश, कोलन हाइड्रोथैरेपी,
+                            एक्यूपंक्चर, फिजियोथैरेपी, क्रोमोथैरेपी,
+                            मैग्नेटोथैरेपी, रिफ्लेक्सोलॉजी और कपिंग थेरेपी शामिल
+                            हो सकते हैं। पंचकर्म प्रक्रियाओं में शिरोधारा, नस्य,
+                            बाह्य बस्ती, अक्षितर्पण, रक्तमोक्षण (आवश्यकता
+                            अनुसार), अभ्यंग और स्वेदन शामिल हो सकते हैं। ये
+                            उपचार आपकी स्थिति और आवश्यकता के अनुसार निर्धारित
+                            किए जाएंगे।
+                          </p>
+
+                          <p className="font-semibold">अपेक्षित लाभ:</p>
+                          <p>
+                            इन उपचारों का उद्देश्य शरीर को विषहरण और शुद्ध करना,
+                            शरीर और मन को पुनर्जीवित करना, पाचन और चयापचय में
+                            सुधार करना, ऊर्जा और स्फूर्ति बढ़ाना, तनाव दूर करना,
+                            मानसिक स्पष्टता बढ़ाना, दर्द और अकड़न कम करना,
+                            प्रतिरक्षा तंत्र को मजबूत करना और समग्र स्वास्थ्य को
+                            बढ़ावा देना है।
+                          </p>
+
+                          <p className="font-semibold">जोखिम और सीमाएँ:</p>
+                          <p>
+                            मैं समझता/समझती हूँ कि संभावित जोखिमों में हल्की
+                            मतली, चक्कर, थकान, सिरदर्द, त्वचा में जलन, अस्थायी
+                            पाचन परिवर्तन और भावनात्मक उतार-चढ़ाव शामिल हो सकते
+                            हैं। अप्रत्याशित जटिलताएँ भी हो सकती हैं। प्रबंधन
+                            आवश्यकता अनुसार मुझे किसी उपयुक्त चिकित्सा केंद्र
+                            में स्थानांतरित करने का अधिकार रखता है और किसी
+                            प्रतिकूल प्रतिक्रिया के लिए उत्तरदायी नहीं होगा। मैं
+                            यह भी समझता/समझती हूँ कि परिणाम प्रोटोकॉल और डॉक्टर
+                            की सलाह के पालन पर निर्भर करते हैं और सफलता की कोई
+                            गारंटी नहीं दी जाती।
+                          </p>
+
+                          <p className="font-semibold">नियम और नीतियाँ:</p>
+                          <p>
+                            मुझे बताया गया है कि किसी भी परिस्थिति में उपचार की
+                            राशि वापस नहीं की जाएगी। प्रबंधन आवश्यकता पड़ने पर
+                            किसी भी समय उपचार बंद करने का अधिकार रखता है। मैं
+                            उपचार की सफलता सुनिश्चित करने के लिए डॉक्टर और उनकी
+                            टीम द्वारा दिए गए सभी निर्देशों का पालन करने के लिए
+                            सहमत हूँ।
+                          </p>
+
+                          <p className="font-semibold">चिकित्सीय जानकारी:</p>
+                          <p>
+                            मैंने अपनी संपूर्ण चिकित्सीय जानकारी, जैसे एलर्जी,
+                            दवाइयाँ और पूर्ववर्ती बीमारियाँ साझा की हैं। मैं
+                            पुष्टि करता/करती हूँ कि मुझे गर्भावस्था, गंभीर हृदय
+                            रोग, सक्रिय संक्रमण या अस्थिर मानसिक विकार नहीं हैं।
+                            यदि ऐसी कोई स्थिति है या विकसित होती है तो मैं तुरंत
+                            चिकित्सक को सूचित करूंगा/करूंगी। मैं घोषणा करता/करती
+                            हूँ कि मैंने सभी नियम पढ़े हैं और सभी प्रश्नों का
+                            ईमानदारीपूर्वक उत्तर दिया है। मैं यह भी घोषणा
+                            करता/करती हूँ कि उपरोक्त जानकारी मेरे ज्ञान के
+                            अनुसार पूर्ण और सही है और मैं यह उपचार अपने जोखिम और
+                            जिम्मेदारी पर ले रहा/रही हूँ।
+                          </p>
+
+                          <p className="font-semibold">अंतिम घोषणा:</p>
+                          <p>
+                            मुझे प्रश्न पूछने, वैकल्पिक विकल्पों पर विचार करने
+                            और सूचित निर्णय लेने के लिए पर्याप्त समय दिया गया
+                            है। मैं समझता/समझती हूँ कि मैं किसी भी समय अपनी
+                            सहमति वापस ले सकता/सकती हूँ। मैं यह सहमति स्वेच्छा
+                            से, बिना किसी दबाव या प्रभाव के, प्रस्तावित उपचारों
+                            के सभी विवरणों को समझने के बाद पंचकर्म और प्राकृतिक
+                            चिकित्सा के समग्र कल्याण दृष्टिकोण के रूप में दे
+                            रहा/रही हूँ।
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Checkbox and Signature */}
+                    <div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Checkbox
+                          checked={consentGiven}
+                          onCheckedChange={(c) => setConsentGiven(c === true)}
+                        />
+                        <span>
+                          {language === "en"
+                            ? "I have read and understood the consent form and give my consent."
+                            : "मैंने सहमति प्रपत्र पढ़ा और समझा है तथा मैं अपनी सहमति देता/देती हूँ।"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {consentGiven && (
+                      <div className="mt-4">
+                        <h3 className="font-semibold text-lg">
+                          {language === "en"
+                            ? "Patient Signature"
+                            : "रोगी के हस्ताक्षर"}
+                        </h3>
+                        <SignatureStep onSaveSignature={handleSignatureSave} />
+                      </div>
+                    )}
+
+                    {uploadingSignature && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {language === "en"
+                          ? "Uploading signature…"
+                          : "हस्ताक्षर अपलोड हो रहे हैं..."}
+                      </p>
+                    )}
+
+                    {signature && typeof signature === "string" && (
+                      <div className="mt-3">
+                        <p className="text-xs text-green-700">
+                          {language === "en"
+                            ? "Signature uploaded."
+                            : "हस्ताक्षर सफलतापूर्वक अपलोड हो गए।"}
+                        </p>
+                        <img
+                          src={signature}
+                          alt="Signature"
+                          className="border border-gray-300 h-20 mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
                   <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
                     <p className="text-green-800 font-semibold mb-2">
                       ✓ All sections completed!

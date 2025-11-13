@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Calendar, Users, Clock, Search, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Users, Clock, Search, User, ChevronLeft, ChevronRight, CalendarCheck, ClipboardList, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { getBackendToken, getPatients } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { SimpleCalendarView } from "./SimpleCalendarView";
+import ReceptionTreatmentTable from "./ReceptionTreatmentTable";
 
 type PaginationBarProps = {
   page: number;
@@ -333,11 +336,39 @@ const ReceptionDashboard = () => {
             )}
           </motion.div>
         </section>
+ <Tabs defaultValue="appointments" className="w-full">
+        <TabsList className="bg-white border rounded-lg shadow-sm mb-4 flex">
+          <TabsTrigger
+            value="appointments"
+            className="flex-1 flex items-center justify-center gap-2"
+          >
+            <CalendarCheck size={16} /> Appointments
+          </TabsTrigger>
+          <TabsTrigger
+            value="patients"
+            className="flex-1 flex items-center justify-center gap-2"
+          >
+            <Users size={16} /> Patients
+          </TabsTrigger>
+          <TabsTrigger
+            value="treatments"
+            className="flex-1 flex items-center justify-center gap-2"
+          >
+            <ClipboardList size={16} /> Treatment Log
+          </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex-1 flex items-center justify-center gap-2">
+    <CalendarDays size={16} /> Calendar
+  </TabsTrigger>
+        </TabsList>
 
-        {/* Appointments + Patients */}
-        <section className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-            {/* ============== Latest Appointments ============== */}
+<TabsContent value="calendar">
+  <SimpleCalendarView />
+</TabsContent>
+<TabsContent value="treatments">
+  <ReceptionTreatmentTable />
+</TabsContent>
+<TabsContent value="appointments">
+  {/* ============== Latest Appointments ============== */}
             <motion.section
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -481,8 +512,9 @@ const ReceptionDashboard = () => {
                 </CardContent>
               </Card>
             </motion.section>
-
-            {/* ============== Patients with Advanced Pagination ============== */}
+</TabsContent>
+<TabsContent value="patients">
+    {/* ============== Patients with Advanced Pagination ============== */}
             <motion.section
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -621,8 +653,10 @@ const ReceptionDashboard = () => {
                 </CardContent>
               </Card>
             </motion.section>
-          </div>
-        </section>
+  
+</TabsContent>
+</Tabs>
+       
       </main>
     </div>
   );

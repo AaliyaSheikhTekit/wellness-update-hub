@@ -408,40 +408,18 @@ export const getDietPlan = async (patientId: string, startDate?: string, endDate
   return await response.json();
 };
 
-// ✅ Create a single weekly diet plan (one combined object)
-export const createWeeklyDietPlan = async (
-  patientId: string,
-  appointmentId: string,
-  consultationId: string,
-  weeklyPlan: { date: string; time: string; dietItemIds: string[] }[],
-  restrictions:string,
-) => {
-  const backendToken = getBackendToken();
-  if (!backendToken) throw new Error("Missing backend token. Please login first.");
 
-  const promises = weeklyPlan.map((plan) =>
-    createDietPlan(
-      plan.date,
-      patientId,
-      appointmentId,
-      consultationId,
-      plan.time,
-      plan.dietItemIds,
-      restrictions
-    )
-  );
 
-  return await Promise.all(promises);
-};
 
 export const createDietPlan = async (
-  date: string,
   patientId: string,
   appointmentId: string,
   consultationId: string,
-  time: string,
-  dietItemIds: string[],
-  restrictions:string
+  weekPlan: {
+    date: string;
+    dietPlanItems: { time: string; dietItem: string[]; yogaItem?: string[];  }[];
+  }[],
+  restrictions: string
 ) => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
@@ -455,12 +433,9 @@ export const createDietPlan = async (
     body: JSON.stringify({
       appointmentId,
       consultationId,
-      date,
       patientId,
-      dietPlanItem: {
-        time,
-        dietItem: dietItemIds,
-      },restrictions
+      restrictions,
+      weekPlan, // ✅ single array for all 7 days
     }),
   });
 
@@ -471,6 +446,7 @@ export const createDietPlan = async (
 
   return await response.json();
 };
+
 
 // api/diet.ts
 
@@ -895,4 +871,95 @@ export const getFeedbackByPatientId = async (patientId: string) => {
 
   if (!res.ok) return null;
   return await res.json();
+};
+export const getWeeklyDietPlan = async (
+  consultationId: string,
+  startDate: string,
+  endDate: string
+) => {
+  const token = await getBackendToken(); // reuse your existing auth helper
+
+  const res = await fetch(
+    `${API_BASE_URL}/diet-plan/get-weekly/${consultationId}?startDate=${startDate}&endDate=${endDate}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch weekly diet plan");
+  return res.json();
+};
+export const getTreatmentTable = async (
+  
+) => {
+  const token = await getBackendToken(); // reuse your existing auth helper
+
+  const res = await fetch(
+    `${API_BASE_URL}/patient/get-patient-treatment`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch weekly diet plan");
+  return res.json();
+};
+export const updatePatientTreatmentTable = async (patientId: string, payload: any) => {
+ const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/patient/update-patient-treatment/${patientId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) throw new Error(`Update failed: ${response.status}`);
+  return await response.json();
+};
+export const getPatientTreatmentCalendar = async (startDate: string, endDate: string) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  const response = await fetch(
+    `${API_BASE_URL}/patient/get-patient-treatment-calendar?startDate=${startDate}&endDate=${endDate}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) throw new Error(`Failed to fetch calendar data: ${response.status}`);
+  return await response.json();
+};
+export const getTherapyList = async (
+  
+) => {
+  const token = await getBackendToken(); // reuse your existing auth helper
+
+  const res = await fetch(
+    `${API_BASE_URL}/therapies`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch weekly diet plan");
+  return res.json();
 };

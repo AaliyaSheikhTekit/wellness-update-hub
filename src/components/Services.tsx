@@ -10,113 +10,84 @@ import {
 import { Clock, ArrowRight } from "lucide-react";
 import treatmentImage from "@/assets/naturopathy-treatment.jpg";
 import { motion } from "framer-motion";
-import detoxImage from "@/assets/servicesImg/detox.jpeg";
-import painImage from "@/assets/servicesImg/pain.png";
-import stressImage from "@/assets/servicesImg/Stress.jpg";
-import ikshaImage from "@/assets/servicesImg/iksha.webp";
-
+import detoxImage from "@/assets/servicesImg/detox.jpg";
+import painImage from "@/assets/servicesImg/pain.jpg";
+import stressImage from "@/assets/servicesImg/stress.jpg";
+import completeCare from "@/assets/servicesImg/completeCare.jpg";
+import sportsImage from "@/assets/servicesImg/sports.jpg";
+import weightImage from "@/assets/servicesImg/weight.jpg";
+import beautyImage from "@/assets/servicesImg/beauty.jpg";
 const Services = () => {
   const services = [
     {
       title: "Detox Therapy",
       description:
-        "Cleanse your body naturally with our comprehensive detoxification programs using herbal remedies and lifestyle modifications.",
-      duration: "4-6 weeks",
-      sessionTime: "45-60 minutes per session",
+        "Our Detox Package is your reset button,a gentle yet powerful combination of Naturopathy and Panchakarma therapies that deeply cleanse your body,revive your digestion.and restore natural balance",
+      duration: "7 days",
+      sessionTime: "75 minutes per session",
       price: "₹12,000",
-      icon: "🌿",    image: detoxImage,
-    },
-    {
-      title: "Pain Management",
-      description:
-        "Natural pain relief through therapeutic treatments, herbal medicines, and holistic approaches without dependency on synthetic drugs.",
-      duration: "2-8 weeks",
-      sessionTime: "30-45 minutes per session",
-      price: "₹8,000",
-      icon: "🌱",    image: painImage,
-    },
-    {
-      title: "Stress Management",
-      description:
-        "Restore mental balance and emotional wellness through natural stress relief techniques and mindfulness practices.",
-      duration: "6-12 weeks",
-      sessionTime: "60-75 minutes per session",
-      price: "₹10,000",
-      icon: "🧘",    image: stressImage,
-    },
-    {
-      title: "Iksha Complete Care",
-      description:
-        "Comprehensive wellness program combining all our services for complete mind-body-spirit transformation and optimal health.",
-      duration: "12-16 weeks",
-      sessionTime: "90-120 minutes per session",
-      price: "₹25,000",
-      icon: "✨",
-      image: ikshaImage,
-    },
-    {
-      title: "Śhodhana Detox Package",
-      description:
-        "A deep body detoxification program using traditional naturopathic methods to cleanse and rejuvenate.",
-      duration: "4-6 weeks",
-      sessionTime: "45-60 minutes per session",
-      price: "₹15,000",
-      icon: "🌀",
+      icon: "🌿",
       image: detoxImage,
-    },
-    {
-      title: "Śham Destress Package",
-      description:
-        "Holistic stress relief with mindfulness, herbal remedies, and relaxation therapies.",
-      duration: "6-8 weeks",
-      sessionTime: "60-75 minutes per session",
-      price: "₹12,000",
-      icon: "🧘",    image: detoxImage,
     },
     {
       title: "Ropaṇ Sports Recovery Package",
       description:
         "Recovery therapies for athletes and active individuals to restore energy and heal naturally.",
-      duration: "3-6 weeks",
-      sessionTime: "45-60 minutes per session",
+      duration: "4 days",
+      sessionTime: "90 minutes per session",
       price: "₹14,000",
-      icon: "🏋️",    image: detoxImage,
+      icon: "🏋️",
+      image: sportsImage,
     },
     {
-      title: "Saṁpūrṇa Ikshā Complete Care Package",
+      title: "Distress Management",
       description:
-        "Comprehensive mind-body-spirit care combining all treatments for complete transformation.",
-      duration: "12-16 weeks",
-      sessionTime: "90-120 minutes per session",
-      price: "₹30,000",
-      icon: "✨",    image: detoxImage,
+        "Stress affects both the mind and the body equally,Our calming therapies such as shirodhara and other nimdful relaxation technique dissolve tension.improve sleep.and restore peace,because you deserve to feel rejuvenated again.",
+      duration: "15 days",
+      sessionTime: "90 minutes per session",
+      price: "₹10,000",
+      icon: "🧘",
+      image: stressImage,
     },
     {
-      title: "Praṇidhāna Weight Loss Package",
+      title: "Iksha Complete Care",
       description:
-        "Personalized naturopathic program focusing on natural fat loss and lifestyle correction.",
-      duration: "8-12 weeks",
-      sessionTime: "60 minutes per session",
-      price: "₹18,000",
-      icon: "⚖️",    image: detoxImage,
+        "This is a complete package that depends on your individual health concerns,chronic illness,lifestyle disorder,stress,or general weakness,this package is for you.It combines detox,therapeutic care,and holistic healing to address the root cause of your problem and restore complete balance to ypour body and mind",
+      duration: "20 days",
+      sessionTime: ">120 min (No time limit)",
+      price: "₹25,000",
+      icon: "✨",
+      image: completeCare,
+    },
+    {
+      title: "Pain Releif",
+      description:
+        "Living with pain can steal joy from everyday life.This package combines targeted therapies,herbal traetments ,and healing techniques to address the root cause-not just symptomes.Relieve stiffness,reduce inflammation,and move freely again with confidence.",
+      duration: "20 days",
+      sessionTime: "90 minutes per session",
+      price: "₹8,000",
+      icon: "🌱",
+      image: painImage,
+    },
+    {
+      title: "Weight Management",
+      description:
+        "A deep body detoxification program using traditional naturopathic methods to cleanse and rejuvenate.",
+      duration: " 30 days",
+      sessionTime: "90 minutes per session",
+      price: "₹15,000",
+      icon: "🌀",
+      image: weightImage,
     },
     {
       title: "Āabha Beauty Package",
       description:
         "Natural beauty care using herbal therapies, detox, and rejuvenation treatments.",
-      duration: "6-10 weeks",
-      sessionTime: "45-60 minutes per session",
+      duration: "7 days",
+      sessionTime: "90 mintues per session",
       price: "₹20,000",
-      icon: "🌸",    image: detoxImage,
-    },
-    {
-      title: "Sādhana Pain Relief Package",
-      description:
-        "Targeted therapies for chronic pain, joint stiffness, and muscular discomfort.",
-      duration: "4-8 weeks",
-      sessionTime: "30-45 minutes per session",
-      price: "₹10,000",
-      icon: "🌿",    image: detoxImage,
+      icon: "🌸",
+      image: beautyImage,
     },
   ];
 

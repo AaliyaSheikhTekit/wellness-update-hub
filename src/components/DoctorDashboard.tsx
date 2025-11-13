@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+// DoctorDashboard.tsx
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,18 +9,34 @@ import {
   User,
   Bell,
   CheckCircle2,
-  Stethoscope,
   Search,
   X,
   ChevronLeft,
   ChevronRight,
+  MoreVertical,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
-import { getPatients, updateAppointment, getBackendToken } from "@/lib/api";
+import {
+  getPatients,
+  updateAppointment,
+  getBackendToken,
+  getTherapyList,
+  getPatient,
+  getPatientById,
+} from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -28,7 +45,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-
+import CaseSheetView from "./CaseSheetView";
+import TreatmentPlanTable from "./TreatmentPlanTable";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { updatePatientConsult, uploadConsultationReport } from "./DoctoreForm";
+import DietTableView from "./Dietician/DietTableView";
 /* ----------------------------- Types ----------------------------- */
 
 type AppointmentStatus =
@@ -41,6 +72,7 @@ type AppointmentStatus =
 
 interface Appointment {
   id: string;
+  patientId?: string;
   patient_name: string;
   patient_phone: string;
   appointment_date: string; // YYYY-MM-DD
@@ -49,6 +81,8 @@ interface Appointment {
   notes: string | null;
   is_read: boolean;
 }
+
+/* ---------------------------- Helpers ---------------------------- */
 
 const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
@@ -69,155 +103,69 @@ const statusClasses: Record<AppointmentStatus, string> = {
 };
 
 const StatusBadge = ({ value }: { value: AppointmentStatus }) => (
-  <Badge className={`${statusClasses[value]} capitalize`}>{value.replace("_", " ")}</Badge>
+  <Badge className={`${statusClasses[value]} capitalize`}>
+    {value.replace("_", " ")}
+  </Badge>
 );
 
-/* ------------------------ Small Pagination UI ------------------------ */
+/* ---------------------------- Component --------------------------- */
 
-type PaginationBarProps = {
-  page: number;
-  totalPages: number;
-  total?: number;
-  limit: number;
-  limits?: number[];
-  onPageChange: (page: number) => void;
-  onLimitChange?: (limit: number) => void;
-  className?: string;
-};
-
-const PaginationBar = ({
-  page,
-  totalPages,
-  total,
-  limit,
-  limits = [10, 20, 50],
-  onPageChange,
-  onLimitChange,
-  className = "",
-}: PaginationBarProps) => {
-  // generate a compact page list (1 ... n)
-  const pages = useMemo(() => {
-    const arr: (number | string)[] = [];
-    const add = (v: number | string) => arr.push(v);
-
-    const window = 1; // pages around current
-    const start = Math.max(1, page - window);
-    const end = Math.min(totalPages, page + window);
-
-    add(1);
-    if (start > 2) add("…");
-    for (let p = start; p <= end; p++) add(p);
-    if (end < totalPages - 1) add("…");
-    if (totalPages > 1) add(totalPages);
-    return Array.from(new Set(arr)).filter(Boolean);
-  }, [page, totalPages]);
-
-  return (
-    <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
-      <div className="text-xs text-muted-foreground">
-        {typeof total === "number" ? `Total: ${total}` : null}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Prev
-        </Button>
-
-        <div className="flex items-center gap-1">
-          {pages.map((p, i) =>
-            typeof p === "number" ? (
-              <Button
-                key={`${p}-${i}`}
-                variant={p === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => onPageChange(p)}
-              >
-                {p}
-              </Button>
-            ) : (
-              <span key={`dots-${i}`} className="px-2 text-xs text-muted-foreground">
-                {p}
-              </span>
-            )
-          )}
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          Next
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
-
-        {onLimitChange && (
-          <div className="ml-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Per page</span>
-            <Select value={String(limit)} onValueChange={(v) => onLimitChange(Number(v))}>
-              <SelectTrigger className="h-8 w-[78px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {limits.map((opt) => (
-                  <SelectItem key={opt} value={String(opt)}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ---------------------------- Main Screen ---------------------------- */
-
-const DoctorDashboard = () => {
+const DoctorDashboard: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const DOCTOR_ID = localStorage.getItem("doctor_id") || "doctor123";
   const SOCKET_URL = "https://api.ikshanaturopathy.com";
 
-  // data
+  // Data & loading
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
-
-  // loading
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [patientLoading, setPatientLoading] = useState(false);
 
-  // filters / search
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  // optimistic update guard
-  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
-
-  // -------- APPOINTMENT PAGINATION (server-side) --------
+  // pagination / filters
   const [aptPage, setAptPage] = useState(1);
   const [aptLimit, setAptLimit] = useState(10);
   const [aptTotal, setAptTotal] = useState(0);
   const [aptTotalPages, setAptTotalPages] = useState(1);
 
-  // -------- PATIENT PAGINATION (client-side) --------
-  const [patPage, setPatPage] = useState(1);
-  const [patLimit, setPatLimit] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
-  // unread
-  const unreadAppointments = useMemo(
-    () => appointments.filter((apt) => !apt.is_read),
-    [appointments]
+  // treatment modal state
+  const [openTreatmentModal, setOpenTreatmentModal] = useState(false);
+  const [openDietModal, setOpenDietModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [patientFullData, setPatientFullData] = useState<any | null>(null); // fetched patient details
+  const [patient, setPatient] = useState<any | null>(null);
+  // doctor form data (keeps minimal fields used here)
+  const [doctorData, setDoctorData] = useState<any>({
+    treatment: {
+      treatmentPlan: { title: "", date: "", timeSlot: "", duration: "" },
+      dietChart: { title: "" },
+      yogaChart: { title: "" },
+    },
+    recommandationduration: "",
+  });
+
+  // therapy list & selection
+  const [therapyList, setTherapyList] = useState<any[]>([]);
+  const [opentherapies, setOpenTherapies] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedTherapies, setSelectedTherapies] = useState<any[]>([]);
+  const filteredTherapies = useMemo(
+    () =>
+      therapyList.filter((t: any) =>
+        (t.treatment || t.title || "")
+          .toString()
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      ),
+    [therapyList, search]
   );
+
+  // treatment plan rows
+  const [treatmentPlanData, setTreatmentPlanData] = useState<any[]>([]);
 
   /* --------------------- Fetch Appointments (server) --------------------- */
   const fetchAppointments = useCallback(async () => {
@@ -235,7 +183,6 @@ const DoctorDashboard = () => {
         }
       );
       const data = await res.json();
-
       const mapped: Appointment[] = (data?.data || []).map((a: any) => {
         const iso = a.date || "";
         const time = iso
@@ -246,6 +193,7 @@ const DoctorDashboard = () => {
           : "";
         return {
           id: a.id,
+          patientId: a.patient?.id || a.patientId || a.patient?._id,
           patient_name: a.patient?.fullName || a.patientName || "Unknown",
           patient_phone: a.patient?.contactNumber || "—",
           appointment_date: iso.split("T")[0] || "",
@@ -280,9 +228,8 @@ const DoctorDashboard = () => {
     const loadPatients = async () => {
       setPatientLoading(true);
       try {
-        const res = await getPatients(searchTerm); // assuming this returns full list by query
+        const res = await getPatients(searchTerm);
         setPatients(res?.data ?? []);
-        setPatPage(1); // reset to first page when search changes
       } catch (err) {
         toast({
           title: "Error fetching patients",
@@ -296,18 +243,51 @@ const DoctorDashboard = () => {
     loadPatients();
   }, [searchTerm, toast]);
 
+  /* ------------------------ Fetch therapy list ------------------------ */
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getTherapyList();
+        setTherapyList(data?.data || []);
+      } catch (err) {
+        console.error("Error fetching therapies:", err);
+      }
+    })();
+  }, []);
+  useEffect(() => {
+    if (!selectedPatient?.id) return;
+    const fetchPatient = async () => {
+      try {
+        const res = await getPatientById(selectedPatient?.id);
+        console.log("Fetched patient response:", res);
+        const p = Array.isArray(res?.data) ? res.data[0] : res?.data || res;
+        setPatient(p || null);
+      } catch (e: any) {
+        console.error("Error fetching patient:", e);
+      }
+    };
+
+    fetchPatient();
+  }, [selectedPatient?.id]);
   /* ------------------------ Update Appointment Status ------------------------ */
-  const handleStatusChange = async (apt: Appointment, nextStatus: AppointmentStatus) => {
+  const handleStatusChange = async (
+    apt: Appointment,
+    nextStatus: AppointmentStatus
+  ) => {
     const prev = appointments;
     try {
       setUpdatingStatusId(apt.id);
-      setAppointments((cur) => cur.map((a) => (a.id === apt.id ? { ...a, status: nextStatus } : a)));
+      setAppointments((cur) =>
+        cur.map((a) => (a.id === apt.id ? { ...a, status: nextStatus } : a))
+      );
       await updateAppointment(apt.id, { status: nextStatus });
       toast({
         title: "Status updated",
-        description: `${apt.patient_name} marked as ${nextStatus.replace("_", " ")}.`,
+        description: `${apt.patient_name} marked as ${nextStatus.replace(
+          "_",
+          " "
+        )}.`,
       });
-      // Re-sync current page from server
       await fetchAppointments();
     } catch (e: any) {
       console.error(e);
@@ -324,7 +304,9 @@ const DoctorDashboard = () => {
 
   const markAsRead = (appointmentId: string) => {
     setAppointments((prev) =>
-      prev.map((apt) => (apt.id === appointmentId ? { ...apt, is_read: true } : apt))
+      prev.map((apt) =>
+        apt.id === appointmentId ? { ...apt, is_read: true } : apt
+      )
     );
   };
 
@@ -333,7 +315,6 @@ const DoctorDashboard = () => {
     const socket = io(SOCKET_URL);
 
     socket.on("connect", () => {
-      // console.log("✅ Connected:", socket.id);
       socket.emit("registerDoctor", DOCTOR_ID);
     });
 
@@ -341,17 +322,20 @@ const DoctorDashboard = () => {
       const iso = data.date || "";
       const newAppointment: Appointment = {
         id: data.id,
+        patientId: data.patient?.id || data.patientId,
         patient_name: data.patientName || "Unknown",
         patient_phone: data.patientPhone || "—",
         appointment_date: iso.split("T")[0] || "",
         appointment_time: iso
-          ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          ? new Date(iso).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
           : "",
         status: (data.status || "pending") as AppointmentStatus,
         notes: data.note || null,
         is_read: false,
       };
-      // Prepend only if it belongs to the current server page OR simply increase attention
       setAppointments((prev) => [newAppointment, ...prev]);
       setShowNotifications(true);
     });
@@ -362,37 +346,252 @@ const DoctorDashboard = () => {
     };
   }, [DOCTOR_ID]);
 
-  /* ----------------------- Derived Patient Pagination ----------------------- */
-
+  /* ----------------------- Patient pagination derived ----------------------- */
   const patTotal = patients.length;
-  const patTotalPages = Math.max(1, Math.ceil(patTotal / patLimit));
-  const pagedPatients = useMemo(() => {
-    const start = (patPage - 1) * patLimit;
-    return patients.slice(start, start + patLimit);
-  }, [patients, patPage, patLimit]);
+  const patTotalPages = Math.max(1, Math.ceil(patTotal / 10));
+  const patPage = 1;
+  const patLimit = 10;
+  const pagedPatients = useMemo(() => patients.slice(0, patLimit), [patients]);
 
-  /* --------------------------------- UI --------------------------------- */
+  /* ------------------------ Selection helpers ------------------------ */
+  const toggleTherapy = (therapy: any) => {
+    setSelectedTherapies((prev) => {
+      const exists = prev.some((t: any) => t.id === therapy.id);
+      if (exists) return prev.filter((t: any) => t.id !== therapy.id);
+      return [...prev, therapy];
+    });
+  };
+
+  const totalSelectedDuration = useMemo(() => {
+    return selectedTherapies.reduce(
+      (sum, t) => sum + (parseInt(t.duration || t.durationMinutes || "0") || 0),
+      0
+    );
+  }, [selectedTherapies]);
+
+  /* ------------------------ Open Add Treatment ------------------------ */
+  const handleOpenAddTreatment = async (apt: Appointment) => {
+    // fetch fresh patient data and consultation/treatment details
+    try {
+      setSelectedPatient({
+        id: apt.patientId,
+        name: apt.patient_name,
+        aptId: apt.id,
+      });
+      const pId = apt.patientId;
+      if (!pId) {
+        toast({ title: "Missing patient id", variant: "destructive" });
+        return;
+      }
+      const resp = await getPatient(pId);
+      const pd = resp?.data || resp;
+      setPatientFullData(pd || null);
+
+      // try to extract existing treatmentPlan and treatment rows
+      const existingTreatmentPlan =
+        pd?.treatmentPlan ||
+        pd?.treatment?.treatmentPlan ||
+        pd?.treatment?.recommendation?.treatmentPlan ||
+        [];
+      const existingRows =
+        pd?.treatmentPlanRows ||
+        pd?.treatment?.treatmentPlan ||
+        pd?.treatmentPlan ||
+        [];
+      setTreatmentPlanData(Array.isArray(existingRows) ? existingRows : []);
+
+      // set any doctorData.treatment defaults from fetched
+      setDoctorData((prev: any) => ({
+        ...prev,
+        treatment: {
+          ...prev.treatment,
+          treatmentPlan: {
+            title:
+              pd?.treatment?.treatmentPlan?.title ||
+              pd?.treatmentPlan?.title ||
+              prev.treatment?.treatmentPlan?.title ||
+              "",
+            date:
+              pd?.treatment?.treatmentPlan?.date ||
+              prev.treatment?.treatmentPlan?.date ||
+              "",
+            timeSlot:
+              pd?.treatment?.treatmentPlan?.timeSlot ||
+              prev.treatment?.treatmentPlan?.timeSlot ||
+              "",
+            duration:
+              pd?.treatment?.treatmentPlan?.duration ||
+              prev.treatment?.treatmentPlan?.duration ||
+              "",
+          },
+          dietChart: {
+            title:
+              pd?.treatment?.dietChart?.title ||
+              prev.treatment?.dietChart?.title ||
+              "",
+          },
+        },
+      }));
+
+      // pre-select therapies if there are existing ones
+      const existingTherapyIds =
+        (pd?.treatment?.recommendation?.title &&
+        Array.isArray(pd.treatment.recommendation.title)
+          ? pd.treatment.recommendation.title
+          : []) || [];
+      const preSelected = therapyList.filter(
+        (t) =>
+          existingTherapyIds.includes(t.id) ||
+          existingTherapyIds.includes(t._id) ||
+          existingTherapyIds.includes(t.title)
+      );
+      setSelectedTherapies(preSelected);
+
+      setOpenTreatmentModal(true);
+    } catch (err: any) {
+      console.error("Failed to load patient details:", err);
+      toast({
+        title: "Error",
+        description: "Unable to load patient details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /* ------------------------ Save Treatment (calls update API) ------------------------ */
+  const handleSaveTreatment = async () => {
+    if (!selectedPatient?.id) {
+      toast({ title: "No patient selected", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // Build recommendation object
+      const recommendation = {
+        treatmentPlan: {
+          title: doctorData.treatment?.treatmentPlan?.title || "",
+          date: doctorData.treatment?.treatmentPlan?.date || "",
+          timeSlot: doctorData.treatment?.treatmentPlan?.timeSlot || "",
+          duration:
+            doctorData.treatment?.treatmentPlan?.duration ||
+            (totalSelectedDuration ? `${totalSelectedDuration} min` : ""),
+        },
+        // store therapy ids/titles in recommendation.title (as earlier code uses)
+        title: selectedTherapies.map(
+          (t) => t.id || t._id || t.treatment || t.title
+        ),
+        duration: totalSelectedDuration ? `${totalSelectedDuration} min` : "",
+      };
+
+      const payload: any = {
+        recommandation: recommendation,
+        treatmentPlan:
+          treatmentPlanData && treatmentPlanData.length
+            ? treatmentPlanData
+            : undefined,
+      };
+
+      // If you require a consultationId you can derive from patientFullData
+      const consultationId =
+        patientFullData?.consultation?.id ||
+        patientFullData?.consultationId ||
+        patientFullData?.latestConsultationId;
+
+      let result;
+      if (consultationId) {
+        result = await updatePatientConsult(consultationId, payload);
+      }
+      toast({ title: "Treatment saved" });
+      setOpenTreatmentModal(false);
+
+      // refresh appointments/patient info
+      await fetchAppointments();
+    } catch (err: any) {
+      console.error("Error saving treatment", err);
+      toast({
+        title: "Failed to save treatment",
+        description: err?.message || "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /* ------------------------ Save Diet ------------------------ */
+  const handleOpenAddDiet = async (apt: Appointment) => {
+    setSelectedPatient({
+      id: apt.patientId,
+      name: apt.patient_name,
+      aptId: apt.id,
+    });
+    try {
+      const resp = await getPatient(apt.patientId || "");
+      setPatientFullData(resp?.data || resp);
+      // populate doctorData dietChart if existing
+      setDoctorData((prev: any) => ({
+        ...prev,
+        treatment: {
+          ...prev.treatment,
+          dietChart: {
+            title:
+              resp?.data?.treatment?.dietChart?.title ||
+              prev.treatment?.dietChart?.title ||
+              "",
+          },
+        },
+      }));
+      setOpenDietModal(true);
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error loading patient", variant: "destructive" });
+    }
+  };
+
+  const handleSaveDiet = async () => {
+    if (!selectedPatient?.id) return;
+    try {
+      const payload = {
+        recommandation: {
+          dietChart: doctorData.treatment?.dietChart,
+        },
+      };
+      const consultationId =
+        patientFullData?.consultation?.id ||
+        patientFullData?.consultationId ||
+        patientFullData?.latestConsultationId;
+      if (consultationId) {
+        await updatePatientConsult(consultationId, payload);
+      }
+      toast({ title: "Diet saved" });
+      setOpenDietModal(false);
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Failed to save diet", variant: "destructive" });
+    }
+  };
+  const latestAppointment =
+    Array.isArray(patient?.appointment) && patient.appointment.length > 0
+      ? patient.appointment.reduce((latest, current) => {
+          const latestDate = new Date(latest.date);
+          const currentDate = new Date(current.date);
+          return currentDate > latestDate ? current : latest;
+        })
+      : null;
+
+  const latestAppointmentId = latestAppointment?.id ?? null;
+  /* --------------------------- Render UI --------------------------- */
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-4 gap-4">
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-gradient-to-br from-primary to-info p-3 shadow-lg">
-            <Stethoscope className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Doctor Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Manage your appointments & patients</p>
-          </div>
-
-          {unreadAppointments.length > 0 && (
+          {appointments.filter((a) => !a.is_read).length > 0 && (
             <Badge
               className="flex items-center gap-1 bg-red-400 text-white shadow-lg animate-pulse cursor-pointer"
               onClick={() => setShowNotifications((s) => !s)}
             >
               <Bell className="h-4 w-4" />
-              {unreadAppointments.length} New
+              {appointments.filter((a) => !a.is_read).length} New
             </Badge>
           )}
         </div>
@@ -409,75 +608,122 @@ const DoctorDashboard = () => {
         </div>
       </div>
 
-      <div className="flex flex-row w-full gap-6 ">
-        {/* Appointments Section */}
-        <Card className="shadow-card w-[50%]">
-          <CardHeader className="border-b">
-            <CardTitle>Appointments</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {loadingAppointments ? "Loading…" : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
-            </p>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Appointments Column */}
+        <Card className="shadow-card w-full lg:w-1/2">
+          <CardHeader className="border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle>Appointments</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {loadingAppointments
+                  ? "Loading…"
+                  : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
+              </p>
+            </div>
           </CardHeader>
 
           <CardContent className="p-4 space-y-4">
             {loadingAppointments && (
-              <div className="space-y-2">
-                <div className="h-20 rounded-lg bg-muted animate-pulse" />
-                <div className="h-20 rounded-lg bg-muted animate-pulse" />
+              <div className="space-y-2 animate-pulse">
+                <div className="h-20 rounded-lg bg-muted" />
+                <div className="h-20 rounded-lg bg-muted" />
               </div>
             )}
 
             {!loadingAppointments && appointments.length === 0 && (
-              <p className="text-center text-muted-foreground">No appointments found</p>
+              <p className="text-center text-muted-foreground">
+                No appointments found
+              </p>
             )}
 
             {!loadingAppointments &&
               appointments.map((apt) => (
                 <Card
                   key={apt.id}
-                  className={`transition-all hover:shadow-elevated ${
-                    !apt.is_read ? "border-primary border-2 shadow-lg" : "shadow-card"
+                  className={`transition-all rounded-xl border shadow-md hover:shadow-lg ${
+                    !apt.is_read ? "border-primary/70" : "border-muted"
                   }`}
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <div className="rounded-full bg-primary/10 p-2">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          {apt.patient_name}
-                          {!apt.is_read && <Badge className="ml-2 bg-notification text-white">New</Badge>}
-                          <div className="ml-2">
-                            <StatusBadge value={apt.status} />
-                          </div>
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">{apt.patient_phone}</p>
+                  <CardHeader className="flex justify-between items-start">
+                    <div className="w-full">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <User className="h-4 w-4 text-primary" />
+                          <span className="font-medium">
+                            {apt.patient_name}
+                          </span>
+                          {!apt.is_read && (
+                            <Badge className="ml-2 bg-primary text-white">
+                              New
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="ml-2">
+                            {apt.status}
+                          </Badge>
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full hover:bg-muted ml-auto"
+                            >
+                              <MoreVertical className="h-5 w-5 text-gray-600" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                          <CaseSheetView  patient={patient || ""} />
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleOpenAddTreatment(apt)}
+                            >
+                              Add Treatment
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => handleOpenAddDiet(apt)}
+                            >
+                              Add Diet
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                /* view treatment */
+                              }}
+                            >
+                              View Treatment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                /* view prescription */
+                              }}
+                            >
+                              View Prescription
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
 
-                      <div className="flex items-start gap-3">
-                        {!apt.is_read && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => markAsRead(apt.id)}
-                            className="hover:bg-success/10 hover:text-success"
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Mark as Read
-                          </Button>
-                        )}
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {apt.patient_phone}
+                      </p>
                     </div>
                   </CardHeader>
 
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-sm bg-muted/50 p-2 rounded-md">
                       <CalendarIcon className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{apt.appointment_date}</span>
+                      <span className="font-medium">
+                        {apt.appointment_date}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm bg-muted/50 p-2 rounded-md">
                       <Clock className="h-4 w-4 text-info" />
-                      <span className="font-medium">{apt.appointment_time}</span>
+                      <span className="font-medium">
+                        {apt.appointment_time}
+                      </span>
                     </div>
                     {apt.notes && (
                       <div className="bg-info/10 border border-info/20 rounded-md p-3">
@@ -489,10 +735,14 @@ const DoctorDashboard = () => {
 
                     <div className="flex flex-col sm:flex-row gap-3 sm:items-end justify-between">
                       <div className="w-full sm:w-64">
-                        <Label className="text-xs text-gray-500">Update Status</Label>
+                        <Label className="text-xs text-gray-500">
+                          Update Status
+                        </Label>
                         <Select
                           value={apt.status}
-                          onValueChange={(val) => handleStatusChange(apt, val as AppointmentStatus)}
+                          onValueChange={(val) =>
+                            handleStatusChange(apt, val as AppointmentStatus)
+                          }
                           disabled={updatingStatusId === apt.id}
                         >
                           <SelectTrigger className="mt-1">
@@ -512,29 +762,37 @@ const DoctorDashboard = () => {
                 </Card>
               ))}
 
-            {/* Appointments Pagination */}
-            <PaginationBar
-              page={aptPage}
-              totalPages={aptTotalPages}
-              total={aptTotal}
-              limit={aptLimit}
-              onPageChange={(p) => setAptPage(p)}
-              onLimitChange={(lim) => {
-                setAptLimit(lim);
-                setAptPage(1);
-              }}
-              className="pt-2"
-            />
+            {/* Pagination UI simplified */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-muted-foreground">{`Total: ${aptTotal}`}</div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAptPage(Math.max(1, aptPage - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" /> Prev
+                </Button>
+                <div className="text-sm">Page {aptPage}</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAptPage(aptPage + 1)}
+                >
+                  Next <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Patients Section */}
-        <motion.div className="space-y-4 w-[50%]">
+        {/* Patients Column (keeps same look) */}
+        <motion.div className="space-y-4 w-full lg:w-1/2">
           <Card className="shadow-lg">
-            <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-sky-50 flex justify-between items-center">
+            <CardHeader className="border-b flex justify-between items-center">
               <CardTitle className="text-lg">Patients</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Page {patPage} of {Math.max(1, Math.ceil(patTotal / patLimit))} • {patTotal} total
+                Page {patPage} • {patTotal} total
               </p>
             </CardHeader>
 
@@ -547,7 +805,9 @@ const DoctorDashboard = () => {
               )}
 
               {!patientLoading && pagedPatients.length === 0 && (
-                <p className="text-center text-muted-foreground">No patients found.</p>
+                <p className="text-center text-muted-foreground">
+                  No patients found.
+                </p>
               )}
 
               {!patientLoading &&
@@ -559,7 +819,8 @@ const DoctorDashboard = () => {
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) =>
-                      (e.key === "Enter" || e.key === " ") && navigate(`/patient/${p.id || p._id}`)
+                      (e.key === "Enter" || e.key === " ") &&
+                      navigate(`/patient/${p.id || p._id}`)
                     }
                   >
                     <div className="absolute left-0 top-0 h-full w-1 bg-indigo-400" />
@@ -574,9 +835,6 @@ const DoctorDashboard = () => {
                               .join("")
                               .toUpperCase()}
                           </span>
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white ring-2 ring-white">
-                            <User className="h-3.5 w-3.5 text-indigo-500" />
-                          </div>
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -586,16 +844,6 @@ const DoctorDashboard = () => {
                                 <span className="truncate text-base font-semibold text-gray-900">
                                   {p.fullName || p.name || "—"}
                                 </span>
-                                {p.bloodType && (
-                                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
-                                    {p.bloodType}
-                                  </span>
-                                )}
-                                {p.reference && (
-                                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-inset ring-sky-200">
-                                    Ref: {p.reference}
-                                  </span>
-                                )}
                               </div>
                             </div>
 
@@ -619,20 +867,26 @@ const DoctorDashboard = () => {
                               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
                                 📞
                               </span>
-                              <span className="truncate">{p.contactNumber || "—"}</span>
+                              <span className="truncate">
+                                {p.contactNumber || "—"}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
                                 🆔
                               </span>
-                              <span className="truncate">{p.reference || "—"}</span>
+                              <span className="truncate">
+                                {p.reference || "—"}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100">
                                 🎂
                               </span>
                               <span className="truncate">
-                                {p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : "—"}
+                                {p.dateOfBirth
+                                  ? new Date(p.dateOfBirth).toLocaleDateString()
+                                  : "—"}
                               </span>
                             </div>
                           </div>
@@ -648,84 +902,304 @@ const DoctorDashboard = () => {
                   </Card>
                 ))}
 
-              {/* Patients Pagination (client-side) */}
-              <PaginationBar
-                page={patPage}
-                totalPages={patTotalPages}
-                total={patTotal}
-                limit={patLimit}
-                onPageChange={(p) => setPatPage(p)}
-                onLimitChange={(lim) => {
-                  setPatLimit(lim);
-                  setPatPage(1);
-                }}
-              />
+              {/* Patients Pagination */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    Total: {patTotal}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
       {/* Notifications Panel */}
-      {showNotifications && unreadAppointments.length > 0 && (
-        <div className="fixed top-20 right-6 w-96 max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-primary to-info p-4 text-white flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 animate-pulse" />
-              <h2 className="font-bold text-lg">New Appointments</h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowNotifications(false)}
-              className="hover:bg-white/20 text-white"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="overflow-y-auto max-h-[400px] p-4 space-y-3 bg-gray-50">
-            {unreadAppointments.map((apt) => (
-              <div
-                key={apt.id}
-                className="bg-white p-4 border border-primary/20 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/40"
+      {showNotifications &&
+        appointments.filter((a) => !a.is_read).length > 0 && (
+          <div className="fixed top-20 right-6 w-96 max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-primary to-info p-4 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 animate-pulse" />
+                <h2 className="font-bold text-lg">New Appointments</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+                className="hover:bg-white/20 text-white"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-800 block">{apt.patient_name}</span>
-                      <span className="text-xs text-gray-500">{apt.patient_phone}</span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => markAsRead(apt.id)}
-                    className="hover:bg-success/10 text-success -mt-1"
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto max-h-[400px] p-4 space-y-3 bg-gray-50">
+              {appointments
+                .filter((a) => !a.is_read)
+                .map((apt) => (
+                  <div
+                    key={apt.id}
+                    className="bg-white p-4 border border-primary/20 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/40"
                   >
-                    <CheckCircle2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm bg-primary/5 p-2 rounded-md">
-                    <CalendarIcon className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-gray-700">{apt.appointment_date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm bg-info/5 p-2 rounded-md">
-                    <Clock className="h-4 w-4 text-info" />
-                    <span className="font-medium text-gray-700">{apt.appointment_time}</span>
-                  </div>
-                  {apt.notes && (
-                    <div className="bg-amber-50 border border-amber-200 p-2 rounded-md">
-                      <p className="text-xs text-amber-900 leading-relaxed">{apt.notes}</p>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-800 block">
+                            {apt.patient_name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {apt.patient_phone}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => markAsRead(apt.id)}
+                        className="hover:bg-success/10 text-success -mt-1"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm bg-primary/5 p-2 rounded-md">
+                        <CalendarIcon className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-gray-700">
+                          {apt.appointment_date}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm bg-info/5 p-2 rounded-md">
+                        <Clock className="h-4 w-4 text-info" />
+                        <span className="font-medium text-gray-700">
+                          {apt.appointment_time}
+                        </span>
+                      </div>
+                      {apt.notes && (
+                        <div className="bg-amber-50 border border-amber-200 p-2 rounded-md">
+                          <p className="text-xs text-amber-900 leading-relaxed">
+                            {apt.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+      {/* Add Treatment Modal */}
+      {openTreatmentModal && selectedPatient && (
+        <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
+          <DialogContent
+            className="
+    max-w-3xl 
+    w-[95%] sm:w-[85%] md:w-[75%] lg:w-[62%]
+    bg-white p-6 rounded-xl 
+       max-h-[85vh]        /* 👈 prevents modal from growing too tall */
+    overflow-y-auto     /* 👈 scroll content inside */
+    overflow-x-hidden 
+  "
+          >
+            <DialogHeader>
+              <DialogTitle>
+                🩺 Treatment Plan for {selectedPatient.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 w-full overflow-x-hidden">
+              {/* Existing Treatments table (component) */}
+              <div>
+                <TreatmentPlanTable
+                  value={treatmentPlanData}
+                  onChange={setTreatmentPlanData}
+                  includeYoga={true}
+                />
+              </div>
+
+              {/* Treatment Details */}
+              <div className="space-y-6 border-t pt-6 mt-6">
+                <h2 className="text-xl font-bold text-amber-700 flex items-center gap-2">
+                  🩺 Treatment Details
+                </h2>
+
+                <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <label className="font-semibold text-gray-700 block mb-2">
+                    Select Therapies
+                  </label>
+
+                  <Popover open={opentherapies} onOpenChange={setOpenTherapies}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {selectedTherapies.length > 0
+                          ? selectedTherapies
+                              .map((t) => t.treatment || t.title)
+                              .join(", ")
+                          : "Select therapies"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+
+                    <PopoverContent className="w-[300px] p-2">
+                      <Input
+                        placeholder="Search therapy..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                      <div className="max-h-48 overflow-y-auto space-y-1">
+                        {filteredTherapies.map((therapy: any) => {
+                          const selected = selectedTherapies.some(
+                            (t) => t.id === therapy.id
+                          );
+                          return (
+                            <div
+                              key={therapy.id}
+                              onClick={() => toggleTherapy(therapy)}
+                              className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer hover:bg-amber-100 ${
+                                selected ? "bg-amber-200" : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">
+                                  {therapy.treatment || therapy.title}
+                                </span>
+                                {therapy.duration && (
+                                  <span className="text-xs text-muted-foreground ml-2">
+                                    ({therapy.duration} min)
+                                  </span>
+                                )}
+                              </div>
+                              {selected && (
+                                <Check className="h-4 w-4 text-amber-600" />
+                              )}
+                            </div>
+                          );
+                        })}
+                        {filteredTherapies.length === 0 && (
+                          <div className="text-sm text-gray-500 px-2 py-2">
+                            No results
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Duration Calculation */}
+                  <div className="mt-4 space-y-3">
+                    <h4 className="font-semibold text-gray-800">
+                      Therapy Durations
+                    </h4>
+                    <Input
+                      placeholder="Duration (e.g. 60 min)"
+                      value={
+                        selectedTherapies.length > 0
+                          ? `${totalSelectedDuration} min`
+                          : doctorData.recommandationduration || ""
+                      }
+                      readOnly={selectedTherapies.length > 0}
+                      onChange={(e) =>
+                        setDoctorData((prev: any) => ({
+                          ...prev,
+                          recommandationduration: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+
+              {/* Save */}
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                  onClick={handleSaveTreatment}
+                >
+                  Save Treatment
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setOpenTreatmentModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Add Diet Modal */}
+      {openDietModal && selectedPatient && (
+        <Dialog open={openDietModal} onOpenChange={setOpenDietModal}>
+          <DialogContent
+            className="
+    max-w-3xl 
+    w-[95%] sm:w-[85%] md:w-[75%] lg:w-[62%]
+    bg-white p-6 rounded-xl 
+       max-h-[85vh]        /* 👈 prevents modal from growing too tall */
+    overflow-y-auto     /* 👈 scroll content inside */
+    overflow-x-hidden 
+  "
+          >
+            <DialogHeader>
+              <DialogTitle>
+                🥗 Diet Chart for {selectedPatient.name}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Input
+                placeholder="e.g. High-protein vegetarian diet"
+                value={doctorData.treatment?.dietChart?.title || ""}
+                onChange={(e) =>
+                  setDoctorData((prev: any) => ({
+                    ...prev,
+                    treatment: {
+                      ...prev.treatment,
+                      dietChart: {
+                        ...(prev.treatment?.dietChart || {}),
+                        title: e.target.value,
+                      },
+                    },
+                  }))
+                }
+              />
+
+              {/* show existing diet table for patient */}
+              {selectedPatient && (
+                <DietTableView
+                  patientId={selectedPatient.id}
+                  latestAppointmentId={latestAppointmentId}
+                  consultationId=""
+                  patientName=""
+                />
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleSaveDiet}
+                >
+                  Save Diet
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setOpenDietModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

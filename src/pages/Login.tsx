@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Leaf, Key } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Leaf, Key, Loader2 } from "lucide-react";
 import {
   signIn,
   confirmSignIn,
@@ -18,7 +18,7 @@ import {
   confirmResetPassword,
   getCurrentUser,
   fetchAuthSession,
-  signOut
+  signOut,
 } from "aws-amplify/auth";
 import IkshaLogo from "../assets/iksha_logo.png"; // Ensure you have the logo image in the specified path
 import { loginWithCognitoToken } from "@/lib/api";
@@ -26,6 +26,7 @@ import { loginWithCognitoToken } from "@/lib/api";
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -44,60 +45,64 @@ const Login = () => {
       [e.target.name]: e.target.value,
     });
   };
-const determineRole = (username: string): string => {
-  const nameLower = username.toLowerCase();
+  const determineRole = (username: string): string => {
+    const nameLower = username.toLowerCase();
 
-  if (nameLower.includes("superadmin")) return "admin";
-  if (nameLower.includes("doctor")) return "doctor";
-  if (nameLower.includes("recptionist")) return "receptionist";
+    if (nameLower.includes("superadmin")) return "admin";
+    if (nameLower.includes("doctor")) return "doctor";
+    if (nameLower.includes("recptionist")) return "receptionist";
 
-  // fallback
-  return "user";
-};
+    // fallback
+    return "user";
+  };
   // --- Sign In ---
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const { isSignedIn, nextStep } = await signIn({
-      username: formData.email,
-      password: formData.password,
-    });
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { isSignedIn, nextStep } = await signIn({
+        username: formData.email,
+        password: formData.password,
+      });
 
-    if (isSignedIn) {
-      const user = await getCurrentUser();
-      const session = await fetchAuthSession();
+      if (isSignedIn) {
+        const user = await getCurrentUser();
+        const session = await fetchAuthSession();
 
-      const payload = session.tokens?.idToken?.payload || {};
-      const preferredUsername = payload["preferred_username"] || payload.username || "User";
-      const email = payload["email"] || formData.email;
- const accessToken = session.tokens?.accessToken?.toString() ?? "";
-      // Save user info
-      localStorage.setItem("userName", String(preferredUsername));
-      localStorage.setItem("userEmail", String(email));
-      localStorage.setItem("CognitoAccessToken", accessToken);
-// Determine role dynamically
-      const role = determineRole(preferredUsername as any);
-      console.log(role)
-      // --- NEW: Call backend login with Cognito token ---
-      try {
-        await loginWithCognitoToken(String(preferredUsername), role); // adjust role if needed
-        console.log("Backend token acquired and saved");
-      } catch (err) {
-        console.error("Backend login failed:", err);
+        const payload = session.tokens?.idToken?.payload || {};
+        const preferredUsername =
+          payload["preferred_username"] || payload.username || "User";
+        const email = payload["email"] || formData.email;
+        const accessToken = session.tokens?.accessToken?.toString() ?? "";
+        // Save user info
+        localStorage.setItem("userName", String(preferredUsername));
+        localStorage.setItem("userEmail", String(email));
+        localStorage.setItem("CognitoAccessToken", accessToken);
+        // Determine role dynamically
+        const role = determineRole(preferredUsername as any);
+        console.log(role);
+        // --- NEW: Call backend login with Cognito token ---
+        try {
+          await loginWithCognitoToken(String(preferredUsername), role); // adjust role if needed
+          console.log("Backend token acquired and saved");
+        } catch (err) {
+          console.error("Backend login failed:", err);
+        }
+
+        navigate("/dashboard");
+      } else {
+        console.log("Next step required:", nextStep);
+        setNextStep(nextStep);
       }
-
-      navigate("/dashboard");
-    } else {
-      console.log("Next step required:", nextStep);
-      setNextStep(nextStep);
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      alert(error.message || "Authentication failed.");
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    console.error("Auth Error:", error);
-    alert(error.message || "Authentication failed.");
-  }
-};
+  };
 
-useEffect(() => {
+  useEffect(() => {
     const clearSession = async () => {
       try {
         await signOut(); // clears Cognito session (cookies + tokens)
@@ -174,11 +179,11 @@ useEffect(() => {
         <Card className="bg-white border-0 wellness-shadow">
           <CardHeader className="text-center space-y-4">
             <div className="flex items-center justify-center space-x-2">
-                <img
-  src={IkshaLogo}
-  alt="Iksha Naturopathy Logo"
-  className="h-16 w-auto object-contain" // larger height
-/>
+              <img
+                src={IkshaLogo}
+                alt="Iksha Naturopathy Logo"
+                className="h-16 w-auto object-contain" // larger height
+              />
             </div>
             <div>
               <CardTitle className="font-display text-3xl font-bold text-foreground">
@@ -238,14 +243,21 @@ useEffect(() => {
                     </button>
                   </div>
                 </div>
-
                 <Button
                   type="submit"
                   variant="wellness"
                   size="lg"
-                  className="w-full bg-foreground hover:bg-foreground/85"
+                  className="w-full bg-foreground hover:bg-foreground/85 flex items-center justify-center gap-2"
+                  disabled={loading} // 👈 disable during loading
                 >
-                  Sign In
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
                 </Button>
 
                 <button
@@ -339,7 +351,6 @@ useEffect(() => {
                 <Button
                   onClick={handleConfirmForgotPassword}
                   variant="wellness"
-
                   size="lg"
                   className="w-full bg-foreground"
                 >
@@ -359,4 +370,3 @@ export default Login;
 //Iksha@Recp90
 //Iksha@doctor90
 //doctor@eanaturopathyindia.com
-
