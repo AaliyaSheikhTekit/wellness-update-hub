@@ -10,13 +10,13 @@ import {
 import { Clock, ArrowRight } from "lucide-react";
 import treatmentImage from "@/assets/naturopathy-treatment.jpg";
 import { motion } from "framer-motion";
-import detoxImage from "@/assets/servicesImg/detox.jpg";
-import painImage from "@/assets/servicesImg/pain.jpg";
-import stressImage from "@/assets/servicesImg/stress.jpg";
-import completeCare from "@/assets/servicesImg/completeCare.jpg";
-import sportsImage from "@/assets/servicesImg/sports.jpg";
-import weightImage from "@/assets/servicesImg/weight.jpg";
-import beautyImage from "@/assets/servicesImg/beauty.jpg";
+import detoxImage from "@/assets/detox.jpg";
+import painImage from "@/assets/pain.jpg";
+import stressImage from "@/assets/Stress.jpg";
+import completeCare from "@/assets/completeCare.jpg";
+import sportsImage from "@/assets/sports.jpg";
+import weightImage from "@/assets/weight.jpg";
+import beautyImage from "@/assets/beauty.jpg";
 
 const Services = () => {
   const services = [
