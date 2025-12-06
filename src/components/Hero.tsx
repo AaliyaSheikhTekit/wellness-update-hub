@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Leaf, Heart, Shield } from "lucide-react";
-import heroImage from "@/assets/hero_video.mp4";
+import heroImage from "@/assets/video-hero.webm";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import IkshaLogo from "../assets/iksha_logo.png";
@@ -15,16 +15,18 @@ const Hero = () => {
         className="relative min-h-screen flex items-center overflow-hidden mt-6"
       >
         {/* Background with parallax effect */}
-        {/* Background with looping video */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute top-0 left-0 w-full h-full object-cover"
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          style={{ filter: "contrast(1.1) saturate(1.05)" }}
         >
           <source src={heroImage} type="video/mp4" />
         </video>
+
         {/* Optional gradient overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-r from-background/55 via-background/20 to-background/20" />
         x
