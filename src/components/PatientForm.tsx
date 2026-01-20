@@ -794,7 +794,7 @@ const markTouched = (fields: string[]) => {
         const data = json?.data ?? json;
         setFormData(mapPatientToFormState(data[0]));
         setLifestyle(mapPatientToLifestyle(data[0]));
-        setVitals(mapPatientToVitals(data));
+        setVitals(mapPatientToVitals(data[0]));
       } catch (e) {
         console.error(e);
       }
