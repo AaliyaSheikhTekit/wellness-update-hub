@@ -86,13 +86,8 @@ const FIELD_VALIDATIONS: Record<
     label: "Blood Pressure",
   },
   Pulse: { required: true, validator: validators.number, label: "Pulse" },
-  Weight: { required: false, validator: validators.number, label: "Weight" },
-  Height: { required: false, validator: validators.number, label: "Height" },
-  Temperature: {
-    required: false,
-    validator: validators.number,
-    label: "Temperature",
-  },
+
+
 };
 
 const VITALS_FIELDS = [
@@ -433,20 +428,22 @@ const PatientRegistrationForm = () => {
   };
 
   // Handle field blur for real-time validation
-  const handleBlur = (fieldName: string) => {
-    setTouched({ ...touched, [fieldName]: true });
-    const value = fieldName.includes(" ")
-      ? vitals[fieldName]
-      : formData[fieldName];
-    const error = validateField(fieldName, value);
-    if (error) {
-      setErrors({ ...errors, [fieldName]: error });
-    } else {
-      const newErrors = { ...errors };
-      delete newErrors[fieldName];
-      setErrors(newErrors);
-    }
-  };
+const handleBlur = (fieldName: string) => {
+  setTouched((prev) => ({ ...prev, [fieldName]: true }));
+
+  const isVital = VITALS_FIELDS.some((v) => v.label === fieldName);
+  const value = isVital ? vitals[fieldName] : formData[fieldName];
+
+  const error = validateField(fieldName, value);
+
+  setErrors((prev) => {
+    const next = { ...prev };
+    if (error) next[fieldName] = error;
+    else delete next[fieldName];
+    return next;
+  });
+};
+
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -601,7 +598,22 @@ const PatientRegistrationForm = () => {
   const handleNext = async () => {
     if (!validateStep(step)) {
       if (step === 1) markTouched(STEP1_FIELDS);
-      if (step === 3) markTouched(["Blood Pressure", "Pulse"]); // optional
+      if (step === 3) markTouched(["Pulse","weight","height"]); // optional
+      if (step === 3) {
+      const w = vitals["Weight"];
+      const h = vitals["Height"];
+
+      // if user enters one, force the other
+      if ((w && !h) || (!w && h)) {
+        setErrors((prev) => ({
+          ...prev,
+          Weight: !w ? "Weight is required for BMI" : prev.Weight,
+          Height: !h ? "Height is required for BMI" : prev.Height,
+        }));
+        return;
+      }
+    }
+
       setApiError("Please fix the errors before proceeding");
       return;
     }
@@ -1364,12 +1376,11 @@ const markTouched = (fields: string[]) => {
                               : ""
                               } ${isAuto ? "bg-gray-50 cursor-not-allowed" : ""}`}
                           />
-                          {errors[v.label] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors[v.label]}
-                            </p>
+                          {errors[v.label] &&
+                            !["BMI", "Temperature", "Weight", "Height"].includes(v.label) && (
+                              <p className="text-red-500 text-xs mt-1">{errors[v.label]}</p>
                           )}
-                        </div>
+                                                  </div>
                       );
                     })}
                   </div>
