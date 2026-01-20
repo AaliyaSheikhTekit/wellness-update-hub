@@ -83,10 +83,10 @@ const FIELD_VALIDATIONS: Record<
     label: "Blood Pressure",
   },
   Pulse: { required: true, validator: validators.number, label: "Pulse" },
-  Weight: { required: true, validator: validators.number, label: "Weight" },
-  Height: { required: true, validator: validators.number, label: "Height" },
+  Weight: { required: false, validator: validators.number, label: "Weight" },
+  Height: { required: false, validator: validators.number, label: "Height" },
   Temperature: {
-    required: true,
+    required: false,
     validator: validators.number,
     label: "Temperature",
   },
@@ -189,7 +189,7 @@ const LIFESTYLE_FIELDS: Record<
     sleepTime: true,
   },
   addictions: {
-    options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee"],
+    options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee","none"],
     other: true,
   },
   physicalActivity: {
@@ -403,9 +403,7 @@ const PatientRegistrationForm = () => {
         const requiredVitals = [
           "Blood Pressure",
           "Pulse",
-          "Weight",
-          "Height",
-          "Temperature",
+          
         ];
         requiredVitals.forEach((field) => {
           const error = validateField(field, vitals[field]);
@@ -594,8 +592,9 @@ const PatientRegistrationForm = () => {
   };
 
   const handleNext = async () => {
-    // Validate before proceeding
     if (!validateStep(step)) {
+      if (step === 1) markTouched(STEP1_FIELDS);
+      if (step === 3) markTouched(["Blood Pressure", "Pulse"]); // optional
       setApiError("Please fix the errors before proceeding");
       return;
     }
@@ -648,6 +647,28 @@ const PatientRegistrationForm = () => {
       setApiError(err?.message || "Something went wrong.");
     }
   };
+const STEP1_FIELDS = [
+  "name",
+  "age",
+  "sex",
+  "fatherOrHusbandName",
+  "contactNumber",
+  "maritalStatus",
+  "dateOfBirth",
+  "bloodType",
+  "occupation",
+  "reference",
+  "address",
+  "primaryHealthConcern",
+];
+
+const markTouched = (fields: string[]) => {
+  setTouched((prev) => {
+    const next = { ...prev };
+    fields.forEach((f) => (next[f] = true));
+    return next;
+  });
+};
 
   const dataUrlToFile = async (
     dataUrl: string,
@@ -1090,6 +1111,11 @@ const PatientRegistrationForm = () => {
                   </div>
 
                   <div>
+                    
+                  <h4 className="font-semibold text-amber-700 mt-4">
+                    Your primary health concern and please specify how long you
+                    have had this condition.
+                  </h4>
                     <Textarea
                       name="primaryHealthConcern"
                       placeholder="Primary Health Concern *"
@@ -1134,10 +1160,6 @@ const PatientRegistrationForm = () => {
                     rows={3}
                   />
 
-                  <h4 className="font-semibold text-amber-700 mt-4">
-                    Your primary health concern and please specify how long you
-                    have had this condition.
-                  </h4>
                   <Textarea
                     name="chronicIllnesses"
                     placeholder="Chronic Illnesses"
