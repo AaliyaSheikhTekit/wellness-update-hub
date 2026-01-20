@@ -215,24 +215,31 @@ const PatientRegistrationForm = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [lifestyle, setLifestyle] = useState<Record<string, any>>({
-    diet: "",
+    diet: [],                 // ✅ because UI uses checkbox array
     appetite: [],
     taste: [],
-    bowelmovements: [],
+    bowelMovements: [],       // ✅ FIXED (was bowelmovements)
     sleep: [],
     addictions: [],
     physicalActivity: [],
     waterIntake: "",
+
     stress: [],
     mentalState: [],
+
     wakeTime: "",
     sleepTime: "",
+
     otherDiet: "",
     otherAddictions: "",
-    otherBowel: "",
+    otherBowelMovements: "",
     otherSleep: "",
+    otherPhysicalActivity: "",
     otherWaterIntake: "",
+
+    frequency_bowelMovements: "", // ✅ because UI uses `frequency_${key}`
   });
+
 
   const [formData, setFormData] = useState<Record<string, any>>({
     name: "",
@@ -511,42 +518,53 @@ const PatientRegistrationForm = () => {
       skinfoldSubscapularMm: toNumberOrNull(vitals["Skinfold (Subscapular)"]),
       skinfoldSuprailiacMm: toNumberOrNull(vitals["Skinfold (Suprailiac)"]),
       bodyFatPercent: toNumberOrNull(vitals["Body Fat %"]),
-      diet: lifestyle.other_diet?.trim()
-        ? lifestyle.other_diet
-        : lifestyle.diet.length
-        ? lifestyle.diet[0]
-        : "",
-      otherDiet: toStringOrNull(lifestyle.other_diet),
-      appetite: lifestyle.appetite.length ? lifestyle.appetite[0] : null,
-      taste: lifestyle.taste.length ? lifestyle.taste[0] : null,
-      // 🩺 Bowel Movements mapping — UI → Backend
+      diet: (lifestyle.otherDiet || "").trim()
+        ? lifestyle.otherDiet
+        : Array.isArray(lifestyle.diet)
+          ? (lifestyle.diet[0] || "")
+          : String(lifestyle.diet || ""),
+
+      otherDiet: toStringOrNull(lifestyle.otherDiet),
+
+      appetite: Array.isArray(lifestyle.appetite) && lifestyle.appetite.length
+        ? lifestyle.appetite[0]
+        : null,
+
+      taste: Array.isArray(lifestyle.taste) && lifestyle.taste.length
+        ? lifestyle.taste[0]
+        : null,
+
       bowel: Array.isArray(lifestyle.bowelMovements)
         ? lifestyle.bowelMovements.join(", ")
-        : lifestyle.bowelMovements
-        ? String(lifestyle.bowelMovements)
-        : "",
+        : String(lifestyle.bowelMovements || ""),
 
-      otherBowel:
-        lifestyle.otherBowel ?? lifestyle.other_bowelMovements
-          ? String(lifestyle.other_bowelMovements)
-          : "",
-      bowelFrequency:
-        lifestyle.bowelFrequency ?? lifestyle.frequency_bowelMovements
-          ? String(lifestyle.frequency_bowelMovements)
-          : "",
-      sleep: lifestyle.sleep.length ? lifestyle.sleep[0] : null,
+      otherBowel: toStringOrNull(lifestyle.otherBowelMovements),
+
+      bowelFrequency: toStringOrNull(lifestyle.frequency_bowelMovements),
+
+      sleep: Array.isArray(lifestyle.sleep) && lifestyle.sleep.length
+        ? lifestyle.sleep[0]
+        : null,
+
       sleepWakeUpTime: toStringOrNull(lifestyle.wakeTime),
       sleepTime: toStringOrNull(lifestyle.sleepTime),
-      addictions: lifestyle.addictions.length ? lifestyle.addictions : [],
-      otherAddictions: toStringOrNull(lifestyle.other_addictions),
-      physicalActivity: lifestyle.physicalActivity.length
+
+      addictions: Array.isArray(lifestyle.addictions) ? lifestyle.addictions : [],
+      otherAddictions: toStringOrNull(lifestyle.otherAddictions),
+
+      physicalActivity: Array.isArray(lifestyle.physicalActivity)
         ? lifestyle.physicalActivity
         : [],
-      otherPhysicalActivity: toStringOrNull(lifestyle.other_physicalActivity),
+      otherPhysicalActivity: toStringOrNull(lifestyle.otherPhysicalActivity),
+
       waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
-      otherWaterIntake: lifestyle.other_water_intake || "test",
-      stress: lifestyle.stress.length ? lifestyle.stress[0] : null,
-      mentalState: lifestyle.mentalState.length
+      otherWaterIntake: toStringOrNull(lifestyle.otherWaterIntake),
+
+      stress: Array.isArray(lifestyle.stress) && lifestyle.stress.length
+        ? lifestyle.stress[0]
+        : null,
+
+      mentalState: Array.isArray(lifestyle.mentalState) && lifestyle.mentalState.length
         ? lifestyle.mentalState[0]
         : null,
       // signature: toStringOrNull(signature),
@@ -597,8 +615,15 @@ const PatientRegistrationForm = () => {
       if (step === 3) {
         try {
           const qrRes = await getPaymentQr();
+          console.log(qrRes)
+          const raw = qrRes?.data?.qrCodeUrl || "";
+
+          // keep the last https://... part (works even if backend concatenates)
+          const fixedQrUrl = raw.includes("https://")
+            ? "https://" + raw.split("https://").pop()
+            : raw;
           setQr({
-            imageUrl: qrRes?.data?.qrCodeUrl || qrRes?.qrCodeUrl,
+            imageUrl: fixedQrUrl || fixedQrUrl,
             upiId: qrRes?.data?.upi || qrRes?.upi,
             id: qrRes?.data?.id || qrRes?.id,
           });
@@ -612,7 +637,10 @@ const PatientRegistrationForm = () => {
         await updatePatient(id, buildUpdatePayload({ includeConsent: false }));
         setSubmitting(false);
       }
-
+      if (step === 4) {
+        await submitFinal();
+        return;
+      }
       setStep(step + 1);
     } catch (err: any) {
       console.error(err);
@@ -638,30 +666,9 @@ const PatientRegistrationForm = () => {
     return new File([jpegBlob], fileName, { type: "image/jpeg" });
   };
 
-  const handleSignatureSave = async (dataUrl: string) => {
-    try {
-      setApiError("");
-      setApiSuccess("");
-      // setUploadingSignature(true);
 
-      if (!id) throw new Error("No patient id. Please complete Step 1 first.");
-      // if (!consentGiven) throw new Error("Consent is required before signing.");
 
-      const file = await dataUrlToFile(dataUrl, "signature.png");
-      const url = await uploadPatientSignature(file);
-
-      // setSignature(url);
-      setApiSuccess("Signature uploaded. Submitting form…");
-
-      await submitFinal(url);
-    } catch (e: any) {
-      console.error(e);
-      setApiError(e?.message || "Failed to upload signature.");
-    } 
-    
-  };
-
-  const submitFinal = async (signatureOverride?: string) => {
+  const submitFinal = async () => {
     if (!patientId)
       return setApiError("No patient id. Please complete Step 1 again.");
     // if (!consentGiven) return setApiError("Consent is required.");
@@ -706,7 +713,7 @@ const PatientRegistrationForm = () => {
     name: p.fullName || "",
     age: p.age ?? "",
     sex: p.sex || "",
-    fatherOrHusbandName: p.fatherOrHusbandName || "",
+    fatherOrHusbandName: p.fatherHusbandName || p.fatherOrHusbandName || "",
     address: p.address || "",
     contactNumber: p.contactNumber || "",
     maritalStatus: p.maritalStatus || "",
@@ -714,7 +721,13 @@ const PatientRegistrationForm = () => {
     bloodType: p.bloodType || "",
     occupation: p.occupation || "",
     reference: p.reference || "",
+    primaryHealthConcern: p.primaryHealthConcern || "",
+    chronicIllnesses: p.chronicIllnesses || "",
+    surgeriesOrInjuries: p.surgeriesOrInjuries || "",
+    allergies: p.allergies || "",
+    familyHistory: p.familyHistory || "",
   });
+
 
   const mapPatientToVitals = (p: any) => ({
     "Blood Pressure": p.bloodPressure || "",
@@ -799,9 +812,8 @@ const PatientRegistrationForm = () => {
                   className="absolute top-5 left-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
                   style={{
                     left: "20px",
-                    width: `calc(${((step - 1) / 4) * 100}% - ${
-                      step === 1 ? 20 : 0
-                    }px)`,
+                    width: `calc(${((step - 1) / 4) * 100}% - ${step === 1 ? 20 : 0
+                      }px)`,
                   }}
                 ></div>
 
@@ -810,13 +822,11 @@ const PatientRegistrationForm = () => {
                     <div key={s} className="flex flex-col items-center">
                       <button
                         onClick={() => setStep(s)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 ${
-                          step >= s
-                            ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/50"
-                            : "bg-white border-2 border-gray-300 text-gray-400 hover:border-amber-400"
-                        } ${
-                          step === s ? "ring-4 ring-amber-200 scale-110" : ""
-                        }`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 transform hover:scale-110 ${step >= s
+                          ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/50"
+                          : "bg-white border-2 border-gray-300 text-gray-400 hover:border-amber-400"
+                          } ${step === s ? "ring-4 ring-amber-200 scale-110" : ""
+                          }`}
                       >
                         {step > s ? (
                           <svg
@@ -835,15 +845,14 @@ const PatientRegistrationForm = () => {
                         )}
                       </button>
                       <span
-                        className={`mt-3 text-xs font-medium transition-colors duration-300 text-center ${
-                          step >= s ? "text-amber-600" : "text-gray-400"
-                        }`}
+                        className={`mt-3 text-xs font-medium transition-colors duration-300 text-center ${step >= s ? "text-amber-600" : "text-gray-400"
+                          }`}
                       >
                         {s === 1 && "Patient Info"}
                         {s === 2 && "Lifestyle"}
                         {s === 3 && "Vitals"}
                         {s === 4 && "Payment"}
-                      
+
                       </span>
                     </div>
                   ))}
@@ -920,7 +929,7 @@ const PatientRegistrationForm = () => {
                         onBlur={() => handleBlur("fatherOrHusbandName")}
                         className={
                           errors.fatherOrHusbandName &&
-                          touched.fatherOrHusbandName
+                            touched.fatherOrHusbandName
                             ? "border-red-500"
                             : ""
                         }
@@ -1090,7 +1099,7 @@ const PatientRegistrationForm = () => {
                       rows={3}
                       className={
                         errors.primaryHealthConcern &&
-                        touched.primaryHealthConcern
+                          touched.primaryHealthConcern
                           ? "border-red-500"
                           : ""
                       }
@@ -1175,29 +1184,45 @@ const PatientRegistrationForm = () => {
                       {config.other && (
                         <Input
                           placeholder={`Other ${key}`}
-                          value={lifestyle[`other_${key}`] || ""}
-                          onChange={(e) =>
-                            setLifestyle({
-                              ...lifestyle,
-                              [`other_${key}`]: e.target.value,
-                            })
+                          value={
+                            key === "diet"
+                              ? lifestyle.otherDiet || ""
+                              : key === "addictions"
+                                ? lifestyle.otherAddictions || ""
+                                : key === "bowelMovements"
+                                  ? lifestyle.otherBowelMovements || ""
+                                  : key === "physicalActivity"
+                                    ? lifestyle.otherPhysicalActivity || ""
+                                    : ""
                           }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setLifestyle((prev) => ({
+                              ...prev,
+                              ...(key === "diet" ? { otherDiet: v } : {}),
+                              ...(key === "addictions" ? { otherAddictions: v } : {}),
+                              ...(key === "bowelMovements" ? { otherBowelMovements: v } : {}),
+                              ...(key === "physicalActivity" ? { otherPhysicalActivity: v } : {}),
+                            }));
+                          }}
                           className="mb-2"
                         />
                       )}
-                      {config?.frequency && (
+
+                      {config.frequency && (
                         <Input
                           placeholder="Frequency"
-                          value={lifestyle[`frequency_${key}`] || ""}
+                          value={lifestyle.frequency_bowelMovements || ""}
                           onChange={(e) =>
-                            setLifestyle({
-                              ...lifestyle,
-                              [`frequency_${key}`]: e.target.value,
-                            })
+                            setLifestyle((prev) => ({
+                              ...prev,
+                              frequency_bowelMovements: e.target.value,
+                            }))
                           }
                           className="mb-2"
                         />
                       )}
+
                       {config.wakeTime && (
                         <div className="flex gap-2 mb-2">
                           <Input
@@ -1239,13 +1264,14 @@ const PatientRegistrationForm = () => {
                             placeholder="Other Water Intake"
                             value={lifestyle.otherWaterIntake || ""}
                             onChange={(e) =>
-                              setLifestyle({
-                                ...lifestyle,
+                              setLifestyle((prev) => ({
+                                ...prev,
                                 otherWaterIntake: e.target.value,
-                              })
+                              }))
                             }
                             className="mb-2"
                           />
+
                         </>
                       )}
                     </div>
@@ -1304,13 +1330,12 @@ const PatientRegistrationForm = () => {
                             placeholder={
                               isAuto ? "Auto-calculated" : "Enter value"
                             }
-                            className={`${
-                              errors[v.label] 
-                                ? "border-red-500"
-                                : ""
-                            } ${isAuto ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            className={`${errors[v.label]
+                              ? "border-red-500"
+                              : ""
+                              } ${isAuto ? "bg-gray-50 cursor-not-allowed" : ""}`}
                           />
-                          {errors[v.label]  && (
+                          {errors[v.label] && (
                             <p className="text-red-500 text-xs mt-1">
                               {errors[v.label]}
                             </p>
@@ -1333,7 +1358,7 @@ const PatientRegistrationForm = () => {
                     <button
                       onClick={() => {
                         setPaymentMethod("UPI");
-                        setStep(5);
+                        // setStep(5);
                       }}
                       className="w-full p-6 bg-white hover:bg-amber-50 transition-colors text-left"
                     >
@@ -1374,7 +1399,7 @@ const PatientRegistrationForm = () => {
                     <button
                       onClick={() => {
                         setPaymentMethod("Cash");
-                        setStep(5);
+                        // setStep(5);
                       }}
                       className="w-full p-6 bg-white hover:bg-amber-50 transition-colors text-left"
                     >
@@ -1393,8 +1418,8 @@ const PatientRegistrationForm = () => {
                   </div>
                 </div>
               )}
-            
-              
+
+
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-8 pt-6 border-t-2 border-amber-200">
                 {step > 1 && (
@@ -1406,8 +1431,8 @@ const PatientRegistrationForm = () => {
                     ← Back
                   </Button>
                 )}
-                <div className="ml-auto">
-                  {step < 5 && step !== 4 && (
+                <div className="ml-auto flex gap-3">
+                  {step !== 4 ? (
                     <Button
                       onClick={handleNext}
                       className="bg-amber-600 hover:bg-amber-700"
@@ -1415,19 +1440,15 @@ const PatientRegistrationForm = () => {
                     >
                       {submitting ? "Processing..." : "Next →"}
                     </Button>
+                  ) : (
+                    <Button
+                      onClick={handleNext} // this will run your step === 4 updatePatient
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={submitting || !paymentMethod}
+                    >
+                      {submitting ? "Submitting..." : "Submit"}
+                    </Button>
                   )}
-                  {/* {step === 5 && (
-                    <div className="flex flex-wrap gap-4 mt-4">
-                   
-                      <Button
-                        onClick={() => submitFinal()}
-                        className="bg-green-600 hover:bg-green-700 disabled:opacity-60"
-                        disabled={submitting || !consentGiven || !signature}
-                      >
-                        {submitting ? "Submitting…" : "➡ Forward to Doctor"}
-                      </Button>
-                    </div>
-                  )} */}
                 </div>
               </div>
             </div>
