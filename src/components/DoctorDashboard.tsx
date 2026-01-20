@@ -676,8 +676,8 @@ const DoctorDashboard: React.FC = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => setDialogOpen(true)}>
-  View Case Sheet
-</DropdownMenuItem>
+                        View Case Sheet
+                      </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleOpenAddTreatment(apt)}
@@ -693,16 +693,12 @@ const DoctorDashboard: React.FC = () => {
 
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => {
-                                /* view treatment */
-                              }}
+                              onClick={() => navigate(`/patient/${apt.patientId}?tab=treatmentplan`)}
                             >
                               View Treatment
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                /* view prescription */
-                              }}
+                              onClick={() => navigate(`/patient/${apt.patientId}?tab=prescription`)}
                             >
                               View Prescription
                             </DropdownMenuItem>

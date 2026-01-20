@@ -199,7 +199,11 @@ const LIFESTYLE_FIELDS: Record<
     options: ["Sedentary", "Active", "Walking", "Yoga", "Exercise"],
     other: true,
   },
-  waterIntake: { options: [], other: true },
+  waterIntake: { options: [
+      "Low - Less than 1.5 ltr",
+      "Normal - 1.5 to 3 ltr",
+      "Excess - Above 3.5 ltr",
+    ], other: true },
   stress: { options: ["Low", "Moderate", "High"], other: false },
   mentalState: {
     options: ["Calm", "Anxious", "Irritable", "Depressed"],
@@ -225,7 +229,7 @@ const PatientRegistrationForm = () => {
     sleep: [],
     addictions: [],
     physicalActivity: [],
-    waterIntake: "",
+    waterIntake: [],
 
     stress: [],
     mentalState: [],
@@ -1276,7 +1280,7 @@ const markTouched = (fields: string[]) => {
                         <>
                           <Input
                             placeholder="Water Intake (Liters)"
-                            value={lifestyle.waterIntake}
+                             value={Array.isArray(lifestyle.waterIntake) ? "" : lifestyle.waterIntake}
                             onChange={(e) =>
                               setLifestyle({
                                 ...lifestyle,
