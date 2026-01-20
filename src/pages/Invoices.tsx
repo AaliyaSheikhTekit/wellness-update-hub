@@ -781,12 +781,12 @@ const addLineFromService = (s: any) => {
               </>
             )}
 
-            <div className="flex justify-between text-sm">
+            {/* <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tax (18% GST):</span>
               <span className="font-medium text-foreground">
                 ₹{toINR(inv.tax)}
               </span>
-            </div>
+            </div> */}
             <Separator />
             <div className="flex justify-between text-lg">
               <span className="font-semibold text-foreground">Total:</span>

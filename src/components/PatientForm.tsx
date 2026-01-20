@@ -38,9 +38,12 @@ const validators = {
     return bpRegex.test(value.trim());
   },
 
-  number: (value: string) => {
-    const num = parseFloat(value);
-    return !isNaN(num) && num >= 0;
+  number: (value: any) => {
+    if (value === null || value === undefined) return false;
+    const str = String(value).trim();
+    if (str === "") return false;
+    const num = Number(str);
+    return Number.isFinite(num) && num > 0; // ✅ pulse must be > 0
   },
 
   date: (value: string) => {
@@ -351,7 +354,7 @@ const PatientRegistrationForm = () => {
       return `${validation.label} is required`;
     }
 
-    if (value && validation.validator && !validation.validator(value)) {
+    if (validation.validator && !validation.validator(value)) {
       switch (fieldName) {
         case "contactNumber":
           return "Please enter a valid 10-digit phone number starting with 6-9";
