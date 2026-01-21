@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-
+import { useLocation } from "react-router-dom";
 // 👉 add these in your api.ts (stubs at bottom of this file)
 import {
   getPatients, // (q: string) -> {data: Patient[]}
@@ -161,7 +161,7 @@ const toINR = (n: number) =>
 /* ---------------- Component ---------------- */
 const Invoices = () => {
   const { toast } = useToast();
-
+  const location = useLocation();
   // Left panel lists
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
@@ -326,6 +326,40 @@ useEffect(() => {
   loadPatientPlan();
 }, [selectedPatient]);
 
+useEffect(() => {
+  const st: any = location.state;
+
+  if (st?.invoiceType !== "consultancy" || !st?.patientId) return;
+
+  // Open invoice builder
+  startNewInvoice();
+
+  // Preselect patient
+  setSelectedPatient({
+    id: st.patientId,
+    fullName: st.patientName || "Patient",
+    contactNumber: st.patientPhone || "",
+    email: "",
+  });
+
+  // 👉 Consultancy line with editable amount
+  setLines([
+    {
+      name: "Consultancy Payment",
+      quantity: 1,
+      rate: 0,     // ✅ user will enter this
+      amount: 0,
+    },
+  ]);
+
+  setDiscountAmount("0");
+  setDiscountType("percentage");
+  setStatus("unpaid"); // cash to be collected
+
+  // prevent re-trigger on refresh
+  window.history.replaceState({}, document.title);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
 
 

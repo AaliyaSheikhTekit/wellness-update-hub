@@ -1429,7 +1429,16 @@ const markTouched = (fields: string[]) => {
                     <button
                       onClick={() => {
                         setPaymentMethod("Cash");
-                        // setStep(5);
+                         navigate("/invoices", {
+                          state: {
+                            from: "patient-registration",
+                            patientId: id,
+                            patientName: formData.name,
+                            patientPhone: formData.contactNumber,
+                            invoiceType: "consultancy",
+                            paymentMethod: "Cash",
+                          },
+                        });// setStep(5);
                       }}
                       className="w-full p-6 bg-white hover:bg-amber-50 transition-colors text-left"
                     >
