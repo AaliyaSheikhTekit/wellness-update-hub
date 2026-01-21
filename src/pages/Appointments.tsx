@@ -982,16 +982,16 @@ const validateAppointment = () => {
           className="space-y-6"
         >
           <TabsList className="grid w-full grid-cols-10 overflow-x-auto gap-2">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="rescheduled">Rescheduled</TabsTrigger>
-            <TabsTrigger value="no_show">No Show</TabsTrigger>
+            <TabsTrigger value="all" className="font-[12px]">All</TabsTrigger>
+            <TabsTrigger value="today" className="font-[12px]">Today</TabsTrigger>
+            <TabsTrigger value="upcoming" className="font-[12px]">Upcoming</TabsTrigger>
+            <TabsTrigger value="calendar" className="font-[12px]">Calendar</TabsTrigger>
+            <TabsTrigger value="pending" className="font-[12px]">Pending</TabsTrigger>
+            <TabsTrigger value="confirmed" className="font-[12px]">Confirmed</TabsTrigger>
+            <TabsTrigger value="cancelled" className="font-[12px]">Cancelled</TabsTrigger>
+            <TabsTrigger value="completed" className="font-[12px]">Completed</TabsTrigger>
+            <TabsTrigger value="rescheduled" className="font-[12px]">Rescheduled</TabsTrigger>
+            <TabsTrigger value="no_show" className="font-[12px]">No Show</TabsTrigger>
           </TabsList>
 
           {/* ALL (paged) */}

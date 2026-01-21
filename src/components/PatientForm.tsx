@@ -201,7 +201,7 @@ const LIFESTYLE_FIELDS: Record<
     ], other: true },
   stress: { options: ["Low", "Moderate", "High"], other: false },
   mentalState: {
-    options: ["Calm", "Anxious", "Irritable", "Depressed"],
+    options: ["Calm", "Anxious", "Irritable", "Unhappy"],
     other: false,
   },
 };
@@ -836,7 +836,7 @@ const markTouched = (fields: string[]) => {
                   />
                 </div>
                 <p className="text-gray-600 text-sm">
-                  Integrated Natural Healing system for a comprehensive
+                  Connect • Consult • Cure
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   📞 +91 9343922950 | 📧 admin@ikshanaturopathy.com
@@ -1181,7 +1181,7 @@ const markTouched = (fields: string[]) => {
 
                   <Textarea
                     name="chronicIllnesses"
-                    placeholder="Chronic Illnesses"
+                    placeholder="Any Other Concern"
                     value={formData.chronicIllnesses}
                     onChange={handleInputChange}
                   />
@@ -1301,17 +1301,7 @@ const markTouched = (fields: string[]) => {
                             }
                             className="mb-2"
                           />
-                          <Input
-                            placeholder="Other Water Intake"
-                            value={lifestyle.otherWaterIntake || ""}
-                            onChange={(e) =>
-                              setLifestyle((prev) => ({
-                                ...prev,
-                                otherWaterIntake: e.target.value,
-                              }))
-                            }
-                            className="mb-2"
-                          />
+                          
 
                         </>
                       )}
