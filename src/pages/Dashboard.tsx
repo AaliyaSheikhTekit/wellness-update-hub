@@ -34,6 +34,7 @@ import DoctorForm from "@/components/DoctoreForm";
 import NewTreatmentForm from "@/pages/NewTreatmentForm";
 import DoctorDashboard from "@/components/DoctorDashboard";
 import DietManager from "@/components/DietManager";
+import { useLocation } from "react-router-dom";
 
 // Mock patient data
 const mockPatients = [
@@ -66,13 +67,28 @@ const Dashboard = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
-
+const location = useLocation();
+const [invoicePayload, setInvoicePayload] = useState<any>(null)
   const userName = localStorage.getItem("userName") || "";
   let userRole = "Naturopathy Doctor"; // default
   if (userName.includes("superAdmin")) userRole = "superAdmin";
   else if (userName.includes("Naturopathy Recptionist"))
     userRole = "Naturopathy Recptionist";
+useEffect(() => {
+  const st: any = location.state;
 
+  if (st?.openTab) {
+    setActiveTab(st.openTab); // 👈 opens "invoices"
+  }
+
+  if (st?.invoicePayload) {
+    setInvoicePayload(st.invoicePayload); // 👈 store payload
+  }
+
+  // optional: clear state so refresh/back doesn't re-trigger
+  // navigate(location.pathname, { replace: true });
+
+}, [location.state]);
   // Sidebar items with keys
   const sidebarItems =
     userRole === "superAdmin"
@@ -142,10 +158,10 @@ const Dashboard = () => {
           return <Appointments />;
         case "prescriptions":
           return <Prescriptions />;
-   case "add-new-diet":
+        case "add-new-diet":
           return <DietManager />;
         case "invoices":
-          return <Invoices />;
+        return <Invoices invoicePayload={invoicePayload} />;
         case "doctor":
           return <DoctorForm />;
         case "add-new-treatment":

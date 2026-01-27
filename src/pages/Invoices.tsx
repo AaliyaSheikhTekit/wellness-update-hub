@@ -1,8 +1,11 @@
-// Invoices.tsx
+// Invoices.tsx (FIXED)
+// ✅ Fix 1: When invoicePayload has patientId -> fetch that ONE patient, lock selection, allow invoice only for that patient
+// ✅ Fix 2: Cursor jumping -> stable keys using clientId + prevent re-init using initRef
+// ✅ Fix 3: Consultancy flow should NOT be overwritten by treatmentPlan auto-lines
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
-  User,
   Calendar as CalIcon,
   IndianRupee,
   Download,
@@ -35,21 +38,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "react-router-dom";
-// 👉 add these in your api.ts (stubs at bottom of this file)
+
 import {
-  getPatients, // (q: string) -> {data: Patient[]}
-  getTreatmentAll, // () -> {data: ServiceItem[]}
-  generatetInvoicePDF, // (q?: string) -> {data: ApiInvoice[]}
+  getPatients,
+  getTreatmentAll,
+  generatetInvoicePDF,
   createInvoice,
   getAllInvoices,
   getInvoiceById,
   updateInvoice,
-  getPatient, // (payload) -> {id: string, ...}
-  // updateInvoice,             // (id, payload) -> {id: string, ...}
-  // recordInvoicePayment,      // (id, {amount, method, note}) -> {...}
+  getPatient, // ✅ by patientId
 } from "@/lib/api";
-import { useReactToPrint } from "react-to-print";
+
 import {
   Select,
   SelectContent,
@@ -68,19 +68,18 @@ type ServiceItem = {
   id: string;
   title: string;
   subTitle?: string;
-  // optional pricing fields in your backend — fallback to 0 if absent
   price?: number;
   rate?: number;
-  // any other fields you have (duration, days, etc.)
 };
 
 type InvoiceLine = {
-  id?: string; // server id, optional for new lines
-  serviceId?: string; // from ServiceItem.id
-  name: string; // display name
+  clientId: string; // ✅ stable key to prevent input remount/cursor jump
+  id?: string; // server id
+  serviceId?: string;
+  name: string;
   quantity: number;
   rate: number;
-  amount: number; // quantity * rate
+  amount: number;
 };
 
 type Patient = {
@@ -103,8 +102,8 @@ type ApiInvoice = {
   patientName: string;
   patientPhone?: string;
   patientEmail?: string;
-  date: string; // ISO
-  dueDate?: string; // ISO
+  date: string;
+  dueDate?: string;
   items: Array<{
     id?: string;
     serviceId?: string;
@@ -119,7 +118,7 @@ type ApiInvoice = {
   tax: number;
   total: number;
   amountPaid: number;
-  status: "paid" | "partially_paid" | "pending" | "overdue";
+  status: "paid" | "partially_paid" | "pending" | "overdue" | "draft" | "unpaid";
 };
 
 type PaymentPayload = {
@@ -134,6 +133,9 @@ const getStatusColor = (status: string) => {
     case "paid":
       return "bg-green-500";
     case "unpaid":
+    case "pending":
+    case "partially_paid":
+    case "overdue":
       return "bg-yellow-500";
     case "draft":
       return "bg-gray-500";
@@ -147,7 +149,11 @@ const getStatusText = (status: string) => {
     case "paid":
       return "Paid";
     case "unpaid":
+    case "pending":
+    case "partially_paid":
       return "Unpaid";
+    case "overdue":
+      return "Overdue";
     case "draft":
       return "Draft";
     default:
@@ -156,26 +162,35 @@ const getStatusText = (status: string) => {
 };
 
 const toINR = (n: number) =>
-  n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+const newClientId = () =>
+  typeof crypto !== "undefined" && (crypto as any).randomUUID
+    ? (crypto as any).randomUUID()
+    : `${Date.now()}-${Math.random()}`;
 
 /* ---------------- Component ---------------- */
-const Invoices = () => {
+const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   const { toast } = useToast();
-  const location = useLocation();
+
+  const initRef = useRef<string>(""); // ✅ prevent re-init for payload
+  const [lockPatient, setLockPatient] = useState(false);
+  const autoCreatedRef = useRef(false);
   // Left panel lists
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
 
-  // Patient search & select (for new/edit invoice)
+  // Patient search & select
   const [patientSearch, setPatientSearch] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientLoading, setPatientLoading] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
   // invoice filter (paid / unpaid / draft)
-  const [invoiceStatus, setInvoiceStatus] = useState<
-    "paid" | "unpaid" | "draft"
-  >("paid");
+  const [invoiceStatus, setInvoiceStatus] = useState<"paid" | "unpaid" | "draft">(
+    "paid"
+  );
 
   // Services catalog
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -183,11 +198,9 @@ const Invoices = () => {
   const [serviceQuery, setServiceQuery] = useState("");
 
   // Selection
-  const [selectedInvoice, setSelectedInvoice] = useState<ApiInvoice | null>(
-    null
-  );
+  const [selectedInvoice, setSelectedInvoice] = useState<ApiInvoice | null>(null);
 
-  // Editing invoice (builder) state
+  // Editing invoice (builder)
   const [isNewInvoice, setIsNewInvoice] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState<string>(() =>
     new Date().toISOString().slice(0, 10)
@@ -227,53 +240,239 @@ const Invoices = () => {
   const [status, setStatus] = useState<"draft" | "unpaid" | "paid">(
     normalizeStatus(selectedInvoice?.status)
   );
-  /* ---------------- Fetch: invoices list ---------------- */
+
+  const isConsultancyFlow =
+    invoicePayload?.invoiceType === "consultancy" && !!invoicePayload?.patientId;
+
+  /* ---------------- Builders ---------------- */
+  const startNewInvoice = (opts?: { keepLockedPatient?: boolean }) => {
+    setIsNewInvoice(true);
+    setSelectedInvoice(null);
+
+    if (!opts?.keepLockedPatient) {
+      setSelectedPatient(null);
+      setLockPatient(false);
+      initRef.current = ""; // allow fresh start if user clicks +New manually
+      setPatients([]);
+      setPatientSearch("");
+    }
+
+    const today = new Date();
+    const due = new Date();
+    due.setDate(due.getDate() + 7);
+
+    setInvoiceDate(today.toISOString().slice(0, 10));
+    setDueDate(due.toISOString().slice(0, 10));
+    setLines([]);
+    setDiscountAmount("0");
+    setDiscountType("percentage");
+    setStatus("draft");
+    setIsEditingDiscount(false);
+  };
+
+  const editExistingInvoice = (inv: ApiInvoice) => {
+    setIsNewInvoice(true);
+    setSelectedInvoice(inv);
+    setLockPatient(false);
+
+    setSelectedPatient({
+      id: inv.patientId,
+      fullName: inv.patientName,
+      contactNumber: inv.patientPhone,
+      email: inv.patientEmail,
+    });
+
+    setInvoiceDate(inv.date?.slice(0, 10) || new Date().toISOString().slice(0, 10));
+    setDueDate(inv.dueDate?.slice(0, 10) || "");
+
+    setLines(
+      inv.items.map((i) => ({
+        clientId: i.id || newClientId(), // ✅ stable key
+        id: i.id,
+        serviceId: i.serviceId,
+        name: i.name,
+        quantity: i.quantity,
+        rate: i.rate,
+        amount: i.amount,
+      }))
+    );
+
+    setDiscountAmount(String(inv.discount ?? 0));
+    setDiscountType(inv.discountType ?? "percentage");
+    setStatus(normalizeStatus(inv.status));
+    setIsEditingDiscount(false);
+  };
+
+  const cancelEdit = () => {
+    setIsNewInvoice(false);
+    setIsEditingDiscount(false);
+    setLockPatient(false);
+    initRef.current = "";
+    if (invoices.length) setSelectedInvoice(invoices[0]);
+    else setSelectedInvoice(null);
+  };
+
+  const addLineFromService = (s: any) => {
+    const rate = Number(s.rate ?? s.price ?? 0);
+    setLines((prev) => [
+      ...prev,
+      {
+        clientId: newClientId(),
+        serviceId: s.id,
+        name: s.title,
+        quantity: 1,
+        rate,
+        amount: rate,
+      },
+    ]);
+  };
+
+  const addCustomLine = () => {
+    setLines((prev) => [
+      ...prev,
+      { clientId: newClientId(), name: "Custom Line Item", quantity: 1, rate: 0, amount: 0 },
+    ]);
+  };
+
+  const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
+    setLines((prev) => {
+      const next = [...prev];
+      const l = { ...next[idx], ...patch };
+      l.amount = l.quantity * l.rate;
+      next[idx] = l;
+      return next;
+    });
+  };
+
+  const removeLine = (idx: number) => {
+    setLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  /* ---------------- Payload (LOCK patient + init once) ---------------- */
+  useEffect(() => {
+    if (!invoicePayload?.patientId) return;
+
+    const pid = invoicePayload.patientId;
+    const initKey = `${invoicePayload.invoiceType || ""}:${pid}`;
+
+    if (initRef.current === initKey) return; // ✅ prevent re-init (cursor jump fix)
+    initRef.current = initKey;
+    autoCreatedRef.current = false;
+    (async () => {
+      setLockPatient(true);
+
+      // open builder but keep lock
+      startNewInvoice({ keepLockedPatient: true });
+
+      // ✅ fetch exact patient by ID
+      try {
+        const res = await getPatient(pid);
+        const data = res?.data ?? res;
+        const p0 = Array.isArray(data) ? data[0] : data;
+
+        const locked: Patient = {
+          id: pid,
+          fullName: p0?.fullName || invoicePayload.patientName || "Patient",
+          contactNumber: p0?.contactNumber || invoicePayload.patientPhone || "",
+          email: p0?.email || "",
+          treatmentPlan: p0?.treatmentPlan || [],
+        };
+
+        setSelectedPatient(locked);
+        setPatients([locked]); // optional: show only this patient in list UI
+        setPatientSearch(locked.fullName);
+      } catch (e) {
+        // fallback from payload
+        const locked: Patient = {
+          id: pid,
+          fullName: invoicePayload.patientName || "Patient",
+          contactNumber: invoicePayload.patientPhone || "",
+          email: "",
+        };
+        setSelectedPatient(locked);
+        setPatients([locked]);
+        setPatientSearch(locked.fullName);
+      }
+
+      // ✅ consultancy default line (editable)
+      if (invoicePayload?.invoiceType === "consultancy") {
+        setLines([
+          {
+            clientId: newClientId(),
+            name: "consultancy",
+            quantity: 1,
+            rate: 0,
+            amount: 0,
+          },
+        ]);
+        setStatus("unpaid");
+        setDiscountAmount("0");
+        setDiscountType("percentage");
+        setPaymentMethod(invoicePayload.paymentMethod || "Cash");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoicePayload]);
+
   /* ---------------- Fetch: invoices list ---------------- */
   const refreshInvoices = async () => {
     try {
       setLoadingInvoices(true);
-      const res = await getAllInvoices(invoiceStatus); // 👈 pass current filter
+      const res = await getAllInvoices(invoiceStatus);
+
       const rawList: any[] = Array.isArray(res?.data)
         ? res.data
         : Array.isArray(res)
         ? res
         : [];
-      const list = rawList.map(mapApiInvoice);
 
-      setInvoices(list);
-      console.log("Fetched invoices:", list);
+      // client-side filter by invoiceSearch (you were re-fetching on invoiceSearch)
+      const mapped = rawList.map(mapApiInvoice);
+      const filtered = invoiceSearch.trim()
+        ? mapped.filter((i) => {
+            const q = invoiceSearch.toLowerCase();
+            return (
+              i.id?.toLowerCase().includes(q) ||
+              i.patientName?.toLowerCase().includes(q)
+            );
+          })
+        : mapped;
 
-      if (list.length) {
+      setInvoices(filtered);
+
+      if (filtered.length) {
         const stillSelected =
-          selectedInvoice && list.find((i) => i.id === selectedInvoice.id);
-        setSelectedInvoice(stillSelected ?? list[0]);
+          selectedInvoice && filtered.find((i) => i.id === selectedInvoice.id);
+        setSelectedInvoice(stillSelected ?? filtered[0]);
       } else {
         setSelectedInvoice(null);
       }
     } catch (e: any) {
       console.error(e);
-      const msg = e?.message?.includes("Missing backend token")
-        ? "Please log in to view invoices."
-        : "Please try again.";
-      toast({ title: "Failed to fetch invoices", description: msg });
+      toast({
+        title: "Failed to fetch invoices",
+        description: "Please try again.",
+      });
     } finally {
       setLoadingInvoices(false);
     }
   };
 
   useEffect(() => {
-    refreshInvoices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceSearch, invoiceStatus]);
+  refreshInvoices();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [invoiceStatus]);
 
-  /* ---------------- Fetch: patients for search ---------------- */
+  /* ---------------- Fetch: patients (skip if locked) ---------------- */
   useEffect(() => {
+    if (lockPatient) return;
+
     const loadPatients = async () => {
       setPatientLoading(true);
       try {
         const res = await getPatients(patientSearch);
         setPatients(res?.data ?? []);
-      } catch (err) {
+      } catch {
         toast({
           title: "Error fetching patients",
           description: "Unable to load patients from the server.",
@@ -282,96 +481,57 @@ const Invoices = () => {
         setPatientLoading(false);
       }
     };
+
     loadPatients();
-  }, [patientSearch, toast]);
-useEffect(() => {
-  const loadPatientPlan = async () => {
-    if (!selectedPatient?.id) return;
+  }, [patientSearch, toast, lockPatient]);
 
-    try {
-      const res = await getPatient(selectedPatient.id);
-      const data = res?.data || res;
+  /* ---------------- Auto-load treatment plan lines (skip for consultancy flow) ---------------- */
+  useEffect(() => {
+    const loadPatientPlan = async () => {
+      if (!selectedPatient?.id) return;
+      if (isConsultancyFlow) return; // ✅ do not override consultancy line
 
-      // 🧠 Get the treatmentPlan array from first object
-      const plan = data?.[0]?.treatmentPlan || [];
-      console.log("Fetched patient treatmentPlan:", plan);
+      try {
+        const res = await getPatient(selectedPatient.id);
+        const data = res?.data ?? res;
 
-      // 🧩 Flatten all treatmentAssign arrays
-      const allAssignments = plan.flatMap((p: any) => p.treatmentAssign || []);
+        const p0 = Array.isArray(data) ? data[0] : data;
+        const plan = p0?.treatmentPlan || [];
 
-      console.log("Extracted allAssignments:", allAssignments);
+        // flatten treatmentAssign
+        const allAssignments = (plan || []).flatMap((p: any) => p.treatmentAssign || []);
 
-      if (allAssignments.length > 0) {
-        const mapped = allAssignments.map((assign: any) => {
-          const t = assign?.treatment || {};
-          return {
-            serviceId: t.id,
-            name: t.title || "Treatment",
-            quantity: 1,
-            rate: Number(t.price || 0),
-            amount: Number(t.price || 0),
-          };
-        });
-
-        console.log("Mapped treatment lines:", mapped);
-        setLines(mapped);
-      } else {
-        setLines([]);
+        if (allAssignments.length > 0) {
+          const mapped: InvoiceLine[] = allAssignments.map((assign: any) => {
+            const t = assign?.treatment || {};
+            const price = Number(t.price || 0);
+            return {
+              clientId: newClientId(),
+              serviceId: t.id,
+              name: t.title || "Treatment",
+              quantity: 1,
+              rate: price,
+              amount: price,
+            };
+          });
+          setLines(mapped);
+        } else {
+          setLines([]);
+        }
+      } catch (error) {
+        console.error("Error fetching patient plan:", error);
       }
-    } catch (error) {
-      console.error("Error fetching patient plan:", error);
-    }
-  };
+    };
 
-  loadPatientPlan();
-}, [selectedPatient]);
+    loadPatientPlan();
+  }, [selectedPatient?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-useEffect(() => {
-  const st: any = location.state;
-
-  if (st?.invoiceType !== "consultancy" || !st?.patientId) return;
-
-  // Open invoice builder
-  startNewInvoice();
-
-  // Preselect patient
-  setSelectedPatient({
-    id: st.patientId,
-    fullName: st.patientName || "Patient",
-    contactNumber: st.patientPhone || "",
-    email: "",
-  });
-
-  // 👉 Consultancy line with editable amount
-  setLines([
-    {
-      name: "Consultancy Payment",
-      quantity: 1,
-      rate: 0,     // ✅ user will enter this
-      amount: 0,
-    },
-  ]);
-
-  setDiscountAmount("0");
-  setDiscountType("percentage");
-  setStatus("unpaid"); // cash to be collected
-
-  // prevent re-trigger on refresh
-  window.history.replaceState({}, document.title);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-
-
-
-
-  /* ---------------- Fetch: services/treatments catalog ---------------- */
+  /* ---------------- Fetch: services catalog ---------------- */
   useEffect(() => {
     const loadServices = async () => {
       setServicesLoading(true);
       try {
         const res = await getTreatmentAll();
-
-        // ✅ normalize price, rate, and include category info
         const data: ServiceItem[] = (res?.data ?? []).map((s: any) => {
           const parsedPrice = Number(s.price) || Number(s.rate) || 0;
           return {
@@ -379,15 +539,12 @@ useEffect(() => {
             title: s.title || s.name || "Service",
             subTitle: s.subTitle || "",
             category: s.category?.name || "Uncategorized",
-            treatment: s.treatment || "",
             duration: s.duration || "",
             validity: s.validity || "",
-            days: s.days || "",
             price: parsedPrice,
             rate: parsedPrice,
           };
         });
-
         setServices(data);
       } catch (e) {
         console.error("Error loading services:", e);
@@ -414,110 +571,28 @@ useEffect(() => {
     [subtotal, discountVal]
   );
 
-  const tax = useMemo(() => afterDiscount * 0.18, [afterDiscount]); // 18% GST
-
+  const tax = useMemo(() => afterDiscount * 0.18, [afterDiscount]);
   const total = useMemo(() => afterDiscount + tax, [afterDiscount, tax]);
 
-  const amountPaid = useMemo(() => {
-    if (!selectedInvoice) return 0;
-    // When editing/creating, we show persisted paid only in view mode.
-    return selectedInvoice.amountPaid || 0;
-  }, [selectedInvoice]);
-
-  const balanceDue = useMemo(
-    () => Math.max(0, total - amountPaid),
-    [total, amountPaid]
+  const catalogFiltered = services.filter((s) =>
+    [s.title, s.category]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(serviceQuery.toLowerCase()))
   );
 
-  /* ---------------- Builders ---------------- */
-  // Replace your current startNewInvoice with this:
-  const startNewInvoice = () => {
-    setIsNewInvoice(true);
-    setSelectedInvoice(null);
-    setSelectedPatient(null);
-
-    const today = new Date();
-    const due = new Date();
-    due.setDate(due.getDate() + 7);
-
-    setInvoiceDate(today.toISOString().slice(0, 10));
-    setDueDate(due.toISOString().slice(0, 10));
-    setLines([]);
-    setDiscountAmount("0");
-    setDiscountType("percentage");
-    setStatus("draft");
-    setIsEditingDiscount(false);
-  };
-
-  const editExistingInvoice = (inv: ApiInvoice) => {
-    setIsNewInvoice(true);
-    setSelectedInvoice(inv);
-    setSelectedPatient({
-      id: inv.patientId,
-      fullName: inv.patientName,
-      contactNumber: inv.patientPhone,
-      email: inv.patientEmail,
-    });
-    setInvoiceDate(
-      inv.date?.slice(0, 10) || new Date().toISOString().slice(0, 10)
-    );
-    setDueDate(inv.dueDate?.slice(0, 10) || "");
-    setLines(
-      inv.items.map((i) => ({
-        id: i.id,
-        serviceId: i.serviceId,
-        name: i.name,
-        quantity: i.quantity,
-        rate: i.rate,
-        amount: i.amount,
-      }))
-    );
-    setDiscountAmount(String(inv.discount ?? 0));
-    setDiscountType(inv.discountType ?? "percentage");
-    setIsEditingDiscount(false);
-  };
-
-  const cancelEdit = () => {
-    setIsNewInvoice(false);
-    setIsEditingDiscount(false);
-    // revert to the first available invoice
-    if (invoices.length) setSelectedInvoice(invoices[0]);
-    else setSelectedInvoice(null);
-  };
-
-const addLineFromService = (s: any) => {
-  const rate = Number(s.rate ?? s.price ?? 0);
-  setLines((prev) => [
-    ...prev,
-    {
-      serviceId: s.id,
-      name: s.title,
-      quantity: 1,
-      rate,
-      amount: rate,
-    },
-  ]);
-};
-
-  const addCustomLine = () => {
-    setLines((prev) => [
-      ...prev,
-      { name: "Custom Line Item", quantity: 1, rate: 0, amount: 0 },
-    ]);
-  };
-
-  const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
-    setLines((prev) => {
-      const next = [...prev];
-      const l = { ...next[idx], ...patch };
-      l.amount = l.quantity * l.rate;
-      next[idx] = l;
-      return next;
-    });
-  };
-
-  const removeLine = (idx: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== idx));
+  const downloadInvoicePDF = async (invoiceId: string) => {
+    try {
+      const blob = await generatetInvoicePDF(invoiceId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice_${invoiceId}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Invoice PDF download failed:", err);
+      alert(err.message || "Failed to generate Invoice PDF.");
+    }
   };
 
   /* ---------------- Persist ---------------- */
@@ -527,25 +602,28 @@ const addLineFromService = (s: any) => {
       return;
     }
 
-    const subtotal = lines.reduce((a, b) => a + b.quantity * b.rate, 0);
-    const discountVal =
+    const _subtotal = lines.reduce((a, b) => a + b.quantity * b.rate, 0);
+    const _discountVal =
       discountType === "percentage"
-        ? (subtotal * parseFloat(discountAmount || "0")) / 100
+        ? (_subtotal * parseFloat(discountAmount || "0")) / 100
         : parseFloat(discountAmount || "0");
-    const afterDiscount = subtotal - discountVal;
-    const tax = (afterDiscount * 18) / 100;
-    const total = afterDiscount + tax;
+
+    const _afterDiscount = Math.max(0, _subtotal - _discountVal);
+    const _tax = (_afterDiscount * 18) / 100;
+    const _total = _afterDiscount + _tax;
 
     const payload = {
       invoiceDate,
       dueDate,
       discountType,
       discount: parseFloat(discountAmount) || 0,
-      subTotal: subtotal,
-      tax,
-      finalTotal: total,
-      status,
-      patientId: selectedPatient.id,
+      subTotal: _subtotal,
+      tax: _tax,
+      finalTotal: _total,
+      status: newStatus, // ✅ use the button’s status
+      patientId:  lockPatient && invoicePayload?.patientId
+    ? invoicePayload.patientId
+    : selectedPatient.id,
       invoiceItems: lines.map((l) => ({
         treatment: l.serviceId,
         name: l.name,
@@ -556,23 +634,43 @@ const addLineFromService = (s: any) => {
     };
 
     try {
-      const res = selectedInvoice
-        ? await updateInvoice(selectedInvoice.id, payload)
-        : await createInvoice(payload);
+      if (selectedInvoice) await updateInvoice(selectedInvoice.id, payload);
+      else await createInvoice(payload);
 
       toast({
         title: selectedInvoice ? "Invoice updated" : "Invoice created",
         description: `Status: ${newStatus.toUpperCase()}`,
       });
+
+      setIsNewInvoice(false);
       await refreshInvoices();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast({ title: "Failed to save invoice", description: e.message });
+      toast({ title: "Failed to save invoice", description: e?.message || "Error" });
     }
   };
+useEffect(() => {
+  // Only run for consultancy payload flow
+  if (!isConsultancyFlow) return;
+  if (!lockPatient) return;
+  if (!invoicePayload?.patientId) return;
+
+  // Wait until user has entered a valid amount
+  const rate = Number(lines?.[0]?.rate || 0);
+  if (rate <= 0) return;
+
+  // Prevent multiple auto creates
+  if (autoCreatedRef.current) return;
+  autoCreatedRef.current = true;
+
+  // Auto create as unpaid
+  handleSaveInvoice("unpaid");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [lines, lockPatient, isConsultancyFlow, invoicePayload?.patientId]);
 
   const handleRecordPayment = async () => {
     if (!selectedInvoice) return;
+
     const amt = parseFloat(paymentAmount) || 0;
     if (amt <= 0) {
       toast({
@@ -581,11 +679,13 @@ const addLineFromService = (s: any) => {
       });
       return;
     }
+
     const p: PaymentPayload = {
       amount: amt,
       method: paymentMethod,
       note: paymentNote,
     };
+
     try {
       // await recordInvoicePayment(selectedInvoice.id, p);
       toast({ title: "Payment recorded", description: `₹${toINR(amt)}` });
@@ -611,8 +711,11 @@ const addLineFromService = (s: any) => {
       onClick={async () => {
         try {
           setIsNewInvoice(false);
+          setLockPatient(false);
+          initRef.current = "";
+
           const res = await getInvoiceById(invoice.id);
-          const invData = res?.data ?? res; // handle either {data: {...}} or direct object
+          const invData = res?.data ?? res;
           const fullInvoice = mapApiInvoice(invData);
           setSelectedInvoice(fullInvoice);
         } catch (err) {
@@ -627,14 +730,10 @@ const addLineFromService = (s: any) => {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-foreground">
-              {invoice.patientName}
-            </h3>
+            <h3 className="font-semibold text-foreground">{invoice.patientName}</h3>
             <p className="text-sm text-muted-foreground">ID: {invoice.id}</p>
           </div>
-          <Badge
-            className={`${getStatusColor(invoice.status)} text-white text-xs`}
-          >
+          <Badge className={`${getStatusColor(invoice.status)} text-white text-xs`}>
             {getStatusText(invoice.status)}
           </Badge>
         </div>
@@ -650,43 +749,17 @@ const addLineFromService = (s: any) => {
     </Card>
   );
 
-  const catalogFiltered = services.filter((s) =>
-    [s.title, s.category]
-      .filter(Boolean)
-      .some((field) => field.toLowerCase().includes(serviceQuery.toLowerCase()))
-  );
-  const downloadInvoicePDF = async (invoiceId: string) => {
-    try {
-      const blob = await generatetInvoicePDF(invoiceId);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Invoice_${invoiceId}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error("Invoice PDF download failed:", err);
-      alert(err.message || "Failed to generate Invoice PDF.");
-    }
-  };
-
-  /* ---------------- View Mode (existing invoice) ---------------- */
+  /* ---------------- View Mode ---------------- */
   const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => (
     <Card className="shadow-natural">
       <CardHeader className="border-b border-border">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-xl text-foreground">
-              Invoice Details
-            </CardTitle>
+            <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
             <p className="text-muted-foreground">Invoice #{inv.id}</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => editExistingInvoice(inv)}
-            >
+            <Button variant="outline" size="sm" onClick={() => editExistingInvoice(inv)}>
               <Edit3 className="h-4 w-4 mr-2" /> Edit
             </Button>
             <Button variant="outline" size="sm">
@@ -695,11 +768,7 @@ const addLineFromService = (s: any) => {
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" /> Print
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => downloadInvoicePDF(inv.id)}
-            >
+            <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
               <Download className="h-4 w-4 mr-2" /> PDF
             </Button>
           </div>
@@ -707,16 +776,12 @@ const addLineFromService = (s: any) => {
       </CardHeader>
 
       <CardContent className="p-6 space-y-6">
-        {/* Header Info */}
         <div className="grid grid-cols-2 gap-6">
           <div>
             <h3 className="font-semibold text-foreground mb-3">Bill To:</h3>
             <div className="space-y-1">
               <p className="font-medium text-foreground">{inv.patientName}</p>
-              <p className="text-sm text-muted-foreground">
-                {inv.patientPhone || "-"}
-              </p>
-              {/* <p className="text-sm text-muted-foreground">{inv.patientEmail || "-"}</p> */}
+              <p className="text-sm text-muted-foreground">{inv.patientPhone || "-"}</p>
             </div>
           </div>
 
@@ -745,11 +810,8 @@ const addLineFromService = (s: any) => {
           </div>
         </div>
 
-        {/* Services Table */}
         <div>
-          <h3 className="font-semibold text-foreground mb-4">
-            Services & Treatments
-          </h3>
+          <h3 className="font-semibold text-foreground mb-4">Services & Treatments</h3>
           <div className="border border-border rounded-md overflow-hidden">
             <div className="bg-muted/50 px-4 py-3 grid grid-cols-12 gap-4 text-sm font-medium text-foreground">
               <div className="col-span-6">Service</div>
@@ -777,83 +839,11 @@ const addLineFromService = (s: any) => {
           </div>
         </div>
 
-        {/* Totals */}
-        <div className="space-y-4">
-          <Separator />
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal:</span>
-              <span className="font-medium text-foreground">
-                ₹{toINR(inv.subtotal)}
-              </span>
-            </div>
-
-            {inv.discount > 0 && (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Tag className="h-3 w-3" />
-                    Discount{" "}
-                    {inv.discountType === "percentage"
-                      ? `(${inv.discount}%)`
-                      : "(Fixed)"}
-                    :
-                  </span>
-                  <span className="font-medium text-green-600">
-                    -₹{toINR(inv.subtotal - (inv.total - inv.tax))}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">After Discount:</span>
-                  <span className="font-medium text-foreground">
-                    ₹
-                    {toINR(
-                      inv.subtotal - (inv.subtotal - (inv.total - inv.tax))
-                    )}
-                  </span>
-                </div>
-              </>
-            )}
-
-            {/* <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax (18% GST):</span>
-              <span className="font-medium text-foreground">
-                ₹{toINR(inv.tax)}
-              </span>
-            </div> */}
-            <Separator />
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold text-foreground">Total:</span>
-              <span className="font-bold text-foreground">
-                ₹{toINR(inv.total)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Amount Paid:</span>
-              <span className="font-medium text-green-600">
-                ₹{toINR(inv.amountPaid)}
-              </span>
-            </div>
-            {inv.total - inv.amountPaid > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Balance Due:</span>
-                <span className="font-medium text-red-600">
-                  ₹{toINR(inv.total - inv.amountPaid)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Payment Actions */}
         {inv.status !== "paid" && (
           <div className="space-y-3 pt-4 border-t border-border">
             <h4 className="font-semibold text-foreground">Payment Actions</h4>
             <div className="flex gap-2">
-              <Dialog
-                open={recordDialogOpen}
-                onOpenChange={setRecordDialogOpen}
-              >
+              <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary">Record Payment</Button>
                 </DialogTrigger>
@@ -889,10 +879,7 @@ const addLineFromService = (s: any) => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setRecordDialogOpen(false)}
-                    >
+                    <Button variant="outline" onClick={() => setRecordDialogOpen(false)}>
                       Cancel
                     </Button>
                     <Button onClick={handleRecordPayment}>Save</Button>
@@ -900,10 +887,7 @@ const addLineFromService = (s: any) => {
                 </DialogContent>
               </Dialog>
 
-              <Button
-                variant="outline"
-                onClick={() => editExistingInvoice(inv)}
-              >
+              <Button variant="outline" onClick={() => editExistingInvoice(inv)}>
                 Edit Invoice
               </Button>
             </div>
@@ -920,26 +904,19 @@ const addLineFromService = (s: any) => {
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-xl text-foreground">
-              {selectedInvoice
-                ? `Edit Invoice #${selectedInvoice.id}`
-                : "New Invoice"}
+              {selectedInvoice ? `Edit Invoice #${selectedInvoice.id}` : "New Invoice"}
             </CardTitle>
             <p className="text-muted-foreground">
-              {selectedInvoice
-                ? "Update items and amounts"
-                : "Create a new invoice"}
+              {selectedInvoice ? "Update items and amounts" : "Create a new invoice"}
             </p>
           </div>
 
-          {/* ✅ Status selector goes here */}
           {selectedInvoice && (
             <div className="flex items-center gap-2">
               <Label>Status</Label>
               <Select
-                value={status as "draft" | "unpaid" | "paid"}
-                onValueChange={(val: "draft" | "unpaid" | "paid") =>
-                  setStatus(val)
-                }
+                value={status}
+                onValueChange={(val: "draft" | "unpaid" | "paid") => setStatus(val)}
               >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Select status" />
@@ -959,21 +936,30 @@ const addLineFromService = (s: any) => {
         {/* Patient + Dates */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-semibold text-foreground mb-3">
-              Bill To (Patient)
-            </h3>
+            <h3 className="font-semibold text-foreground mb-3">Bill To (Patient)</h3>
             <div className="space-y-2">
               <Label>Search Patient</Label>
               <Input
                 placeholder="Type name or phone to search…"
                 value={patientSearch}
+                disabled={lockPatient} // ✅ locked when coming from payload
                 onChange={(e) => setPatientSearch(e.target.value)}
               />
+
               <div className="max-h-40 overflow-auto border rounded">
-                {patientLoading ? (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    Loading…
-                  </div>
+                {lockPatient ? (
+                  selectedPatient ? (
+                    <div className="p-3 text-sm">
+                      <div className="font-medium">{selectedPatient.fullName}</div>
+                      <div className="text-muted-foreground">
+                        {selectedPatient.contactNumber || "-"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 text-sm text-muted-foreground">Loading patient…</div>
+                  )
+                ) : patientLoading ? (
+                  <div className="p-3 text-sm text-muted-foreground">Loading…</div>
                 ) : patients.length ? (
                   patients.map((p) => (
                     <div
@@ -984,27 +970,19 @@ const addLineFromService = (s: any) => {
                       onClick={() => setSelectedPatient(p)}
                     >
                       <div className="font-medium">{p.fullName}</div>
-                      <div className="text-muted-foreground">
-                        {p.contactNumber || "-"}
-                      </div>
+                      <div className="text-muted-foreground">{p.contactNumber || "-"}</div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    No patients found.
-                  </div>
+                  <div className="p-3 text-sm text-muted-foreground">No patients found.</div>
                 )}
               </div>
 
               {selectedPatient && (
                 <div className="mt-3 text-sm bg-muted/20 p-3 rounded border">
                   <div className="font-medium">{selectedPatient.fullName}</div>
-                  <div className="text-muted-foreground">
-                    {selectedPatient.contactNumber || "-"}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {selectedPatient.email || "-"}
-                  </div>
+                  <div className="text-muted-foreground">{selectedPatient.contactNumber || "-"}</div>
+                  <div className="text-muted-foreground">{selectedPatient.email || "-"}</div>
                 </div>
               )}
             </div>
@@ -1013,82 +991,19 @@ const addLineFromService = (s: any) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Invoice Date</Label>
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-              />
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
             </div>
             <div>
               <Label>Due Date</Label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
         </div>
-        {/* 🧘 Auto-fetched Treatment Plan from Consultation */}
-        {selectedPatient?.treatmentPlan?.length > 0 && (
-          <div className="border border-green-200 rounded-md bg-green-50 p-4 space-y-2">
-            <h4 className="font-semibold text-green-800 mb-2">
-              Treatment Plan from Consultation
-            </h4>
-            {selectedPatient.treatmentPlan.map((t: any, i: number) => (
-              <div
-                key={i}
-                className="flex justify-between items-center py-1 border-b border-green-100 last:border-0 text-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={t.selected}
-                    onChange={(e) => {
-                      setSelectedPatient((prev: any) => ({
-                        ...prev,
-                        treatmentPlan: prev.treatmentPlan.map(
-                          (tp: any, j: number) =>
-                            j === i ? { ...tp, selected: e.target.checked } : tp
-                        ),
-                      }));
-                    }}
-                  />
-                  <span>{t.name}</span>
-                </div>
-                <span className="font-medium">₹{t.rate}</span>
-              </div>
-            ))}
-
-            <Button
-              className="mt-3 w-full bg-green-600 hover:bg-green-700"
-              onClick={() => {
-                const selected = selectedPatient.treatmentPlan.filter(
-                  (tp: any) => tp.selected
-                );
-                setLines((prev) => [
-                  ...prev,
-                  ...selected.map((tp: any) => ({
-                    serviceId: tp.serviceId,
-                    name: tp.name,
-                    quantity: 1,
-                    rate: tp.rate,
-                    amount: tp.amount,
-                  })),
-                ]);
-              }}
-            >
-              ➕ Add Selected to Invoice
-            </Button>
-          </div>
-        )}
 
         {/* Items */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground">
-              Services & Treatments
-            </h3>
+            <h3 className="font-semibold text-foreground">Services & Treatments</h3>
             <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>
@@ -1105,47 +1020,43 @@ const addLineFromService = (s: any) => {
                     />
                     <div className="max-h-64 overflow-auto border rounded">
                       {servicesLoading ? (
-                        <div className="p-3 text-sm text-muted-foreground">
-                          Loading…
-                        </div>
+                        <div className="p-3 text-sm text-muted-foreground">Loading…</div>
                       ) : catalogFiltered.length ? (
                         catalogFiltered.map((s) => (
                           <div
-    key={s.id}
-    className="p-3 hover:bg-muted/50 cursor-pointer border-b text-sm"
-    onClick={() => addLineFromService(s)}
-  >
-    <div className="flex justify-between items-center">
-      <div>
-        <div className="font-medium text-foreground">{s.title}</div>
-        {s.subTitle && (
-          <div className="text-xs text-muted-foreground">{s.subTitle}</div>
-        )}
-        <div className="text-xs text-gray-600 mt-1">
-          🕒 {s.duration || "N/A"}{" "}
-          {s.validity && <> | ⏳ {s.validity}</>}
-        </div>
-        {s.category && (
-          <div className="text-xs text-amber-700 font-semibold mt-1">
-            🏷️ {s.category}
-          </div>
-        )}
-      </div>
-      <div className="font-bold text-green-700 text-right">
-        ₹{toINR(s.price ?? 0)}
-      </div>
-    </div>
-  </div>
+                            key={s.id}
+                            className="p-3 hover:bg-muted/50 cursor-pointer border-b text-sm"
+                            onClick={() => addLineFromService(s)}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-medium text-foreground">{s.title}</div>
+                                {s.subTitle && (
+                                  <div className="text-xs text-muted-foreground">{s.subTitle}</div>
+                                )}
+                                <div className="text-xs text-gray-600 mt-1">
+                                  🕒 {s.duration || "N/A"} {s.validity ? ` | ⏳ ${s.validity}` : ""}
+                                </div>
+                                {s.category && (
+                                  <div className="text-xs text-amber-700 font-semibold mt-1">
+                                    🏷️ {String(s.category)}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="font-bold text-green-700 text-right">
+                                ₹{toINR(s.price ?? 0)}
+                              </div>
+                            </div>
+                          </div>
                         ))
                       ) : (
-                        <div className="p-3 text-sm text-muted-foreground">
-                          No services found.
-                        </div>
+                        <div className="p-3 text-sm text-muted-foreground">No services found.</div>
                       )}
                     </div>
                   </div>
                 </PopoverContent>
               </Popover>
+
               <Button variant="outline" size="sm" onClick={addCustomLine}>
                 <Plus className="h-4 w-4 mr-2" /> Add custom
               </Button>
@@ -1164,51 +1075,40 @@ const addLineFromService = (s: any) => {
             {lines.length ? (
               lines.map((l, idx) => (
                 <div
-                  key={idx}
+                  key={l.clientId} // ✅ stable key (cursor fix)
                   className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
                 >
                   <div className="col-span-5">
-                    <Input
-                      value={l.name}
-                      onChange={(e) =>
-                        updateLine(idx, { name: e.target.value })
-                      }
-                    />
+                    <Input value={l.name} onChange={(e) => updateLine(idx, { name: e.target.value })} />
                   </div>
+
                   <div className="col-span-2 text-center">
                     <Input
                       type="number"
                       min="1"
                       value={l.quantity}
                       onChange={(e) =>
-                        updateLine(idx, {
-                          quantity: Math.max(1, Number(e.target.value) || 1),
-                        })
+                        updateLine(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })
                       }
                     />
                   </div>
+
                   <div className="col-span-2 text-right">
                     <Input
                       className="text-right"
                       type="number"
                       min="0"
                       value={l.rate}
-                      onChange={(e) =>
-                        updateLine(idx, {
-                          rate: Math.max(0, Number(e.target.value) || 0),
-                        })
-                      }
+                      onChange={(e) => updateLine(idx, { rate: Math.max(0, Number(e.target.value) || 0) })}
                     />
                   </div>
+
                   <div className="col-span-2 text-right font-medium text-foreground pt-2">
                     ₹{toINR(l.quantity * l.rate)}
                   </div>
+
                   <div className="col-span-1 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeLine(idx)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
@@ -1230,11 +1130,7 @@ const addLineFromService = (s: any) => {
               Discount
             </h3>
             {!isEditingDiscount && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditingDiscount(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setIsEditingDiscount(true)}>
                 Edit Discount
               </Button>
             )}
@@ -1251,20 +1147,14 @@ const addLineFromService = (s: any) => {
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="percentage" id="percentage" />
-                    <Label
-                      htmlFor="percentage"
-                      className="flex items-center gap-1 cursor-pointer"
-                    >
+                    <Label htmlFor="percentage" className="flex items-center gap-1 cursor-pointer">
                       <Percent className="h-3 w-3" />
                       Percentage
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="fixed" id="fixed" />
-                    <Label
-                      htmlFor="fixed"
-                      className="flex items-center gap-1 cursor-pointer"
-                    >
+                    <Label htmlFor="fixed" className="flex items-center gap-1 cursor-pointer">
                       <IndianRupee className="h-3 w-3" />
                       Fixed Amount
                     </Label>
@@ -1274,9 +1164,7 @@ const addLineFromService = (s: any) => {
 
               <div className="space-y-2">
                 <Label htmlFor="discount-amount">
-                  {discountType === "percentage"
-                    ? "Discount Percentage"
-                    : "Discount Amount"}
+                  {discountType === "percentage" ? "Discount Percentage" : "Discount Amount"}
                 </Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -1288,20 +1176,13 @@ const addLineFromService = (s: any) => {
                       step={discountType === "percentage" ? "0.1" : "1"}
                       value={discountAmount}
                       onChange={(e) => setDiscountAmount(e.target.value)}
-                      placeholder={
-                        discountType === "percentage"
-                          ? "Enter percentage"
-                          : "Enter amount"
-                      }
                       className="pr-8"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                       {discountType === "percentage" ? "%" : "₹"}
                     </span>
                   </div>
-                  <Button onClick={() => setIsEditingDiscount(false)}>
-                    Apply
-                  </Button>
+                  <Button onClick={() => setIsEditingDiscount(false)}>Apply</Button>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -1314,22 +1195,6 @@ const addLineFromService = (s: any) => {
                   </Button>
                 </div>
               </div>
-
-              {parseFloat(discountAmount) > 0 && (
-                <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded border border-primary/20">
-                  <p className="font-medium text-foreground mb-1">
-                    Discount Preview:
-                  </p>
-                  <p>
-                    {discountType === "percentage"
-                      ? `${discountAmount}% discount = ₹${toINR(discountVal)}`
-                      : `Fixed discount = ₹${toINR(
-                          parseFloat(discountAmount)
-                        )}`}
-                  </p>
-                  <p className="mt-1">New Total: ₹{toINR(total)}</p>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -1340,9 +1205,7 @@ const addLineFromService = (s: any) => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal:</span>
-              <span className="font-medium text-foreground">
-                ₹{toINR(subtotal)}
-              </span>
+              <span className="font-medium text-foreground">₹{toINR(subtotal)}</span>
             </div>
 
             {discountVal > 0 && (
@@ -1350,21 +1213,13 @@ const addLineFromService = (s: any) => {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Tag className="h-3 w-3" />
-                    Discount{" "}
-                    {discountType === "percentage"
-                      ? `(${discountAmount}%)`
-                      : "(Fixed)"}
-                    :
+                    Discount {discountType === "percentage" ? `(${discountAmount}%)` : "(Fixed)"}:
                   </span>
-                  <span className="font-medium text-green-600">
-                    -₹{toINR(discountVal)}
-                  </span>
+                  <span className="font-medium text-green-600">-₹{toINR(discountVal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">After Discount:</span>
-                  <span className="font-medium text-foreground">
-                    ₹{toINR(afterDiscount)}
-                  </span>
+                  <span className="font-medium text-foreground">₹{toINR(afterDiscount)}</span>
                 </div>
               </>
             )}
@@ -1387,16 +1242,10 @@ const addLineFromService = (s: any) => {
           <Button variant="outline" onClick={cancelEdit}>
             Cancel
           </Button>
-          <Button
-            className="bg-yellow-600 hover:bg-yellow-700"
-            onClick={() => handleSaveInvoice("unpaid")}
-          >
+          <Button className="bg-yellow-600 hover:bg-yellow-700" onClick={() => handleSaveInvoice("unpaid")}>
             Save & Mark Unpaid
           </Button>
-          <Button
-            className="bg-green-600 hover:bg-green-700"
-            onClick={() => handleSaveInvoice("paid")}
-          >
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleSaveInvoice("paid")}>
             Save & Mark Paid
           </Button>
         </div>
@@ -1409,13 +1258,11 @@ const addLineFromService = (s: any) => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Invoices</h1>
-          <p className="text-muted-foreground">
-            Generate and manage invoices based on services/treatments
-          </p>
+          <p className="text-muted-foreground">Generate and manage invoices based on services/treatments</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Invoice List + search */}
+          {/* Left: Invoice List */}
           <div className="lg:col-span-1 space-y-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -1427,21 +1274,20 @@ const addLineFromService = (s: any) => {
                   className="pl-10"
                 />
               </div>
-              <Button className="bg-primary" onClick={startNewInvoice}>
+              <Button className="bg-primary" onClick={() => startNewInvoice()}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+
             <div className="flex gap-2 mt-2">
-              {["paid", "unpaid", "draft"].map((status) => (
+              {["paid", "unpaid", "draft"].map((s) => (
                 <Button
-                  key={status}
-                  variant={invoiceStatus === status ? "default" : "outline"}
-                  onClick={() =>
-                    setInvoiceStatus(status as "paid" | "unpaid" | "draft")
-                  }
+                  key={s}
+                  variant={invoiceStatus === s ? "default" : "outline"}
+                  onClick={() => setInvoiceStatus(s as any)}
                   className="capitalize flex-1"
                 >
-                  {status}
+                  {s}
                 </Button>
               ))}
             </div>
@@ -1449,17 +1295,13 @@ const addLineFromService = (s: any) => {
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {loadingInvoices ? (
                 <Card>
-                  <CardContent className="p-4 text-sm text-muted-foreground">
-                    Loading…
-                  </CardContent>
+                  <CardContent className="p-4 text-sm text-muted-foreground">Loading…</CardContent>
                 </Card>
               ) : invoices.length ? (
                 invoices.map(renderInvoiceListCard)
               ) : (
                 <Card>
-                  <CardContent className="p-4 text-sm text-muted-foreground">
-                    No invoices yet.
-                  </CardContent>
+                  <CardContent className="p-4 text-sm text-muted-foreground">No invoices yet.</CardContent>
                 </Card>
               )}
             </div>
@@ -1474,8 +1316,7 @@ const addLineFromService = (s: any) => {
             ) : (
               <Card className="shadow-natural">
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  Select an invoice from the left, or click{" "}
-                  <strong>+ New</strong> to create one.
+                  Select an invoice from the left, or click <strong>+ New</strong> to create one.
                 </CardContent>
               </Card>
             )}
@@ -1486,26 +1327,25 @@ const addLineFromService = (s: any) => {
   );
 };
 
-/* ---------- map from backend shape if needed ---------- */
-/* ---------- map from backend shape ---------- */
+/* ---------- map backend -> UI shape ---------- */
 function mapApiInvoice(inv: any): ApiInvoice {
   return {
     id: inv.id,
-    patientId: inv.patient?.id ?? "",
-    patientName: inv.patient?.fullName ?? "Unknown Patient",
-    patientPhone: inv.patient?.contactNumber ?? "",
-    patientEmail: inv.patient?.email ?? "",
+    patientId: inv.patient?.id ?? inv.patientId ?? "",
+    patientName: inv.patient?.fullName ?? inv.patientName ?? "Unknown Patient",
+    patientPhone: inv.patient?.contactNumber ?? inv.patientPhone ?? "",
+    patientEmail: inv.patient?.email ?? inv.patientEmail ?? "",
     date: inv.invoiceDate ?? inv.date ?? "",
     dueDate: inv.dueDate ?? "",
-    items: (inv.items || []).map((i: any) => ({
+    items: (inv.items || inv.invoiceItems || []).map((i: any) => ({
       id: i.id,
-      serviceId: i.treatment?.id ?? "",
+      serviceId: i.treatment?.id ?? i.serviceId ?? "",
       name: i.treatment?.title || i.name || "Untitled Service",
-      quantity: Number(i.qty ?? 0),
+      quantity: Number(i.qty ?? i.quantity ?? 0),
       rate: Number(i.rate ?? 0),
       amount: Number(i.amount ?? 0),
     })),
-    subtotal: Number(inv.subTotal ?? 0),
+    subtotal: Number(inv.subTotal ?? inv.subtotal ?? 0),
     discount: Number(inv.discount ?? 0),
     discountType: (inv.discountType ?? "percentage") as DiscountType,
     tax: Number(inv.tax ?? 0),
