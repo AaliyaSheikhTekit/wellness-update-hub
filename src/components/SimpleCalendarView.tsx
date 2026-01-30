@@ -2,6 +2,11 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { CalendarIcon } from "lucide-react";
 import {
   getPatientTreatmentCalendar,
   getTreatmentAll,
@@ -35,7 +40,7 @@ const SimpleCalendar = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const monthNames = [
-    "January","February","March","April","May","June","July","August","September","October","November","December",
+    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
   ];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -93,16 +98,15 @@ const SimpleCalendar = ({
           const dayAppointments = getAppointmentsForDay(day);
           const dateStr = day
             ? `${currentDate.getFullYear()}-${String(
-                currentDate.getMonth() + 1
-              ).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+              currentDate.getMonth() + 1
+            ).padStart(2, "0")}-${String(day).padStart(2, "0")}`
             : "";
 
           return (
             <div
               key={i}
-              className={`min-h-32 p-1 border rounded-lg ${
-                day ? "hover:bg-gray-50 cursor-pointer" : "bg-transparent"
-              } ${selectedDate === dateStr ? "ring-2 ring-indigo-500" : ""}`}
+              className={`min-h-32 p-1 border rounded-lg ${day ? "hover:bg-gray-50 cursor-pointer" : "bg-transparent"
+                } ${selectedDate === dateStr ? "ring-2 ring-indigo-500" : ""}`}
               onClick={() => day && setSelectedDate(dateStr)}
             >
               {day && (
@@ -144,11 +148,21 @@ const SimpleCalendar = ({
 export const SimpleCalendarView = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const today = new Date();
 
-  const fetchAppointments = async () => {
+  const [range, setRange] = useState<DateRange>({
+    from: today,
+    to: today,
+  });
+  const toYMD = (d: Date) => format(d, "yyyy-MM-dd");
+
+  const fetchAppointments = async (r: DateRange = range) => {
     try {
+      const from = r?.from ?? new Date();
+      const to = r?.to ?? r?.from ?? new Date(); // ✅ if user selects only one date
+
       const [calendarRes, treatmentRes, therapyRes] = await Promise.all([
-        getPatientTreatmentCalendar("2024-11-01", "2026-11-08"),
+        getPatientTreatmentCalendar(toYMD(from), toYMD(to)), // ✅ dynamic range
         getTreatmentAll(),
         getTherapyList(),
       ]);
@@ -171,8 +185,7 @@ export const SimpleCalendarView = () => {
               : [c.treatment?.recommendation?.title].filter(Boolean);
 
             const readableNames = recIds.map(
-              (id: string) =>
-                treatmentMap.get(id) || therapyMap.get(id) || id
+              (id: string) => treatmentMap.get(id) || therapyMap.get(id) || id
             );
 
             return {
@@ -203,17 +216,50 @@ export const SimpleCalendarView = () => {
   };
 
   useEffect(() => {
-    fetchAppointments();
+    fetchAppointments({ from: today, to: today });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Treatment Calendar</h2>
-        <Button variant="outline" onClick={fetchAppointments}>
-          Refresh
-        </Button>
+
+        <div className="flex items-center gap-2">
+          {/* ✅ Date Range Selector on right */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {range?.from
+                  ? range?.to
+                    ? `${format(range.from, "dd MMM yyyy")} - ${format(range.to, "dd MMM yyyy")}`
+                    : format(range.from, "dd MMM yyyy")
+                  : "Select date range"}
+              </Button>
+            </PopoverTrigger>
+
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={range}
+                onSelect={(r) => {
+                  const next = r ?? { from: today, to: today };
+                  setRange(next);
+                  fetchAppointments(next); // ✅ fetch on change
+                }}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Refresh */}
+          <Button variant="outline" onClick={() => fetchAppointments(range)}>
+            Refresh
+          </Button>
+        </div>
       </div>
+
       <SimpleCalendar
         appointments={appointments}
         selectedDate={selectedDate}

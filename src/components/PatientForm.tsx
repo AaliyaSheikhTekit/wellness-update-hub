@@ -1409,7 +1409,7 @@ const PatientRegistrationForm = () => {
                       {qr?.imageUrl && (
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <p className="text-xs text-gray-600 mb-3 font-medium">
-                            Scan QR Code • UPI ID: {qr?.upiId || "—"}
+                            Scan QR Code • UPI ID: eanaturopathyindia@oksbi
                           </p>
                           <div className="flex justify-center">
                             <img

@@ -115,7 +115,7 @@ type ApiInvoice = {
   subtotal: number;
   discount: number;
   discountType: DiscountType;
-  tax: number;
+  // tax: number;
   total: number;
   amountPaid: number;
   status: "paid" | "partially_paid" | "pending" | "overdue" | "draft" | "unpaid";
@@ -583,8 +583,8 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     [subtotal, discountVal]
   );
 
-  const tax = useMemo(() => afterDiscount * 0.18, [afterDiscount]);
-  const total = useMemo(() => afterDiscount + tax, [afterDiscount, tax]);
+  // const tax = useMemo(() => afterDiscount * 0.18, [afterDiscount]);
+  const total = useMemo(() => afterDiscount , [afterDiscount]);
 
   const catalogFiltered = services.filter((s) =>
     [s.title, s.category]
@@ -622,8 +622,8 @@ const isConsultancyAmountInvalid =
         : parseFloat(discountAmount || "0");
 
     const _afterDiscount = Math.max(0, _subtotal - _discountVal);
-    const _tax = (_afterDiscount * 18) / 100;
-    const _total = _afterDiscount + _tax;
+    // const _tax = (_afterDiscount * 18) / 100;
+    const _total = _afterDiscount ;
 
     const payload = {
       invoiceDate,
@@ -631,7 +631,7 @@ const isConsultancyAmountInvalid =
       discountType,
       discount: parseFloat(discountAmount) || 0,
       subTotal: _subtotal,
-      tax: _tax,
+      // tax: _tax,
       finalTotal: _total,
       status: newStatus, // ✅ use the button’s status
       patientId: lockPatient && invoicePayload?.patientId
@@ -1374,7 +1374,7 @@ function mapApiInvoice(inv: any): ApiInvoice {
     subtotal: Number(inv.subTotal ?? inv.subtotal ?? 0),
     discount: Number(inv.discount ?? 0),
     discountType: (inv.discountType ?? "percentage") as DiscountType,
-    tax: Number(inv.tax ?? 0),
+    // tax: Number(inv.tax ?? 0),
     total: Number(inv.finalTotal ?? inv.total ?? 0),
     amountPaid: Number(inv.amountPaid ?? 0),
     // your backend: paid / unpaid / draft
