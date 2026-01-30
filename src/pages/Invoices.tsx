@@ -1245,11 +1245,6 @@ const isConsultancyAmountInvalid =
                 </div>
               </>
             )}
-
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax (18% GST):</span>
-              <span className="font-medium text-foreground">₹{toINR(tax)}</span>
-            </div>
             <Separator />
             <div className="flex justify-between text-lg">
               <span className="font-semibold text-foreground">Total:</span>
