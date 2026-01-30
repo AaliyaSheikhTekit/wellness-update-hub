@@ -172,7 +172,7 @@ const newClientId = () =>
 /* ---------------- Component ---------------- */
 const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   const { toast } = useToast();
-
+  const preferredInvoiceIdRef = useRef<string | null>(null);
   const initRef = useRef<string>(""); // ✅ prevent re-init for payload
   const [lockPatient, setLockPatient] = useState(false);
   const autoCreatedRef = useRef(false);
@@ -394,22 +394,27 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         setPatientSearch(locked.fullName);
       }
 
-      // ✅ consultancy default line (editable)
-      if (invoicePayload?.invoiceType === "consultancy") {
-        setLines([
-          {
-            clientId: newClientId(),
-            name: "consultancy",
-            quantity: 1,
-            rate: 0,
-            amount: 0,
-          },
-        ]);
-        setStatus("unpaid");
-        setDiscountAmount("0");
-        setDiscountType("percentage");
-        setPaymentMethod(invoicePayload.paymentMethod || "Cash");
-      }
+   if (invoicePayload?.invoiceType === "consultancy") {
+  setInvoiceStatus("unpaid");
+
+  const amt = Number(invoicePayload?.amount ?? 0);
+
+  setLines([
+    {
+      clientId: newClientId(),
+      name: "consultancy",
+      quantity: 1,
+      rate: amt > 0 ? amt : 0,
+      amount: amt > 0 ? amt : 0,
+    },
+  ]);
+
+  setStatus("unpaid");
+  setDiscountAmount("0");
+  setDiscountType("percentage");
+  setPaymentMethod(invoicePayload.paymentMethod || "Cash");
+}
+
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoicePayload]);
@@ -423,27 +428,34 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       const rawList: any[] = Array.isArray(res?.data)
         ? res.data
         : Array.isArray(res)
-        ? res
-        : [];
+          ? res
+          : [];
 
       // client-side filter by invoiceSearch (you were re-fetching on invoiceSearch)
       const mapped = rawList.map(mapApiInvoice);
       const filtered = invoiceSearch.trim()
         ? mapped.filter((i) => {
-            const q = invoiceSearch.toLowerCase();
-            return (
-              i.id?.toLowerCase().includes(q) ||
-              i.patientName?.toLowerCase().includes(q)
-            );
-          })
+          const q = invoiceSearch.toLowerCase();
+          return (
+            i.id?.toLowerCase().includes(q) ||
+            i.patientName?.toLowerCase().includes(q)
+          );
+        })
         : mapped;
 
       setInvoices(filtered);
 
       if (filtered.length) {
+        const preferredId = preferredInvoiceIdRef.current;
+
+        const preferred = preferredId
+          ? filtered.find((i) => i.id === preferredId)
+          : null;
+
         const stillSelected =
           selectedInvoice && filtered.find((i) => i.id === selectedInvoice.id);
-        setSelectedInvoice(stillSelected ?? filtered[0]);
+
+        setSelectedInvoice(preferred ?? stillSelected ?? filtered[0]);
       } else {
         setSelectedInvoice(null);
       }
@@ -459,9 +471,9 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   };
 
   useEffect(() => {
-  refreshInvoices();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [invoiceStatus]);
+    refreshInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceStatus]);
 
   /* ---------------- Fetch: patients (skip if locked) ---------------- */
   useEffect(() => {
@@ -579,7 +591,8 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       .filter(Boolean)
       .some((field) => String(field).toLowerCase().includes(serviceQuery.toLowerCase()))
   );
-
+const isConsultancyAmountInvalid =
+  isConsultancyFlow && (Number(lines?.[0]?.rate || 0) <= 0);
   const downloadInvoicePDF = async (invoiceId: string) => {
     try {
       const blob = await generatetInvoicePDF(invoiceId);
@@ -621,9 +634,9 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       tax: _tax,
       finalTotal: _total,
       status: newStatus, // ✅ use the button’s status
-      patientId:  lockPatient && invoicePayload?.patientId
-    ? invoicePayload.patientId
-    : selectedPatient.id,
+      patientId: lockPatient && invoicePayload?.patientId
+        ? invoicePayload.patientId
+        : selectedPatient.id,
       invoiceItems: lines.map((l) => ({
         treatment: l.serviceId,
         name: l.name,
@@ -634,13 +647,25 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     };
 
     try {
-      if (selectedInvoice) await updateInvoice(selectedInvoice.id, payload);
-      else await createInvoice(payload);
+      if (selectedInvoice) {
+        await updateInvoice(selectedInvoice.id, payload);
+        preferredInvoiceIdRef.current = selectedInvoice.id; // ✅ pin it
+      } else {
+        const createdRes: any = await createInvoice(payload);
+
+        // ✅ adjust based on your backend response
+        const created = createdRes?.data ?? createdRes;
+        const createdId = created?.id ?? created?.invoice?.id;
+
+        if (createdId) preferredInvoiceIdRef.current = createdId; // ✅ pin created
+      }
 
       toast({
         title: selectedInvoice ? "Invoice updated" : "Invoice created",
         description: `Status: ${newStatus.toUpperCase()}`,
       });
+
+      setInvoiceStatus(newStatus); // ✅ switch tab so it is visible in left list
 
       setIsNewInvoice(false);
       await refreshInvoices();
@@ -649,24 +674,24 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       toast({ title: "Failed to save invoice", description: e?.message || "Error" });
     }
   };
-useEffect(() => {
-  // Only run for consultancy payload flow
-  if (!isConsultancyFlow) return;
-  if (!lockPatient) return;
-  if (!invoicePayload?.patientId) return;
+  useEffect(() => {
+    // Only run for consultancy payload flow
+    if (!isConsultancyFlow) return;
+    if (!lockPatient) return;
+    if (!invoicePayload?.patientId) return;
 
-  // Wait until user has entered a valid amount
-  const rate = Number(lines?.[0]?.rate || 0);
-  if (rate <= 0) return;
+    // Wait until user has entered a valid amount
+    const rate = Number(lines?.[0]?.rate || 0);
+    if (rate <= 0) return;
 
-  // Prevent multiple auto creates
-  if (autoCreatedRef.current) return;
-  autoCreatedRef.current = true;
+    // Prevent multiple auto creates
+    if (autoCreatedRef.current) return;
+    autoCreatedRef.current = true;
 
-  // Auto create as unpaid
-  handleSaveInvoice("unpaid");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [lines, lockPatient, isConsultancyFlow, invoicePayload?.patientId]);
+    // Auto create as unpaid
+    handleSaveInvoice("unpaid");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, lockPatient, isConsultancyFlow, invoicePayload?.patientId]);
 
   const handleRecordPayment = async () => {
     if (!selectedInvoice) return;
@@ -705,9 +730,8 @@ useEffect(() => {
   const renderInvoiceListCard = (invoice: ApiInvoice) => (
     <Card
       key={invoice.id}
-      className={`cursor-pointer transition-all shadow-natural hover:shadow-card-hover ${
-        selectedInvoice?.id === invoice.id ? "ring-2 ring-primary" : ""
-      }`}
+      className={`cursor-pointer transition-all shadow-natural hover:shadow-card-hover ${selectedInvoice?.id === invoice.id ? "ring-2 ring-primary" : ""
+        }`}
       onClick={async () => {
         try {
           setIsNewInvoice(false);
@@ -855,7 +879,7 @@ useEffect(() => {
                     <div>
                       <Label>Amount</Label>
                       <Input
-                        type="number"
+                        type="text"
                         min="0"
                         value={paymentAmount}
                         onChange={(e) => setPaymentAmount(e.target.value)}
@@ -942,7 +966,7 @@ useEffect(() => {
               <Input
                 placeholder="Type name or phone to search…"
                 value={patientSearch}
-                disabled={lockPatient} // ✅ locked when coming from payload
+                disabled={lockPatient}
                 onChange={(e) => setPatientSearch(e.target.value)}
               />
 
@@ -964,9 +988,8 @@ useEffect(() => {
                   patients.map((p) => (
                     <div
                       key={p.id}
-                      className={`p-2 text-sm cursor-pointer hover:bg-muted/50 ${
-                        selectedPatient?.id === p.id ? "bg-muted/60" : ""
-                      }`}
+                      className={`p-2 text-sm cursor-pointer hover:bg-muted/50 ${selectedPatient?.id === p.id ? "bg-muted/60" : ""
+                        }`}
                       onClick={() => setSelectedPatient(p)}
                     >
                       <div className="font-medium">{p.fullName}</div>
@@ -1084,7 +1107,7 @@ useEffect(() => {
 
                   <div className="col-span-2 text-center">
                     <Input
-                      type="number"
+                      type="text"
                       min="1"
                       value={l.quantity}
                       onChange={(e) =>
@@ -1096,8 +1119,7 @@ useEffect(() => {
                   <div className="col-span-2 text-right">
                     <Input
                       className="text-right"
-                      type="number"
-                      min="0"
+                      type="text"
                       value={l.rate}
                       onChange={(e) => updateLine(idx, { rate: Math.max(0, Number(e.target.value) || 0) })}
                     />
@@ -1170,7 +1192,7 @@ useEffect(() => {
                   <div className="relative flex-1">
                     <Input
                       id="discount-amount"
-                      type="number"
+                      type="text"
                       min="0"
                       max={discountType === "percentage" ? "100" : undefined}
                       step={discountType === "percentage" ? "0.1" : "1"}
@@ -1238,16 +1260,25 @@ useEffect(() => {
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button onClick={() => handleSaveInvoice("draft")}>Save Draft</Button>
-          <Button variant="outline" onClick={cancelEdit}>
-            Cancel
+          <Button onClick={() => handleSaveInvoice("draft")} disabled={isConsultancyAmountInvalid}>
+            Save Draft
           </Button>
-          <Button className="bg-yellow-600 hover:bg-yellow-700" onClick={() => handleSaveInvoice("unpaid")}>
+
+          <Button
+            className="bg-yellow-600 hover:bg-yellow-700"
+            onClick={() => handleSaveInvoice("unpaid")}
+            disabled={isConsultancyAmountInvalid}
+          >
             Save & Mark Unpaid
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleSaveInvoice("paid")}>
+
+          <Button
+            className="bg-green-600 hover:bg-green-700"
+            onClick={() => handleSaveInvoice("paid")}
+            disabled={isConsultancyAmountInvalid}
+          >
             Save & Mark Paid
-          </Button>
+</Button>
         </div>
       </CardContent>
     </Card>

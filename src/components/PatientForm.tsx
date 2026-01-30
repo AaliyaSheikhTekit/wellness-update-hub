@@ -187,18 +187,20 @@ const LIFESTYLE_FIELDS: Record<
     sleepTime: true,
   },
   addictions: {
-    options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee","none"],
+    options: ["Smoking", "Alcohol", "Tobacco", "Tea", "Coffee", "none"],
     other: true,
   },
   physicalActivity: {
     options: ["Sedentary", "Active", "Walking", "Yoga", "Exercise"],
     other: true,
   },
-  waterIntake: { options: [
+  waterIntake: {
+    options: [
       "Low - Less than 1.5 ltr",
       "Normal - 1.5 to 3 ltr",
       "Excess - Above 3.5 ltr",
-    ], other: true },
+    ], other: true
+  },
   stress: { options: ["Low", "Moderate", "High"], other: false },
   mentalState: {
     options: ["Calm", "Anxious", "Irritable", "Unhappy"],
@@ -212,7 +214,7 @@ const PatientRegistrationForm = () => {
   const [step, setStep] = useState(1);
   const [showPrint, setShowPrint] = useState(false);
   const printRef = useRef<HTMLDivElement | null>(null);
-
+  const [cashAmount, setCashAmount] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -405,7 +407,7 @@ const PatientRegistrationForm = () => {
         const requiredVitals = [
           "Blood Pressure",
           "Pulse",
-          
+
         ];
         requiredVitals.forEach((field) => {
           const error = validateField(field, vitals[field]);
@@ -428,21 +430,21 @@ const PatientRegistrationForm = () => {
   };
 
   // Handle field blur for real-time validation
-const handleBlur = (fieldName: string) => {
-  setTouched((prev) => ({ ...prev, [fieldName]: true }));
+  const handleBlur = (fieldName: string) => {
+    setTouched((prev) => ({ ...prev, [fieldName]: true }));
 
-  const isVital = VITALS_FIELDS.some((v) => v.label === fieldName);
-  const value = isVital ? vitals[fieldName] : formData[fieldName];
+    const isVital = VITALS_FIELDS.some((v) => v.label === fieldName);
+    const value = isVital ? vitals[fieldName] : formData[fieldName];
 
-  const error = validateField(fieldName, value);
+    const error = validateField(fieldName, value);
 
-  setErrors((prev) => {
-    const next = { ...prev };
-    if (error) next[fieldName] = error;
-    else delete next[fieldName];
-    return next;
-  });
-};
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (error) next[fieldName] = error;
+      else delete next[fieldName];
+      return next;
+    });
+  };
 
 
   const handleInputChange = (
@@ -598,21 +600,21 @@ const handleBlur = (fieldName: string) => {
   const handleNext = async () => {
     if (!validateStep(step)) {
       if (step === 1) markTouched(STEP1_FIELDS);
-      if (step === 3) markTouched(["Pulse","weight","height"]); // optional
+      if (step === 3) markTouched(["Pulse", "weight", "height"]); // optional
       if (step === 3) {
-      const w = vitals["Weight"];
-      const h = vitals["Height"];
+        const w = vitals["Weight"];
+        const h = vitals["Height"];
 
-      // if user enters one, force the other
-      if ((w && !h) || (!w && h)) {
-        setErrors((prev) => ({
-          ...prev,
-          Weight: !w ? "Weight is required for BMI" : prev.Weight,
-          Height: !h ? "Height is required for BMI" : prev.Height,
-        }));
-        return;
+        // if user enters one, force the other
+        if ((w && !h) || (!w && h)) {
+          setErrors((prev) => ({
+            ...prev,
+            Weight: !w ? "Weight is required for BMI" : prev.Weight,
+            Height: !h ? "Height is required for BMI" : prev.Height,
+          }));
+          return;
+        }
       }
-    }
 
       setApiError("Please fix the errors before proceeding");
       return;
@@ -666,28 +668,28 @@ const handleBlur = (fieldName: string) => {
       setApiError(err?.message || "Something went wrong.");
     }
   };
-const STEP1_FIELDS = [
-  "name",
-  "age",
-  "sex",
-  "fatherOrHusbandName",
-  "contactNumber",
-  "maritalStatus",
-  "dateOfBirth",
-  "bloodType",
-  "occupation",
-  "reference",
-  "address",
-  "primaryHealthConcern",
-];
+  const STEP1_FIELDS = [
+    "name",
+    "age",
+    "sex",
+    "fatherOrHusbandName",
+    "contactNumber",
+    "maritalStatus",
+    "dateOfBirth",
+    "bloodType",
+    "occupation",
+    "reference",
+    "address",
+    "primaryHealthConcern",
+  ];
 
-const markTouched = (fields: string[]) => {
-  setTouched((prev) => {
-    const next = { ...prev };
-    fields.forEach((f) => (next[f] = true));
-    return next;
-  });
-};
+  const markTouched = (fields: string[]) => {
+    setTouched((prev) => {
+      const next = { ...prev };
+      fields.forEach((f) => (next[f] = true));
+      return next;
+    });
+  };
 
   const dataUrlToFile = async (
     dataUrl: string,
@@ -1130,11 +1132,11 @@ const markTouched = (fields: string[]) => {
                   </div>
 
                   <div>
-                    
-                  <h4 className="font-semibold text-amber-700 mt-4">
-                    Your primary health concern and please specify how long you
-                    have had this condition.
-                  </h4>
+
+                    <h4 className="font-semibold text-amber-700 mt-4">
+                      Your primary health concern and please specify how long you
+                      have had this condition.
+                    </h4>
                     <Textarea
                       name="primaryHealthConcern"
                       placeholder="Primary Health Concern *"
@@ -1292,7 +1294,7 @@ const markTouched = (fields: string[]) => {
                         <>
                           <Input
                             placeholder="Water Intake (Liters)"
-                             value={Array.isArray(lifestyle.waterIntake) ? "" : lifestyle.waterIntake}
+                            value={Array.isArray(lifestyle.waterIntake) ? "" : lifestyle.waterIntake}
                             onChange={(e) =>
                               setLifestyle({
                                 ...lifestyle,
@@ -1301,7 +1303,7 @@ const markTouched = (fields: string[]) => {
                             }
                             className="mb-2"
                           />
-                          
+
 
                         </>
                       )}
@@ -1369,8 +1371,8 @@ const markTouched = (fields: string[]) => {
                           {errors[v.label] &&
                             !["BMI", "Temperature", "Weight", "Height"].includes(v.label) && (
                               <p className="text-red-500 text-xs mt-1">{errors[v.label]}</p>
-                          )}
-                                                  </div>
+                            )}
+                        </div>
                       );
                     })}
                   </div>
@@ -1426,39 +1428,62 @@ const markTouched = (fields: string[]) => {
 
                   {/* Cash Payment Option */}
                   <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-amber-400 transition-all">
-                    <button
-                      onClick={() => {
-                        setPaymentMethod("Cash");
-
-                        navigate("/dashboard", {
-                          state: {
-                            openTab: "invoices",
-                            invoicePayload: {
-                              from: "patient-registration",
-                              patientId: id,
-                              patientName: formData.name,
-                              patientPhone: formData.contactNumber,
-                              invoiceType: "consultancy",
-                              paymentMethod: "Cash",
-                            },
-                          },
-                        })
-                      }}
-                      className="w-full p-6 bg-white hover:bg-amber-50 transition-colors text-left"
-                    >
+                    <div className="w-full p-6 bg-white hover:bg-amber-50 transition-colors text-left">
                       <div className="flex items-center gap-4">
                         <div className="text-4xl">💵</div>
-                        <div>
-                          <h4 className="text-xl font-semibold text-gray-800">
-                            Cash Payment
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Pay with cash at the counter
-                          </p>
+                        <div className="flex-1">
+                          <h4 className="text-xl font-semibold text-gray-800">Cash Payment</h4>
+                          <p className="text-sm text-gray-600">Pay with cash at the counter</p>
+
+                          {/* ✅ Amount input */}
+                          <div className="mt-3">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Amount to be paid
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={cashAmount}
+                              onChange={(e) => setCashAmount(e.target.value)}
+                              className="w-full border rounded-md px-3 py-2 text-sm"
+                              placeholder="Enter amount"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </button>
+
+                      {/* ✅ Action button */}
+                      <button
+                        type="button"
+                        disabled={!Number(cashAmount) || Number(cashAmount) <= 0}
+                        onClick={() => {
+                          setPaymentMethod("Cash");
+
+                          navigate("/dashboard", {
+                            state: {
+                              openTab: "invoices",
+                              invoicePayload: {
+                                from: "patient-registration",
+                                patientId: id,
+                                patientName: formData.name,
+                                patientPhone: formData.contactNumber,
+                                invoiceType: "consultancy",
+                                paymentMethod: "Cash",
+                                amount: Number(cashAmount), // ✅ send amount
+                              },
+                            },
+                          });
+                        }}
+                        className={`mt-4 w-full px-4 py-3 rounded-md text-white font-semibold transition ${!Number(cashAmount) || Number(cashAmount) <= 0
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-amber-500 hover:bg-amber-600"
+                          }`}
+                      >
+                        Continue with Cash
+                      </button>
+                    </div>
                   </div>
+
                 </div>
               )}
 
