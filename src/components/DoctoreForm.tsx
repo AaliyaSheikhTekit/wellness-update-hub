@@ -173,9 +173,7 @@ export default function DoctorForm() {
       },
       otherChronicIllness: "",
     },
-    medicineHistory: [
-      { medicineId: "", dosage: "", frequency: "", remarks: "" },
-    ],
+    medicineChart: [{ medicineName: "", dosage: "", frequency: "", remarks: "" }],
     physical: {
       pallor: {
         absent: false,
@@ -486,41 +484,18 @@ export default function DoctorForm() {
 
     try {
       // Prepare medicine history (only non-empty entries)
-      const medicineHistory = doctorData.medicineChart
-        .filter((med) => med.dosage || med.frequency)
-        .map((med) => ({
-          ...(med.medicineName ? { medicineName: med.medicineName } : {}),
-          dosage: med.dosage,
-          frequency: med.frequency,
-          remarks: med.remarks,
-        }));
+      const medicineHistory = (medicineChart || [])
+      .filter((med) => med?.dosage || med?.frequency || med?.remarks || med?.medicineName)
+      .map((med) => ({
+        ...(med?.medicineName ? { medicineName: med.medicineName } : {}),
+        dosage: med?.dosage || "",
+        frequency: med?.frequency || "",
+        remarks: med?.remarks || "",
+      }));
 
       const payload = {
-        physical: {
-          pallor: doctorData.generalPhysicalExam.pallor,
-          cyanosis: doctorData.generalPhysicalExam.cyanosis,
-          icterus: doctorData.generalPhysicalExam.icterus,
-          lymphadinopathy: doctorData.generalPhysicalExam.lymphadinopathy,
-          oedema: doctorData.generalPhysicalExam.oedema,
-          clubbing: doctorData.generalPhysicalExam.clubbing,
-          eye: doctorData.generalPhysicalExam.eye,
-          ear: doctorData.generalPhysicalExam.ear,
-          nostrils: doctorData.generalPhysicalExam.nostrils,
-          lips: doctorData.generalPhysicalExam.lips,
-          hair: doctorData.generalPhysicalExam.hair,
-          head: doctorData.generalPhysicalExam.head,
-          throat: doctorData.generalPhysicalExam.throat,
-          teeth: doctorData.generalPhysicalExam.teeth,
-          mouth: doctorData.generalPhysicalExam.mouth,
-          genitals: doctorData.generalPhysicalExam.genitals,
-        },
-        systemic: {
-          respiratorySystem: doctorData.systemicExam.respiratory,
-          cardioVascularSystem: doctorData.systemicExam.cardiovascular,
-          gastroIntestinalSystem: doctorData.systemicExam.gastrointestinal,
-          nrvousSystem: doctorData.systemicExam.nervous,
-          musculoskeletalSystem: doctorData.systemicExam.musculoskeletal,
-        },
+        physical: doctorData.physical ?? {},
+        systemic: doctorData.systemic ?? {},
         investigationsOrDiagnosis: {
           investigations: doctorData.investigations,
           provisionalDiagnosis: doctorData.provisionalDiagnosis,
