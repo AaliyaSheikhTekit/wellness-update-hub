@@ -32,11 +32,13 @@ const SimpleCalendar = ({
   onEventClick,
   selectedDate,
   setSelectedDate,
+  rangeFrom
 }: {
   appointments: Appointment[];
   onEventClick?: (apt: Appointment) => void;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
+  rangeFrom?: Date;
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const monthNames = [
@@ -64,7 +66,11 @@ const SimpleCalendar = ({
     for (let day = 1; day <= daysInMonth; day++) days.push(day);
     return days;
   };
-
+useEffect(() => {
+  if (rangeFrom) {
+    setCurrentDate(new Date(rangeFrom)); 
+  }
+}, [rangeFrom]);
   const getAppointmentsForDay = (day: number | null) => {
     if (!day) return [];
     return appointments.filter((apt) => {
@@ -122,11 +128,20 @@ const SimpleCalendar = ({
                           onEventClick?.(apt);
                         }}
                       >
-                        <div className="font-semibold truncate">
-                          {apt.treatmentIds?.length
-                            ? apt.treatmentIds.join(", ")
-                            : "No Recommendations"}
-                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold truncate">{apt.patientName}</div>
+
+                        {apt.includeYoga && (
+                          <span className="text-[10px] px-2 py-[2px] rounded bg-green-100 text-green-700 whitespace-nowrap">
+                            Yoga
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-[10px] text-gray-700 truncate mt-1">
+                        {apt.treatmentIds?.length ? apt.treatmentIds.join(", ") : "No Recommendations"}
+                      </div>
+
                         <div className="text-[10px] text-gray-600">
                           {apt.treatmentDuration
                             ? `Duration: ${apt.treatmentDuration}`
@@ -264,6 +279,7 @@ export const SimpleCalendarView = () => {
         appointments={appointments}
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
+        rangeFrom={range?.from}
         onEventClick={(apt) => {
           toast({
             title: `Patient: ${apt.patientName}`,
