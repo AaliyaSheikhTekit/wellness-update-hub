@@ -186,7 +186,8 @@ const PatientDetail = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
   const [openPrescription, setOpenPrescription] = useState(false);
-
+const userName = localStorage.getItem("userName") || "";
+console.log("User Name from localStorage:", userName);
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
     null
@@ -749,7 +750,7 @@ className="flex  overflow-x-auto w-full "
     >
       {[
         { value: "appointments", label: "Appointments" },
-        { value: "prescription", label: "Prescription" },
+        userName === "Naturopathy Doctor" && { value: "prescription", label: "Prescription" },
         { value: "history", label: "Personal and lifestyle history" },
         { value: "vitals", label: "Vitals and anthropometric measurement" },
         { value: "consent", label: "Consent & Signature" },

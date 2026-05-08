@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { c } from "node_modules/framer-motion/dist/types.d-Cjd591yU";
 import { Checkbox } from "../ui/checkbox";
+import { fruits } from "@/data/dietData";
 
 interface MealPlan {
   [date: string]: {
@@ -570,6 +571,7 @@ const DietTableView = ({
   ];
 
   const [selectedVeg, setSelectedVeg] = useState(vegOptions);
+  const [selectedFruits, setSelectedFruits] = useState(fruits);
   const [selectedDal, setSelectedDal] = useState(dalOptions);
   const [selectedAtta, setSelectedAtta] = useState(attaOptions);
 
@@ -640,14 +642,14 @@ const DietTableView = ({
     }, [allItems, timeLabel, yogaCategories]);
 
     // 🔹 Automatically preselect gated items when dialog opens
-    useEffect(() => {
-      if (open && gated.length > 0) {
-        // Only preselect if nothing is selected yet
-        setSelectedItems((prev) =>
-          prev.length === 0 ? gated.map((i) => i.id) : prev
-        );
-      }
-    }, [open, gated]);
+    // useEffect(() => {
+    //   if (open && gated.length > 0) {
+    //     // Only preselect if nothing is selected yet
+    //     setSelectedItems((prev) =>
+    //       prev.length === 0 ? gated.map((i) => i.id) : prev
+    //     );
+    //   }
+    // }, [open, gated]);
 
     const filtered = useMemo(() => {
       const q = searchQuery.toLowerCase();
@@ -1061,6 +1063,22 @@ const DietTableView = ({
       </Card>
       {/* Checkboxes Section */}
       <div className="space-y-4">
+         <div>
+          <h3 className="font-semibold mb-2">fruits</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {fruits.map((fruit) => (
+              <label key={fruit} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={selectedFruits.includes(fruit)}
+                  onCheckedChange={() =>
+                    toggleCheckbox(fruit, selectedFruits, setSelectedFruits)
+                  }
+                />
+                {fruit}
+              </label>
+            ))}
+          </div>
+        </div>
         <div>
           <h3 className="font-semibold mb-2">🥦 Vegetables</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
