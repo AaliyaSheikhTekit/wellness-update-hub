@@ -7,6 +7,7 @@ import {
   getAllYoga,
   generatetTreatmentPDF,
   getPatientById,
+  createTherapist,
 } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
@@ -103,11 +104,13 @@ const SessionsContext = React.createContext<{
   sessions: TreatmentSession[];
   setSessions: React.Dispatch<React.SetStateAction<TreatmentSession[]>>;
   therapists: Therapist[];
+  setTherapists: React.Dispatch<React.SetStateAction<Therapist[]>>;
   treatments: TreatmentOption[];
 }>({
   sessions: [],
   setSessions: () => {},
   therapists: [],
+  setTherapists: () => {},
   treatments: [],
 });
 
@@ -388,6 +391,7 @@ interface SessionEditorProps {
   onSave: (session: TreatmentSession) => void;
   treatments: any[];
   therapists: any[];
+  setTherapists: React.Dispatch<React.SetStateAction<any[]>>;
   initial: any;
   patient: any;
 }
@@ -602,6 +606,7 @@ export const TreatmentUpdateDialog: React.FC<TreatmentUpdateDialogProps> = ({
 export const SessionEditor: React.FC<SessionEditorProps> = ({
   open,
   onClose,
+  setTherapists,
   therapists,
   treatments,
   initial,
@@ -618,7 +623,8 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
   );
   const [treatmentId, setTreatmentId] = useState(initial.treatmentId || "");
   const [therapistId, setTherapistId] = useState(initial.therapistId || "");
-
+const [showCreateTherapist, setShowCreateTherapist] = useState(false);
+const [newTherapistName, setNewTherapistName] = useState("");
   // ✅ 1. Show only treatments assigned to this patient
   const patientTreatments: any[] = useMemo(() => {
     if (!patient?.treatmentPlan) return [];
@@ -696,22 +702,89 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
             </select>
           </label>
 
-          <label className="text-sm">
-            Therapist
-            <select
-              className="mt-1 w-full border rounded-lg p-2"
-              value={therapistId}
-              onChange={(e) => setTherapistId(e.target.value)}
-            >
-              <option value="">— Select —</option>
-              {therapists.map((th) => (
-                <option key={th.id} value={th.id}>
-                  {th.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="col-span-2">
+  <label className="text-sm font-medium">Therapist</label>
 
+  <div className="flex gap-2 mt-1">
+    <select
+      className="w-full border rounded-lg p-2"
+      value={therapistId}
+      onChange={(e) => setTherapistId(e.target.value)}
+    >
+      <option value="">— Select Therapist —</option>
+
+      {therapists.map((th) => (
+        <option key={th.id} value={th.id}>
+          {th.name}
+        </option>
+      ))}
+    </select>
+
+    <button
+      type="button"
+      onClick={() => setShowCreateTherapist(true)}
+      className="px-3 py-2 rounded-lg bg-blue-600 text-white whitespace-nowrap"
+    >
+      + Add
+    </button>
+  </div>
+</div>
+{showCreateTherapist && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-5 rounded-2xl w-full max-w-md shadow-xl">
+      <h2 className="text-lg font-semibold mb-4">
+        Create Therapist
+      </h2>
+
+      <input
+        type="text"
+        placeholder="Enter therapist name"
+        value={newTherapistName}
+        onChange={(e) => setNewTherapistName(e.target.value)}
+        className="w-full border rounded-lg p-2 mb-4"
+      />
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowCreateTherapist(false)}
+          className="px-4 py-2 border rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button
+          className="px-4 py-2 bg-green-600 text-white rounded-lg"
+          onClick={async () => {
+           try {
+  const res = await createTherapist({
+    name: newTherapistName,
+  });
+
+  const created = res.data?.data || res.data;
+
+  console.log("Created therapist:", created);
+
+  setTherapists((prev) => [...prev, created]);
+
+  setTherapistId(created.id);
+
+  setShowCreateTherapist(false);
+  setNewTherapistName("");
+
+  toast({
+    title: "Therapist created successfully",
+  });
+} catch (err) {
+  console.error(err);
+}
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
           <label className="text-sm">
             Date
             <input
@@ -836,7 +909,7 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
 // -------------------- TREATMENT PLAN VIEW -------------------- //
 
 export function TreatmentPlanView({ patient }) {
-  const { sessions, setSessions, therapists, treatments } =
+  const { sessions, setSessions, therapists, treatments,setTherapists } =
     useContext(SessionsContext);
 
   const [localPatient, setLocalPatient] = useState(patient);
@@ -1087,6 +1160,7 @@ export function TreatmentPlanView({ patient }) {
         open={draft.open}
         onClose={() => setDraft({ open: false, initial: undefined })}
         therapists={therapists}
+        setTherapists={setTherapists}
         treatments={treatments}
         initial={draft.initial || {}}
         onSave={(sess) => {
@@ -1168,7 +1242,7 @@ function SchedulerLeft({ patient }: { patient: Patient }) {
 
   return (
     <SessionsContext.Provider
-      value={{ sessions, setSessions, therapists, treatments }}
+      value={{ sessions, setSessions, therapists, treatments,setTherapists }}
     >
       <TreatmentPlanView patient={patient} />
     </SessionsContext.Provider>
@@ -1176,7 +1250,7 @@ function SchedulerLeft({ patient }: { patient: Patient }) {
 }
 
 function SchedulerRight({ patient }: { patient: Patient }) {
-  const { sessions, setSessions, therapists, treatments } =
+  const { sessions, setSessions, therapists, treatments,setTherapists } =
     useContext(SessionsContext);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editing, setEditing] = useState<TreatmentSession | null>(null);
@@ -1208,6 +1282,7 @@ function SchedulerRight({ patient }: { patient: Patient }) {
         open={!!editing}
         onClose={() => setEditing(null)}
         therapists={therapists}
+        setTherapists={setTherapists}
         treatments={treatments}
         initial={editing || {}}
         onSave={(updated) => {

@@ -48,9 +48,9 @@ const Login = () => {
   const determineRole = (username: string): string => {
     const nameLower = username.toLowerCase();
 
-    if (nameLower.includes("superadmin")) return "admin";
+    if (nameLower.includes("superAdmin")) return "admin";
     if (nameLower.includes("doctor")) return "doctor";
-    if (nameLower.includes("recptionist")) return "receptionist";
+    if (nameLower.includes("receptionist")) return "receptionist";
 
     // fallback
     return "user";

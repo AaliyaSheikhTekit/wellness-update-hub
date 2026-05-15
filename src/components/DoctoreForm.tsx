@@ -60,14 +60,13 @@ export default function DoctorForm() {
   const navigate = useNavigate();
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
+const [signature, setSignature] =
+  useState("");
 
-  const [signature, setSignature] = useState<string>(""); // Initialize as empty string, not null
-  const [catOpen, setCatOpen] = useState(false);
-  const handleSignatureSave = (dataUrl: string) => {
-    console.log("✅ Signature captured:", dataUrl);
-    setSignature(dataUrl);
-    alert("Signature saved successfully!");
-  };
+const [
+  signaturePatient,
+  setSignaturePatient,
+] = useState("");
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -89,7 +88,9 @@ export default function DoctorForm() {
   const [selectedPranayama, setSelectedPranayama] = useState<string[]>([]);
   const [language, setLanguage] = useState("en");
   const [therapyList, setTherapyList] = useState<any[]>([]);
+const doctorSigRef = useRef(null);
 
+const patientSigRef = useRef(null);
   useEffect(() => {
     (async () => {
       try {
@@ -153,9 +154,29 @@ export default function DoctorForm() {
   }, [id]);
   const [consentGiven, setConsentGiven] = useState(false);
   // const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [signaturePatient, setSignaturePatient] = useState("");
   const [uploadingSignature, setUploadingSignature] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
+  const saveDoctorSignature = () => {
+  if (!doctorSigRef.current?.isEmpty()) {
+    const sig =
+      doctorSigRef.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png");
+
+    setSignature(sig);
+  }
+};
+
+const savePatientSignature = () => {
+  if (!patientSigRef.current?.isEmpty()) {
+    const sig =
+      patientSigRef.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png");
+
+    setSignaturePatient(sig);
+  }
+};
   const [doctorData, setDoctorData] = useState<any>({
     pastMedicalHistory: {
       chronicIllnesses: [],
@@ -463,43 +484,75 @@ export default function DoctorForm() {
         remarks: med?.remarks || "",
       }));
 
-      const payload = {
-        physical: doctorData.physical ?? {},
-        systemic: doctorData.systemic ?? {},
-        investigationsOrDiagnosis: {
-          investigations: doctorData.investigations,
-          provisionalDiagnosis: doctorData.provisionalDiagnosis,
-          investigationsUrl: doctorData.investigationsUrl,
-          provisionalDiagnosisUrl: doctorData.provisionalDiagnosisUrl,
-        },
+    const payload = {
+  cheifCompaints:
+    doctorData.pastMedicalHistory.chiefComplaints || "",
 
-        recommandation: {
-          treatmentPlan: {
-            title: doctorData.treatment?.treatmentPlan?.title || "",
+  surgeriesOrInjuries:
+    doctorData.pastMedicalHistory.surgeriesOrInjuries || "",
 
-            duration: doctorData.treatment?.treatmentPlan?.duration || "",
-          },
-          dietChart: {
-            title: doctorData.treatment?.dietChart?.title || "",
-          },
-          yogaChart: {
-            title:
-              doctorData.treatment?.yogaChart?.title ||
-              selectedAsanas.join(", "),
-          },
-        },
+  allergies:
+    doctorData.pastMedicalHistory.allergies || "",
 
-        doctorName: doctorData.doctorName,
-       consent: consentGiven ? "true" : "false",
-        patientSignature: signaturePatient,
-        signature: signature,
-        medicineHistory:
-          medicineHistory.length > 0 ? medicineHistory : undefined,
-        treatmentPlan:
-          treatmentPlanData.length > 0 ? treatmentPlanData : undefined,
-        includeYoga: includeYoga,
-      };
+  familyHistory:
+    doctorData.pastMedicalHistory.familyHistory || "",
 
+  knowCase:
+    doctorData.pastMedicalHistory.knowCase || {},
+
+  physical: doctorData.physical,
+
+  systemic: doctorData.systemic,
+
+  investigationsOrDiagnosis:
+    doctorData.investigationsOrDiagnosis,
+
+  treatment: {
+    recommendation: {
+      title:
+        selectedTherapies.map(
+          (item: any) => item.id
+        ) || [],
+
+      duration:
+        doctorData.treatment
+          ?.recommendation?.duration || "",
+    },
+
+    dietChart: {
+      title:
+        doctorData.treatment
+          ?.dietChart?.title || "",
+
+      restrictions:
+        doctorData.treatment
+          ?.dietChart?.restrictions || "",
+    },
+
+    yogaChart: {
+      title:
+        doctorData.treatment
+          ?.yogaChart?.title || "",
+
+      duration:
+        doctorData.treatment
+          ?.yogaChart?.duration || "",
+    },
+  },
+
+  doctorName: doctorData.doctorName || "",
+
+  signature: signature || "",
+
+  patientSignature:
+    signaturePatient || "",
+
+  includeYoga: includeYoga,
+
+  medicineHistory: medicineChart,
+
+  treatmentPlan: treatmentPlanData,
+};
       console.log("Updating consultation with payload:", payload);
 
       const result = await updatePatientConsult(consultationId, payload);
@@ -1822,10 +1875,38 @@ export default function DoctorForm() {
                             ? "Patient Signature"
                             : "रोगी के हस्ताक्षर"}
                         </h3>
-                        <SignatureStep onSaveSignature={handleSignatureSave} />
-                      </div>
+<SignatureCanvas
+  ref={patientSigRef}
+  penColor="black"
+  canvasProps={{
+    width: 320,
+    height: 120,
+    className:
+      "border border-gray-300 rounded-md bg-white",
+  }}
+/>                      </div>
                     )}
+<Button
+  type="button"
+  onClick={savePatientSignature}
+>
+  Save Patient Signature
+</Button>
 
+{signaturePatient &&
+  typeof signaturePatient === "string" && (
+    <div className="mt-3">
+      <p className="text-xs text-green-700">
+        Patient signature uploaded.
+      </p>
+
+      <img
+        src={signaturePatient}
+        alt="Patient Signature"
+        className="border border-gray-300 h-20 mt-1 rounded-md"
+      />
+    </div>
+)}
                     {uploadingSignature && (
                       <p className="text-xs text-muted-foreground mt-2">
                         {language === "en"
@@ -1834,20 +1915,27 @@ export default function DoctorForm() {
                       </p>
                     )}
 
-                    {signature && typeof signature === "string" && (
-                      <div className="mt-3">
-                        <p className="text-xs text-green-700">
-                          {language === "en"
-                            ? "Signature uploaded."
-                            : "हस्ताक्षर सफलतापूर्वक अपलोड हो गए।"}
-                        </p>
-                        <img
-                          src={signature}
-                          alt="Signature"
-                          className="border border-gray-300 h-20 mt-1"
-                        />
-                      </div>
-                    )}
+                   <Button
+  type="button"
+  onClick={saveDoctorSignature}
+>
+  Save Doctor Signature
+</Button>
+
+{signature &&
+  typeof signature === "string" && (
+    <div className="mt-3">
+      <p className="text-xs text-green-700">
+        Doctor signature uploaded.
+      </p>
+
+      <img
+        src={signature}
+        alt="Doctor Signature"
+        className="border border-gray-300 h-20 mt-1 rounded-md"
+      />
+    </div>
+)}
                   </div>
                   <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
                     <p className="text-green-800 font-semibold mb-2">
@@ -1879,11 +1967,16 @@ export default function DoctorForm() {
                     </label>
                     <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
                       <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
-                        <SignatureStep
-                          onSaveSignature={handleSignatureSave}
-                          height={180}
-                          strokeWidth={2}
-                        />
+                      <SignatureCanvas
+  ref={doctorSigRef}
+  penColor="black"
+  canvasProps={{
+    width: 320,
+    height: 120,
+    className:
+      "border border-gray-300 rounded-md bg-white",
+  }}
+/>
 
                         {signature && (
                           <div className="mt-4 p-3 bg-green-50 border-2 border-green-300 rounded-lg">

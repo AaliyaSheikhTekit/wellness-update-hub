@@ -486,7 +486,7 @@ const DoctorDashboard: React.FC = () => {
       };
 
       const payload: any = {
-        recommandation: recommendation,
+        recommendation: recommendation,
         treatmentPlan:
           treatmentPlanData && treatmentPlanData.length
             ? treatmentPlanData
@@ -498,7 +498,7 @@ const DoctorDashboard: React.FC = () => {
         patientFullData?.consultation?.id ||
         patientFullData?.consultationId ||
         patientFullData?.latestConsultationId;
-
+console.log(consultationId, payload);
       let result;
       if (consultationId) {
         result = await updatePatientConsult(consultationId, payload);
@@ -552,7 +552,7 @@ const DoctorDashboard: React.FC = () => {
     if (!selectedPatient?.id) return;
     try {
       const payload = {
-        recommandation: {
+        recommendation: {
           dietChart: doctorData.treatment?.dietChart,
         },
       };

@@ -650,6 +650,19 @@ export async function updateInvoice(id: string, payload: Record<string, any>) {
   return await res.json();
 }
 //therapist 
+export const createTherapist = async (payload: any) => {
+ const backendToken = getBackendToken();
+  const response = await fetch(`${API_BASE_URL}/therapist/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(backendToken ? { Authorization: `Bearer ${backendToken}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Create failed: ${response.status}`);
+  return await response.json();
+};
 export const getAllTherapist = async () => {
   const backendToken = getBackendToken();
   if (!backendToken) throw new Error("Missing backend token. Please login first.");
