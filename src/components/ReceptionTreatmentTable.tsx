@@ -28,6 +28,7 @@ interface Treatment {
   id: string;
   patientId: string;
   patientName: string;
+  treatmentPlanId: string;
   treatmentIds: string[];
   treatmentName: string;
   therapistId?: string;
@@ -167,26 +168,27 @@ const fetchTreatments = async () => {
               }
             }
 
-            return {
-              id: c.id,
-              patientId: patient.id,
-              patientName,
-              treatmentIds: ids,
-              treatmentName: getTreatmentDetails(ids),
-              therapistId,
-              therapistName,
-              inTime,
-              outTime,
-              timeSlot:
-                c.treatment.recommendation.timeSlot ||
-                calculatedTimeSlot ||
-                "",
-              remark: c.treatment.recommendation.remark || "",
-              totalDuration:
-                matched?.duration ||
-                c.treatment?.recommendation?.duration ||
-                "",
-            };
+           return {
+  id: c.id,
+  patientId: patient.id,
+  treatmentPlanId: appt.id, // FIX
+  patientName,
+  treatmentIds: ids,
+  treatmentName: getTreatmentDetails(ids),
+  therapistId,
+  therapistName,
+  inTime,
+  outTime,
+  timeSlot:
+    c.treatment.recommendation.timeSlot ||
+    calculatedTimeSlot ||
+    "",
+  remark: c.treatment.recommendation.remark || "",
+  totalDuration:
+    matched?.duration ||
+    c.treatment?.recommendation?.duration ||
+    "",
+};
           });
       });
     });
@@ -260,6 +262,13 @@ const calculateOutTime = (inTime: string, duration: string): string => {
 
 
     await updatePatientTreatmentTable(id, payload);
+    if (editData.therapistId) {
+  await assignTherapist(
+    editData.therapistId,
+    editData.treatmentPlanId!,
+    id
+  );
+}
     toast({
       title: "Treatment updated successfully",
       description: `Therapist: ${selectedTherapist?.name || "N/A"}`,
@@ -570,27 +579,18 @@ const calculateOutTime = (inTime: string, duration: string): string => {
                             variant="outline"
                             onClick={() => {
                               setEditingId(t.id);
-                              setEditData(t);
+                              setEditData({
+  ...t,
+  therapistId: t.therapistId || "",
+  treatmentPlanId: t.treatmentPlanId,
+});
                             }}
                             className="hover:bg-primary/10 hover:text-primary hover:border-primary transition-all"
                           >
                             <Edit3 className="w-3.5 h-3.5 mr-1" />
                             Edit
                           </Button>
-                          <Button
-                            size="sm"
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-                            onClick={() =>
-                              handleAssignTherapist(
-                                therapists.find((th) => th.name === t.therapistName)?.id || "",
-                                t.patientId,
-                                t.id
-                              )
-                            }
-                          >
-                            <UserPlus className="w-3.5 h-3.5 mr-1" />
-                            Assign
-                          </Button>
+                         
                         </div>
                       )}
                     </td>
