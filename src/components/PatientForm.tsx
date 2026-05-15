@@ -1442,7 +1442,6 @@ const PatientRegistrationForm = () => {
                             </label>
                             <input
                               type="number"
-                              min="0"
                               value={cashAmount}
                               onChange={(e) => setCashAmount(e.target.value)}
                               className="w-full border rounded-md px-3 py-2 text-sm"
@@ -1483,7 +1482,51 @@ const PatientRegistrationForm = () => {
                       </button>
                     </div>
                   </div>
+{/* Payment Exemption */}
+<div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-green-400 transition-all">
+  <div className="w-full p-6 bg-white hover:bg-green-50 transition-colors text-left">
+    <div className="flex items-center gap-4">
+      <div className="text-4xl">🆓</div>
 
+      <div className="flex-1">
+        <h4 className="text-xl font-semibold text-gray-800">
+          Payment Exemption
+        </h4>
+
+        <p className="text-sm text-gray-600">
+          Skip payment and complete registration
+        </p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          setSubmitting(true);
+
+          setPaymentMethod("EXEMPTION");
+
+          await updatePatient(id, {
+            ...buildUpdatePayload({ includeConsent: true }),
+            paymentMethod: "EXEMPTION",
+            amount: 0,
+            isExempted: true,
+          });
+
+          navigate(`/patient/${id}`);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      className="mt-4 w-full px-4 py-3 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700 transition"
+    >
+      Submit Without Payment
+    </button>
+  </div>
+</div> 
                 </div>
               )}
 
