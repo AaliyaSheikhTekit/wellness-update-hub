@@ -695,7 +695,7 @@ const [activeTab, setActiveTab] = useState("appointments");
           </div>
           
           {/* Conditionally render button */}
-          {["Naturopathy Doctor", "SuperAdmin"].includes(
+          {["Naturopathy Doctor", "superAdmin"].includes(
             localStorage.getItem("userName") || ""
           ) && (
             <Button

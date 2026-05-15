@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getBackendToken } from "@/lib/api";
 
 const NewTreatmentForm = () => {
   const { toast } = useToast();
@@ -32,57 +33,64 @@ const NewTreatmentForm = () => {
     if (type === "image") setImageFile(file);
     else setPdfFile(file);
   };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  try {
+    const token = getBackendToken();
 
-    try {
-      const bodyData = new FormData();
-      // Append text fields
-      Object.entries(formData).forEach(([key, value]) => {
-        bodyData.append(key, value.toString());
-      });
-      // Append files if present
-      if (imageFile) bodyData.append("image", imageFile);
-      if (pdfFile) bodyData.append("pdf", pdfFile);
+    const res = await fetch("https://api.ikshanaturopathy.com/v1/treatment/create", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        categoryId: formData.categoryId,
+        title: formData.title,
+        subTitle: formData.subTitle,
+        treatment: formData.treatment,
+        packageDescription: formData.packageDescription ||"-",
+        price: formData.price,
+        duration: formData.duration,
+        validity: formData.validity || 0,
+        days: formData.days || 0,
+      }),
+    });
 
-      const res = await fetch("https://api.ikshanaturopathy.com/v1/treatment/create", {
-        method: "POST",
-        body: bodyData,
-      });
+    if (!res.ok) throw new Error("Failed to create treatment");
 
-      if (!res.ok) throw new Error("Failed to create treatment");
+    await res.json();
 
-      const result = await res.json();
-      toast({
-        title: "Treatment Added",
-        description: `Successfully added "${formData.title}"`,
-      });
-      // Reset form
-      setFormData({
-        categoryId: "",
-        title: "",
-        subTitle: "",
-        treatment: "",
-        packageDescription: "",
-        price: "",
-        duration: "",
-        validity: "",
-        days: "",
-      });
-      setImageFile(null);
-      setPdfFile(null);
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to add treatment",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast({
+      title: "Treatment Added",
+      description: `Successfully added "${formData.title}"`,
+    });
 
+    setFormData({
+      categoryId: "",
+      title: "",
+      subTitle: "",
+      treatment: "",
+      packageDescription: "",
+      price: "",
+      duration: "",
+      validity: "",
+      days: "",
+    });
+    setImageFile(null);
+    setPdfFile(null);
+
+  } catch (err: any) {
+    toast({
+      title: "Error",
+      description: err.message || "Failed to add treatment",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="flex flex-col items-start  p-6 bg-white shadow-md rounded-lg space-y- mt-4">
       <h2 className="text-2xl font-semibold text-gray-800">Add New Treatment</h2>
@@ -120,7 +128,7 @@ const NewTreatmentForm = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="price">Price</Label>
-            <Input type="number" name="price" value={formData.price} onChange={handleChange} required />
+            <Input type="text" name="price" value={formData.price} onChange={handleChange} required />
           </div>
 
           <div>

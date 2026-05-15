@@ -276,32 +276,94 @@ export default function TreatmentPlanTable({
 
                           {/* Show selected Yoga tags */}
                           {row.asanas.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {row.asanas.map((asanaId) => {
-                                const yogaItem = yogaCategories
-                                  .flatMap((cat: any) =>
-                                    cat.subCategories.flatMap((sub: any) => sub.items || [])
-                                  )
-                                  .find((item: any) => item.id === asanaId);
+                            <div
+  className="
+    mt-2
+    max-h-[120px]
+    overflow-y-auto
+    space-y-1
+    rounded-lg
+    border
+    border-gray-200
+    bg-gray-50
+    p-2
+    custom-scrollbar
+  "
+>
+                             {/* Compact Selected Yoga */}
+{row.asanas.length > 0 && (
+  <div className="mt-2 flex gap-2 overflow-x-auto scrollbar-hide">
 
-                                return (
-                                  <div
-                                    key={asanaId}
-                                    className="flex items-center justify-between gap-2 border rounded-md px-2 py-1 sm:py-1.5 bg-gray-50 text-xs"
-                                  >
-                                    <span className="truncate">{yogaItem ? yogaItem.name : asanaId}</span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleChange(i, "asanas", row.asanas.filter((a) => a !== asanaId));
-                                      }}
-                                      className="text-gray-400 hover:text-red-500 flex-shrink-0 text-base sm:text-lg"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                );
-                              })}
+    {row.asanas.slice(0, 2).map((asanaId) => {
+      const yogaItem = yogaCategories
+        .flatMap((cat: any) =>
+          cat.subCategories.flatMap(
+            (sub: any) => sub.items || []
+          )
+        )
+        .find((item: any) => item.id === asanaId);
+
+      return (
+        <div
+          key={asanaId}
+          className="
+            flex
+            items-center
+            gap-2
+            bg-blue-50
+            text-blue-700
+            border
+            border-blue-200
+            rounded-full
+            px-3
+            py-1
+            text-xs
+            whitespace-nowrap
+            shrink-0
+          "
+        >
+          <span className="truncate max-w-[120px]">
+            {yogaItem?.name}
+          </span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+
+              handleChange(
+                i,
+                "asanas",
+                row.asanas.filter((a) => a !== asanaId)
+              );
+            }}
+            className="hover:text-red-500 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+      );
+    })}
+
+    {row.asanas.length > 2 && (
+      <div
+        className="
+          bg-gray-100
+          text-gray-600
+          rounded-full
+          px-3
+          py-1
+          text-xs
+          whitespace-nowrap
+          shrink-0
+        "
+      >
+        +{row.asanas.length - 2} more
+      </div>
+    )}
+
+  </div>
+)}
                             </div>
                           )}
                         </div>
@@ -358,31 +420,96 @@ export default function TreatmentPlanTable({
 
                         {/* Show selected Treatments */}
                         {row.treatments.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {row.treatments.map((treatmentId) => {
-                              const t = treatmentOptions.find((opt) => opt.id === treatmentId);
-                              return (
-                                <div
-                                  key={treatmentId}
-                                  className="flex items-center justify-between gap-2 border rounded-md px-2 py-1 sm:py-1.5 bg-gray-50 text-xs"
-                                >
-                                  <span className="truncate">{t ? t.title : treatmentId}</span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleChange(
-                                        i,
-                                        "treatments",
-                                        row.treatments.filter((tid) => tid !== treatmentId)
-                                      );
-                                    }}
-                                    className="text-gray-400 hover:text-red-500 flex-shrink-0 text-base sm:text-lg"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
+                          <div
+  className="
+    mt-2
+    max-h-[120px]
+    overflow-y-auto
+    space-y-1
+    rounded-lg
+    border
+    border-gray-200
+    bg-gray-50
+    p-2
+    custom-scrollbar
+  "
+>
+                          {/* Compact Selected Treatments */}
+{row.treatments.length > 0 && (
+  <div className="mt-2 flex gap-2 overflow-x-auto scrollbar-hide">
+
+    {row.treatments.slice(0, 2).map((treatmentId) => {
+      const t = treatmentOptions.find(
+        (opt) => opt.id === treatmentId
+      );
+
+      return (
+        <div
+          key={treatmentId}
+          className="
+            flex
+            items-center
+            gap-2
+            bg-green-50
+            text-green-700
+            border
+            border-green-200
+            rounded-full
+            px-3
+            py-1
+            text-xs
+            whitespace-nowrap
+            shrink-0
+          "
+        >
+          <span className="truncate max-w-[120px]">
+            {t?.title}
+          </span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+
+              handleChange(
+                i,
+                "treatments",
+                row.treatments.filter(
+                  (tid) => tid !== treatmentId
+                )
+              );
+            }}
+            className="
+              hover:text-red-500
+              transition-colors
+            "
+          >
+            ×
+          </button>
+        </div>
+      );
+    })}
+
+    {/* Remaining Count */}
+    {row.treatments.length > 2 && (
+      <div
+        className="
+          bg-gray-100
+          text-gray-600
+          rounded-full
+          px-3
+          py-1
+          text-xs
+          whitespace-nowrap
+          shrink-0
+        "
+      >
+        +{row.treatments.length - 2} more
+      </div>
+    )}
+
+  </div>
+)}
                           </div>
                         )}
                       </div>
