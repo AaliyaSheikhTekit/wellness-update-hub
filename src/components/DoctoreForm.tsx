@@ -105,10 +105,14 @@ const patientSigRef = useRef(null);
   const [opentherapies, setOpenTherapies] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedTherapies, setSelectedTherapies] = useState([]);
-  const filtered = therapyList.filter((t: any) =>
-    t.treatment.toLowerCase().includes(search.toLowerCase())
-  );
+const filtered = therapyList.filter((t: any) => {
+  const query = search.toLowerCase();
 
+  return (
+    t.treatment?.toLowerCase().includes(query) ||
+    t.shortForm?.toLowerCase().includes(query)
+  );
+});
   const toggleTherapy = (therapy: any) => {
     const exists = selectedTherapies.some((t: any) => t.id === therapy.id);
     if (exists) {
