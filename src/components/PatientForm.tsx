@@ -1456,7 +1456,7 @@ const PatientRegistrationForm = () => {
                         type="button"
                         disabled={!Number(cashAmount) || Number(cashAmount) <= 0}
                         onClick={() => {
-                          setPaymentMethod("Cash");
+                          setPaymentMethod("CASH");
 
                           navigate("/dashboard", {
                             state: {
@@ -1467,7 +1467,7 @@ const PatientRegistrationForm = () => {
                                 patientName: formData.name,
                                 patientPhone: formData.contactNumber,
                                 invoiceType: "consultancy",
-                                paymentMethod: "Cash",
+                                paymentMethod: "CASH",
                                 amount: Number(cashAmount), // ✅ send amount
                               },
                             },
@@ -1505,11 +1505,11 @@ const PatientRegistrationForm = () => {
         try {
           setSubmitting(true);
 
-          setPaymentMethod("EXEMPTION");
+          setPaymentMethod("");
 
           await updatePatient(id, {
             ...buildUpdatePayload({ includeConsent: true }),
-            paymentMethod: "EXEMPTION",
+            paymentMethod: "",
             amount: 0,
             isExempted: true,
           });
