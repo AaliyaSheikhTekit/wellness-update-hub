@@ -585,6 +585,7 @@ const payload = {
   medicineHistory: medicineChart,
 
   treatmentPlan: treatmentPlanData,
+  consent: consentGiven
 };
       console.log("Updating consultation with payload:", payload);
 
