@@ -387,16 +387,45 @@ const savePatientSignature = () => {
     setErr("");
 
     try {
-      const payload = {
-        chronicIllnesses: doctorData.pastMedicalHistory.chronicIllnesses,
-        surgeriesOrInjuries: doctorData.pastMedicalHistory.surgeries,
-        allergies: doctorData.pastMedicalHistory.allergies,
-        familyHistory: doctorData.pastMedicalHistory.familyHistory,
-        patientId: patient.id,
-        appointmentId: latestAppointmentId,
-        cheifCompaints: doctorData.pastMedicalHistory.cheifCompaints,
-        knowCase: doctorData.pastMedicalHistory.knowCase,
-      };
+    const selectedIllnesses =
+  doctorData.pastMedicalHistory.chronicIllnesses || [];
+
+const payload = {
+  surgeriesOrInjuries:
+    doctorData.pastMedicalHistory.surgeriesOrInjuries || "",
+
+  allergies:
+    doctorData.pastMedicalHistory.allergies || "",
+
+  familyHistory:
+    doctorData.pastMedicalHistory.familyHistory || "",
+
+  patientId: patient.id,
+
+  appointmentId: latestAppointmentId,
+
+  cheifCompaints:
+    doctorData.pastMedicalHistory.chiefComplaints || "",
+
+  knowCase: {
+    diabetes: selectedIllnesses.includes("Diabetes"),
+
+    hypertension:
+      selectedIllnesses.includes("Hypertension"),
+
+    cad: selectedIllnesses.includes("CAD"),
+
+    asthma:
+      selectedIllnesses.includes("Asthma"),
+
+    others:
+      selectedIllnesses.includes("Others"),
+
+    otherDescription:
+      doctorData.pastMedicalHistory
+        .otherChronicIllness || "",
+  },
+};
 
       const result = await createPatientConsult(payload);
 
