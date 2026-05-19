@@ -621,7 +621,7 @@ const payload = {
 
   treatmentPlan: treatmentPlanData,
 
-  consent: consentGiven,
+  consent: consentGiven ? "true" : "false",
 };
       console.log("Updating consultation with payload:", payload);
 
