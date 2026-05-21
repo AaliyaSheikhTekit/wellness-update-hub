@@ -14,7 +14,7 @@ export const loginWithCognitoToken = async (username: string, role: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: cognitoToken, // send Cognito token
+        Authorization: `Bearer ${cognitoToken}`, // send Cognito token
       },
       body: JSON.stringify({ username, role }),
     });
