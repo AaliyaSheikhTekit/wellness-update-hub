@@ -465,7 +465,15 @@ const Appointments = () => {
   }, [page, activeTab]);
 
   /* ------------------------ Derived Lists ------------------------ */
-  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+const todayISO = useMemo(() => {
+  return new Date().toISOString().split("T")[0];
+}, []);
+
+const tomorrowISO = useMemo(() => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split("T")[0];
+}, []);
   const todaysAppointments = useMemo(
     () => appointmentsAll.filter((a) => a.date === todayISO),
     [appointmentsAll, todayISO]
@@ -535,16 +543,20 @@ const validateAppointment = () => {
   }
 
   // ✅ Date: required + not past date
-  if (!date) {
-    newErrors.date = "Date is required.";
-  } else {
-    const today = new Date();
-    const selected = new Date(date);
-    today.setHours(0, 0, 0, 0);
-    if (selected < today) {
-      newErrors.date = "Date cannot be in the past.";
-    }
+ // ✅ Date: required + only future dates allowed
+if (!date) {
+  newErrors.date = "Date is required.";
+} else {
+  const today = new Date();
+  const selected = new Date(date);
+
+  today.setHours(0, 0, 0, 0);
+  selected.setHours(0, 0, 0, 0);
+
+  if (selected <= today) {
+    newErrors.date = "Only future dates are allowed.";
   }
+}
 
   // ✅ Time: required
   if (!time) {
@@ -875,6 +887,7 @@ const validateAppointment = () => {
                   <Input
                     id="appointmentDate"
                     type="date"
+                    min={tomorrowISO}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
