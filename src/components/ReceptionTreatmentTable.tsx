@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   Edit3,
-  Check,
-  X,
-  UserPlus,
   Clock,
   Calendar,
   User,
@@ -23,11 +20,18 @@ import {
   assignTherapist,
   getTreatmentAll,
   getTherapyList,
+  getPatientById,
+  createTherapist,
 } from "@/lib/api";
-interface Treatment {
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+interface TreatmentRow {
   id: string;
   patientId: string;
   patientName: string;
+  treatmentAssignId?: string;
   treatmentPlanId: string;
   treatmentIds: string[];
   treatmentName: string;
@@ -40,7 +44,6 @@ interface Treatment {
   totalDuration?: string;
 }
 
-
 interface Therapist {
   id: string;
   name: string;
@@ -52,24 +55,342 @@ interface MasterTreatment {
   duration: string;
 }
 
+// ─────────────────────────────────────────────
+// Assign Therapist Modal
+// Identical behaviour to SessionEditor
+// ─────────────────────────────────────────────
+interface AssignModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  row: TreatmentRow | null;
+  therapists: Therapist[];
+  setTherapists: React.Dispatch<React.SetStateAction<Therapist[]>>;
+  masterTreatments: MasterTreatment[];
+}
+
+function AssignTherapistModal({
+  open,
+  onClose,
+  onSave,
+  row,
+  therapists,
+  setTherapists,
+  masterTreatments,
+}: AssignModalProps) {
+  const { toast } = useToast();
+
+  const [therapistId, setTherapistId] = useState("");
+  const [inTime, setInTime] = useState("");
+  const [outTime, setOutTime] = useState("");
+  const [durationMin, setDurationMin] = useState(45);
+  const [remark, setRemark] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Create-therapist nested modal
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Pre-fill when row changes
+  useEffect(() => {
+    if (!row || !open) return;
+    setTherapistId(row.therapistId || "");
+    setInTime(row.inTime || "");
+    setOutTime(row.outTime || "");
+    setRemark(row.remark || "");
+
+    // duration from master list
+    const matched = masterTreatments.find((m) =>
+      row.treatmentIds?.includes(m._id)
+    );
+    const raw = matched?.duration || row.totalDuration || "45";
+    setDurationMin(parseInt(raw.replace(/\D/g, "") || "45", 10));
+  }, [row, open]);
+
+  // Auto-compute outTime when inTime or duration changes
+  useEffect(() => {
+    if (!inTime || !durationMin) return;
+    const parsed = inTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!parsed) return;
+    const [, h, m, p] = parsed;
+    const date = new Date();
+    date.setHours((+h % 12) + (p.toUpperCase() === "PM" ? 12 : 0), +m, 0, 0);
+    date.setMinutes(date.getMinutes() + durationMin);
+    const oh = date.getHours();
+    const om = date.getMinutes();
+    const period = oh >= 12 ? "PM" : "AM";
+    const h12 = oh % 12 || 12;
+    setOutTime(`${h12}:${om.toString().padStart(2, "0")} ${period}`);
+  }, [inTime, durationMin]);
+
+  const handleSave = async () => {
+    if (!row) return;
+    setSaving(true);
+    try {
+      // 1. update recommendation fields
+      await updatePatientTreatmentTable(row.id, {
+        recommendation: {
+          inTime,
+          outTime,
+          therapist: therapistId,
+          timeSlot: `${inTime} - ${outTime}`,
+          remark,
+        },
+      });
+
+      // 2. find correct treatmentPlanId + treatmentAssignId then assign therapist
+      if (therapistId) {
+        const patientRes = await getPatientById(row.patientId);
+        const patient = patientRes.data;
+
+        let treatmentPlanId = "";
+        let treatmentAssignId = "";
+
+        for (const plan of patient.treatmentPlan || []) {
+          const assign = (plan.treatmentAssign || []).find((a: any) =>
+            row.treatmentIds?.includes(a.treatment?.id)
+          );
+          if (assign) {
+            treatmentPlanId = plan.id;
+            treatmentAssignId = assign.id;
+            break;
+          }
+        }
+
+        if (treatmentPlanId && treatmentAssignId) {
+          await assignTherapist(therapistId, treatmentPlanId, treatmentAssignId);
+        }
+      }
+
+      const th = therapists.find((t) => t.id === therapistId);
+      toast({
+        title: "Therapist assigned successfully",
+        description: th ? `Assigned to ${th.name}` : undefined,
+      });
+      onSave();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error assigning therapist", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateTherapist = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const res = await createTherapist({ name: newName.trim() });
+      const created = res.data?.data || res.data;
+      setTherapists((prev) => [...prev, created]);
+      setTherapistId(created.id);
+      setShowCreate(false);
+      setNewName("");
+      toast({ title: "Therapist created successfully" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error creating therapist", variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (!open || !row) return null;
+
+  return (
+    <>
+      {/* Main assign modal */}
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Assign Therapist</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Patient + Treatment info (read-only) */}
+          <div className="bg-gray-50 dark:bg-muted rounded-lg p-3 text-sm space-y-1">
+            <div>
+              <span className="text-muted-foreground">Patient: </span>
+              <strong>{row.patientName}</strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Treatment: </span>
+              <strong>{row.treatmentName || "—"}</strong>
+            </div>
+          </div>
+
+          {/* Therapist select + Add */}
+          <div>
+            <label className="text-sm font-medium block mb-1">Therapist</label>
+            <div className="flex gap-2">
+              <select
+                value={therapistId}
+                onChange={(e) => setTherapistId(e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">— Select Therapist —</option>
+                {therapists.map((th) => (
+                  <option key={th.id} value={th.id}>
+                    {th.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowCreate(true)}
+                className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm whitespace-nowrap hover:bg-blue-700"
+              >
+                + Add
+              </button>
+            </div>
+          </div>
+
+          {/* Date row — inTime / outTime */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Check In</label>
+              <Input
+                placeholder="9:00 AM"
+                value={inTime}
+                onChange={(e) => setInTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Check Out</label>
+              <Input
+                placeholder="10:00 AM"
+                value={outTime}
+                onChange={(e) => setOutTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="text-sm font-medium block mb-1">
+              Duration (minutes)
+            </label>
+            <Input
+              type="number"
+              min={5}
+              step={5}
+              value={durationMin}
+              onChange={(e) =>
+                setDurationMin(Math.max(5, Number(e.target.value)))
+              }
+            />
+          </div>
+
+          {/* Remark */}
+          <div>
+            <label className="text-sm font-medium block mb-1">Notes</label>
+            <Input
+              placeholder="Add notes..."
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button
+              disabled={saving}
+              onClick={handleSave}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Nested create-therapist modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create New Therapist</h3>
+              <button
+                onClick={() => {
+                  setShowCreate(false);
+                  setNewName("");
+                }}
+                className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">
+                Therapist Name
+              </label>
+              <Input
+                placeholder="Enter therapist name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateTherapist()}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreate(false);
+                  setNewName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!newName.trim() || creating}
+                onClick={handleCreateTherapist}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {creating ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Table Component
+// ─────────────────────────────────────────────
 export default function ReceptionTreatmentTable() {
   const { toast } = useToast();
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [treatments, setTreatments] = useState<TreatmentRow[]>([]);
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [masterTreatments, setMasterTreatments] = useState<MasterTreatment[]>([]);
   const [filter, setFilter] = useState("");
-  const [sortKey, setSortKey] = useState<keyof Treatment>("patientName");
+  const [sortKey, setSortKey] = useState<keyof TreatmentRow>("patientName");
   const [sortAsc, setSortAsc] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<Treatment>>({});
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeRow, setActiveRow] = useState<TreatmentRow | null>(null);
 
   useEffect(() => {
-    const loadData = async () => {
+    const load = async () => {
       await fetchMasterTreatments();
       await fetchTherapists();
       await fetchTreatments();
     };
-    loadData();
+    load();
   }, []);
 
   const fetchMasterTreatments = async () => {
@@ -78,7 +399,6 @@ export default function ReceptionTreatmentTable() {
         getTreatmentAll(),
         getTherapyList(),
       ]);
-
       const treatmentData = Array.isArray(treatmentRes?.data)
         ? treatmentRes.data.map((pkg: any) => ({
             _id: pkg.id,
@@ -86,7 +406,6 @@ export default function ReceptionTreatmentTable() {
             duration: pkg.duration || "",
           }))
         : [];
-
       const therapyData = Array.isArray(therapyRes?.data)
         ? therapyRes.data.map((t: any) => ({
             _id: t.id,
@@ -94,14 +413,10 @@ export default function ReceptionTreatmentTable() {
             duration: t.duration || "",
           }))
         : [];
-
       setMasterTreatments([...treatmentData, ...therapyData]);
-    } catch (error) {
-      console.error(error);
-      toast({ 
-        title: "Error fetching master treatments", 
-        variant: "destructive" 
-      });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error fetching master treatments", variant: "destructive" });
     }
   };
 
@@ -116,192 +431,60 @@ export default function ReceptionTreatmentTable() {
       .join(", ");
   };
 
-const fetchTreatments = async () => {
-  try {
-    const res = await getTreatmentTable();
-    const patients = res.data || [];
+  const fetchTreatments = async () => {
+    try {
+      const res = await getTreatmentTable();
+      const patients = res.data || [];
 
-    const formatted = patients.flatMap((patient: any) => {
-      const patientName = patient.fullName;
-      return patient.appointment.flatMap((appt: any) => {
-        return appt.consultation
-          .filter((c: any) => c.treatment?.recommendation)
-          .map((c: any) => {
-            const ids = Array.isArray(c.treatment.recommendation.title)
-              ? c.treatment.recommendation.title
-              : [c.treatment.recommendation.title].filter(Boolean);
-
-            const therapistId = c.treatment.recommendation.therapist;
+      const formatted = patients.flatMap((patient: any) => {
+        const patientName = patient.fullName;
+        return patient.appointment.flatMap((appt: any) =>
+          appt.consultation.map((c: any) => {
+            const recommendation = c.treatment?.recommendation || {};
+            const ids = Array.isArray(recommendation.title)
+              ? recommendation.title
+              : [recommendation.title].filter(Boolean);
+            const therapistId = recommendation.therapist || "";
             const therapistName =
               therapists.find((th) => th.id === therapistId)?.name || "";
+            const inTime = recommendation.inTime || "";
+            const outTime = recommendation.outTime || "";
+            const matched = masterTreatments.find((m) => ids.includes(m._id));
 
-            const inTime = c.treatment.recommendation.inTime || "";
-            const outTime = c.treatment.recommendation.outTime || "";
-
-            // find treatment duration from treatment or therapy list
-            const matched = masterTreatments.find((m) =>
-              ids.includes(m._id)
-            );
-
-            // calculate timeslot using inTime + duration if not already available
-            let calculatedTimeSlot = "";
-            if (inTime && matched?.duration) {
-              const [inH, inM, inP] =
-                inTime.match(/(\d+):(\d+)\s*(AM|PM)/i)?.slice(1) || [];
-              if (inH) {
-                const durationMinutes = parseInt(
-                  matched.duration.replace(/\D/g, "") || "0",
-                  10
-                );
-                const date = new Date();
-                date.setHours(
-                  (+inH % 12) + (inP.toUpperCase() === "PM" ? 12 : 0),
-                  +inM
-                );
-                const endDate = new Date(date.getTime() + durationMinutes * 60000);
-                const hours24 = endDate.getHours();
-                const minutes = endDate.getMinutes();
-                const endPeriod = hours24 >= 12 ? "PM" : "AM";
-                const hours12 = hours24 % 12 || 12;
-                const formattedMinutes = minutes.toString().padStart(2, "0");
-                calculatedTimeSlot = `${inTime} - ${hours12}:${formattedMinutes} ${endPeriod}`;
-              }
-            }
-
-           return {
-  id: c.id,
-  patientId: patient.id,
-  treatmentPlanId: appt.id, // FIX
-  patientName,
-  treatmentIds: ids,
-  treatmentName: getTreatmentDetails(ids),
-  therapistId,
-  therapistName,
-  inTime,
-  outTime,
-  timeSlot:
-    c.treatment.recommendation.timeSlot ||
-    calculatedTimeSlot ||
-    "",
-  remark: c.treatment.recommendation.remark || "",
-  totalDuration:
-    matched?.duration ||
-    c.treatment?.recommendation?.duration ||
-    "",
-};
-          });
+            return {
+              id: c.id,
+              patientId: patient.id,
+              treatmentPlanId: appt.id,
+              treatmentAssignId: c.id,
+              patientName,
+              treatmentIds: ids,
+              treatmentName: getTreatmentDetails(ids) || "Treatment Not Assigned",
+              therapistId,
+              therapistName,
+              inTime,
+              outTime,
+              timeSlot: recommendation.timeSlot || "",
+              remark: recommendation.remark || "",
+              totalDuration: matched?.duration || recommendation.duration || "",
+            };
+          })
+        );
       });
-    });
 
-    setTreatments(formatted);
-  } catch (error) {
-    console.error(error);
-    toast({
-      title: "Error fetching treatments",
-      variant: "destructive",
-    });
-  }
-};
-
-
+      setTreatments(formatted);
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error fetching treatments", variant: "destructive" });
+    }
+  };
 
   const fetchTherapists = async () => {
     try {
       const res = await getAllTherapist();
       setTherapists(res.data || []);
-    } catch (error) {
-      console.error(error);
-      toast({ 
-        title: "Error fetching therapists", 
-        variant: "destructive" 
-      });
-    }
-  };
-const calculateOutTime = (inTime: string, duration: string): string => {
-  if (!inTime || !duration) return "";
-
-  // Parse duration: "1h 30m" or "45m"
-  const match = duration.match(/(?:(\d+)h)?\s*(?:(\d+)m)?/i);
-  const hours = match?.[1] ? parseInt(match[1]) : 0;
-  const mins = match?.[2] ? parseInt(match[2]) : 0;
-
-  // Parse inTime: "9:00 AM"
-  const [h, m, p] = inTime.match(/(\d+):(\d+)\s*(AM|PM)/i)?.slice(1) || [];
-  if (!h || !p) return "";
-
-  const date = new Date();
-  date.setHours((+h % 12) + (p.toUpperCase() === "PM" ? 12 : 0), +m);
-
-  // Add duration
-  date.setMinutes(date.getMinutes() + hours * 60 + mins);
-
-  // Convert to 12-hour time
-  let outH = date.getHours();
-  const outM = date.getMinutes();
-  const period = outH >= 12 ? "PM" : "AM";
-  outH = outH % 12 || 12;
-
-  return `${outH}:${outM.toString().padStart(2, "0")} ${period}`;
-};
-
- const handleUpdate = async (id: string) => {
-  try {
-    const selectedTherapist = therapists.find(
-      (th) => th.id === editData.therapistId
-    );
-
- const payload = {
-  recommendation: {
-    inTime: editData.inTime,
-    outTime: editData.outTime,
-    therapist: editData.therapistId,
-    timeSlot: `${editData.inTime} - ${editData.outTime}`,
-    remark: editData.remark,
-  },
-};
-
-
-    await updatePatientTreatmentTable(id, payload);
-    if (editData.therapistId) {
-  await assignTherapist(
-    editData.therapistId,
-    editData.treatmentPlanId!,
-    id
-  );
-}
-    toast({
-      title: "Treatment updated successfully",
-      description: `Therapist: ${selectedTherapist?.name || "N/A"}`,
-    });
-    setEditingId(null);
-    fetchTreatments();
-  } catch (error) {
-    console.error(error);
-    toast({
-      title: "Error updating treatment",
-      variant: "destructive",
-    });
-  }
-};
-
-  const handleAssignTherapist = async (
-    therapistId: string,
-    treatmentPlanId: string,
-    treatmentId: string
-  ) => {
-    try {
-      await assignTherapist(therapistId, treatmentPlanId, treatmentId);
-      toast({ 
-        title: "Therapist assigned successfully",
-        description: "The therapist has been assigned to this treatment"
-      });
-      fetchTreatments();
-    } catch (error) {
-      console.error(error);
-      toast({ 
-        title: "Error assigning therapist", 
-        variant: "destructive" 
-      });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error fetching therapists", variant: "destructive" });
     }
   };
 
@@ -320,34 +503,44 @@ const calculateOutTime = (inTime: string, duration: string): string => {
     return `${hours}h ${mins}m`;
   };
 
-  const filteredData = treatments
-    .map((t) => ({
-      ...t,
-      treatmentName: getTreatmentDetails(t.treatmentIds),
-    }))
-    .filter((t) =>
-      Object.values(t).some((v) =>
-        v?.toString().toLowerCase().includes(filter.toLowerCase())
-      )
-    )
-    .sort((a, b) => {
-      const valA = a[sortKey]?.toString().toLowerCase() || "";
-      const valB = b[sortKey]?.toString().toLowerCase() || "";
-      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
-
-  const handleSort = (key: keyof Treatment) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
+  const handleSort = (key: keyof TreatmentRow) => {
+    if (sortKey === key) setSortAsc((v) => !v);
+    else { setSortKey(key); setSortAsc(true); }
   };
+
+  const filteredData = useMemo(
+    () =>
+      treatments
+        .map((t) => ({ ...t, treatmentName: getTreatmentDetails(t.treatmentIds) }))
+        .filter((t) =>
+          Object.values(t).some((v) =>
+            v?.toString().toLowerCase().includes(filter.toLowerCase())
+          )
+        )
+        .sort((a, b) => {
+          const vA = a[sortKey]?.toString().toLowerCase() || "";
+          const vB = b[sortKey]?.toString().toLowerCase() || "";
+          return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        }),
+    [treatments, filter, sortKey, sortAsc, masterTreatments]
+  );
+
+  const columns = [
+    { key: "patientName", label: "Patient", icon: User },
+    { key: "treatmentName", label: "Treatment", icon: Stethoscope },
+    { key: "therapistName", label: "Therapist", icon: User },
+    { key: "timeSlot", label: "Time Slot", icon: Calendar },
+    { key: "inTime", label: "Check In", icon: Clock },
+    { key: "outTime", label: "Check Out", icon: Clock },
+    { key: "totalDuration", label: "Duration", icon: Clock },
+    { key: "remark", label: "Notes", icon: null },
+    { key: "actions", label: "Actions", icon: null },
+  ];
 
   return (
     <div className="w-full p-6 bg-gradient-to-br from-background via-background to-secondary/20 min-h-screen">
       <Card className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
+        {/* Header */}
         <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -363,7 +556,6 @@ const calculateOutTime = (inTime: string, duration: string): string => {
                 </p>
               </div>
             </div>
-            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -376,30 +568,24 @@ const calculateOutTime = (inTime: string, duration: string): string => {
           </div>
         </CardHeader>
 
+        {/* Table */}
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-table-header border-b border-border">
-                  {[
-                    { key: "patientName", label: "Patient", icon: User },
-                    { key: "treatmentName", label: "Treatment", icon: Stethoscope },
-                    { key: "therapistName", label: "Therapist", icon: User },
-                    { key: "timeSlot", label: "Time Slot", icon: Calendar },
-                    { key: "inTime", label: "Check In", icon: Clock },
-                    { key: "outTime", label: "Check Out", icon: Clock },
-                    { key: "totalDuration", label: "Duration", icon: Clock },
-                    { key: "remark", label: "Notes", icon: null },
-                    { key: "actions", label: "Actions", icon: null },
-                  ].map((col) => (
+                  {columns.map((col) => (
                     <th
                       key={col.key}
                       className="px-6 py-4 text-left text-xs font-semibold text-foreground/80 uppercase tracking-wider"
                     >
                       <button
-                        onClick={() => col.key !== "actions" && handleSort(col.key as keyof Treatment)}
-                        className="flex items-center gap-2 hover:text-primary transition-colors group"
+                        onClick={() =>
+                          col.key !== "actions" &&
+                          handleSort(col.key as keyof TreatmentRow)
+                        }
                         disabled={col.key === "actions"}
+                        className="flex items-center gap-2 hover:text-primary transition-colors group"
                       >
                         {col.icon && <col.icon className="w-4 h-4" />}
                         <span>{col.label}</span>
@@ -418,8 +604,9 @@ const calculateOutTime = (inTime: string, duration: string): string => {
                     key={t.id}
                     className={`transition-all duration-200 hover:bg-table-hover ${
                       i % 2 === 0 ? "bg-background" : "bg-table-stripe"
-                    } ${editingId === t.id ? "ring-2 ring-primary/20" : ""}`}
+                    }`}
                   >
+                    {/* Patient */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
@@ -431,100 +618,46 @@ const calculateOutTime = (inTime: string, duration: string): string => {
                       </div>
                     </td>
 
+                    {/* Treatment */}
                     <td className="px-6 py-4">
-                      <div className="max-w-xs">
-                        <p className="text-sm text-foreground/80 line-clamp-2">
-                          {t.treatmentName || "—"}
-                        </p>
-                      </div>
+                      <p className="text-sm text-foreground/80 max-w-xs line-clamp-2">
+                        {t.treatmentName || "—"}
+                      </p>
                     </td>
 
-                   <td className="px-6 py-4">
-  {editingId === t.id ? (
-   <select
-  value={editData.therapistId || ""}
-  onChange={(e) => {
-    const selected = therapists.find((th) => th.id === e.target.value);
-    setEditData({
-      ...editData,
-      therapistId: selected?.id,
-      therapistName: selected?.name || "",
-    });
-  }}
-  className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
->
-  <option value="">Select Therapist</option>
-  {therapists.map((th) => (
-    <option key={th.id} value={th.id}>
-      {th.name}
-    </option>
-  ))}
-</select>
+                    {/* Therapist */}
+                    <td className="px-6 py-4">
+                      {t.therapistName ? (
+                        <Badge variant="secondary" className="font-normal">
+                          {t.therapistName}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </td>
 
-  ) : t.therapistName ? (
-    <Badge variant="secondary" className="font-normal">
-      {t.therapistName}
-    </Badge>
-  ) : (
-    <span className="text-muted-foreground text-sm">—</span>
-  )}
-</td>
-
-
+                    {/* Time Slot */}
                     <td className="px-6 py-4">
                       <span className="text-sm text-foreground/80">
                         {t.timeSlot || "—"}
                       </span>
                     </td>
 
+                    {/* Check In */}
                     <td className="px-6 py-4">
-                      {editingId === t.id ? (
-                       <Input
-  placeholder="9:00 AM"
-  value={editData.inTime || ""}
-  onChange={(e) => {
-    const newInTime = e.target.value;
-    const duration =
-      editData.totalDuration ||
-      masterTreatments.find((m) =>
-        editData.treatmentIds?.includes(m._id)
-      )?.duration ||
-      "";
-    const newOutTime = calculateOutTime(newInTime, duration);
-    setEditData({
-      ...editData,
-      inTime: newInTime,
-      outTime: newOutTime,
-      timeSlot: `${newInTime} - ${newOutTime}`,
-    });
-  }}
-  className="w-28 text-sm"
-/>
-
-                      ) : (
-                        <span className="text-sm text-foreground/80">
-                          {t.inTime || "—"}
-                        </span>
-                      )}
+                      <span className="text-sm text-foreground/80">
+                        {t.inTime || "—"}
+                      </span>
                     </td>
 
+                    {/* Check Out */}
                     <td className="px-6 py-4">
-                      {editingId === t.id ? (
-                        <Input
-                          placeholder="10:00 AM"
-                          value={editData.outTime || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, outTime: e.target.value })
-                          }
-                          className="w-28 text-sm"
-                        />
-                      ) : (
-                        <span className="text-sm text-foreground/80">
-                          {t.outTime || "—"}
-                        </span>
-                      )}
+                      <span className="text-sm text-foreground/80">
+                        {t.outTime || "—"}
+                      </span>
                     </td>
 
+                    {/* Duration */}
                     <td className="px-6 py-4">
                       {calculateDuration(t.inTime, t.outTime) ? (
                         <Badge variant="outline" className="font-mono text-xs">
@@ -535,64 +668,27 @@ const calculateOutTime = (inTime: string, duration: string): string => {
                       )}
                     </td>
 
+                    {/* Notes */}
                     <td className="px-6 py-4">
-                      {editingId === t.id ? (
-                        <Input
-                          placeholder="Add notes..."
-                          value={editData.remark || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, remark: e.target.value })
-                          }
-                          className="w-full text-sm"
-                        />
-                      ) : (
-                        <span className="text-sm text-foreground/70">
-                          {t.remark || "—"}
-                        </span>
-                      )}
+                      <span className="text-sm text-foreground/70">
+                        {t.remark || "—"}
+                      </span>
                     </td>
 
+                    {/* Actions — single Assign button opens modal */}
                     <td className="px-6 py-4">
-                      {editingId === t.id ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdate(t.id)}
-                            className="bg-success hover:bg-success/90 text-success-foreground shadow-sm"
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingId(null)}
-                            className="border-border hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingId(t.id);
-                              setEditData({
-  ...t,
-  therapistId: t.therapistId || "",
-  treatmentPlanId: t.treatmentPlanId,
-});
-                            }}
-                            className="hover:bg-primary/10 hover:text-primary hover:border-primary transition-all"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 mr-1" />
-                            Edit
-                          </Button>
-                         
-                        </div>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setActiveRow(t);
+                          setModalOpen(true);
+                        }}
+                        className="hover:bg-primary/10 hover:text-primary hover:border-primary transition-all"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 mr-1" />
+                        {t.therapistName ? "Edit" : "Assign"}
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -617,6 +713,24 @@ const calculateOutTime = (inTime: string, duration: string): string => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Assign Therapist Modal */}
+      <AssignTherapistModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setActiveRow(null);
+        }}
+        onSave={() => {
+          fetchTreatments();
+          setModalOpen(false);
+          setActiveRow(null);
+        }}
+        row={activeRow}
+        therapists={therapists}
+        setTherapists={setTherapists}
+        masterTreatments={masterTreatments}
+      />
     </div>
   );
 }
