@@ -371,15 +371,23 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     ]);
   };
 
-  const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
-    setLines((prev) => {
-      const next = [...prev];
-      const l = { ...next[idx], ...patch };
-      l.amount = l.quantity * l.rate;
-      next[idx] = l;
-      return next;
-    });
-  };
+ const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
+  setLines((prev) =>
+    prev.map((line, i) => {
+      if (i !== idx) return line;
+
+      const updated = {
+        ...line,
+        ...patch,
+      };
+
+      return {
+        ...updated,
+        amount: Number(updated.quantity || 0) * Number(updated.rate || 0),
+      };
+    })
+  );
+};
 
   const removeLine = (idx: number) => {
     setLines((prev) => prev.filter((_, i) => i !== idx));
@@ -814,9 +822,53 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       </CardContent>
     </Card>
   );
+const printInvoice = (inv: ApiInvoice) => {
+  const printContents = document.getElementById(`invoice-${inv.id}`)?.innerHTML;
 
+  if (!printContents) return;
+
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+
+          th,
+          td {
+            border: 1px solid #ddd;
+            padding: 8px;
+          }
+        </style>
+      </head>
+      <body>
+        ${printContents}
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 300);
+};
   /* ---------------- View Mode ---------------- */
   const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => (
+  <div id={`invoice-${inv.id}`}>
     <Card className="shadow-natural">
       <CardHeader className="border-b border-border">
         <div className="flex items-start justify-between">
@@ -831,9 +883,14 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
             <Button variant="outline" size="sm">
               <Eye className="h-4 w-4 mr-2" /> Preview
             </Button>
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Printer className="h-4 w-4 mr-2" /> Print
-            </Button>
+            <Button
+  variant="outline"
+  size="sm"
+  onClick={() => printInvoice(inv)}
+>
+  <Printer className="h-4 w-4 mr-2" /> Print
+</Button>
+             
             <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
               <Download className="h-4 w-4 mr-2" /> PDF
             </Button>
@@ -961,6 +1018,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 
   /* ---------------- Edit/New Mode ---------------- */
@@ -1173,9 +1231,21 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
                 >
                   <div className="col-span-5">
                     <Input
-                      value={l.name}
-                      onChange={(e) => updateLine(idx, { name: e.target.value })}
-                    />
+  key={`name-${l.clientId}`}
+  value={l.name || ""}
+  onChange={(e) =>
+    setLines((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? {
+              ...item,
+              name: e.target.value,
+            }
+          : item
+      )
+    )
+  }
+/>
                   </div>
 
                   <div className="col-span-2 text-center">
