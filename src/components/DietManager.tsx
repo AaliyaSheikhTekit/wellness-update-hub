@@ -92,7 +92,15 @@ export default function DietManager() {
               <label className="block text-xs text-gray-600">Type</label>
               <select
                 value={form.type}
-                onChange={(e) => setForm((s) => ({ ...s, type: e.target.value as any }))}
+               onChange={(e) =>
+  setForm({
+    type: e.target.value,
+    name: "",
+    categoryId: "",
+    subCategoryId: "",
+    subForm: "",
+  })
+}
                 className="w-full border rounded px-3 py-2 mt-1"
               >
                 <option value="category">Category</option>
@@ -112,16 +120,31 @@ export default function DietManager() {
             </div>
 
             {form.type === "subcategory" && (
-              <div>
-                <label className="block text-xs text-gray-600">Parent Category ID</label>
-                <input
-                  value={form.categoryId}
-                  onChange={(e) => setForm((s) => ({ ...s, categoryId: e.target.value }))}
-                  placeholder="category id"
-                  className="w-full border rounded px-3 py-2 mt-1"
-                />
-              </div>
-            )}
+  <div>
+    <label className="block text-xs text-gray-600">Select Parent Category</label>
+    <select
+      value={form.categoryId || ""}
+      onChange={(e) =>
+        setForm((s) => ({
+          ...s,
+          categoryId: e.target.value,
+        }))
+      }
+      required
+      className="w-full border rounded px-3 py-2 mt-1"
+    >
+      <option value="">Select Category</option>
+
+      {list
+        .filter((item: any) => item.type === "category")
+        .map((category: any) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+    </select>
+  </div>
+)}
 
             {form.type === "item" && (
               <>

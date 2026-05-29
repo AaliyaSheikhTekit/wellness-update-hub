@@ -96,7 +96,7 @@ useEffect(() => {
           { key: "overview", name: "Overview", icon: Users },
           { key: "add-patient", name: "Add Patient", icon: Plus },
           { key: "appointments", name: "Appointments", icon: Calendar },
-          { key: "prescriptions", name: "Prescriptions", icon: Pill },
+          // { key: "prescriptions", name: "Prescriptions", icon: Pill },
           { key: "add-new-diet", name: "Add New Diet", icon: ChartArea },
           { key: "invoices", name: "Invoices", icon: FileText },
           {
@@ -105,11 +105,11 @@ useEffect(() => {
             icon: FileText,
           },
           {
-            key: "add-post-treatment",
+            key: "add-post-treatment",  
             name: "Add Post-Treatment",
             icon: Stethoscope,
           },
-          { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
+          // { key: "add-medicine-post", name: "Add Medicine Post", icon: Pill },
           { key: "upload-qr", name: "Upload QR Code", icon: QrCode },
         ]
       : userRole === "Naturopathy Doctor"
