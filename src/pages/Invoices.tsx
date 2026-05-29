@@ -7,6 +7,7 @@
 // ✅ Fix 6: All earnings/pending calculations use local invoices state only
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import {
   Search,
   Calendar as CalIcon,
@@ -178,6 +179,7 @@ const newClientId = () =>
 /* ---------------- Component ---------------- */
 const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   const { toast } = useToast();
+  const invoiceRef = useRef<HTMLDivElement>(null);
   const preferredInvoiceIdRef = useRef<string | null>(null);
   const initRef = useRef<string>("");
   const [lockPatient, setLockPatient] = useState(false);
@@ -822,53 +824,15 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       </CardContent>
     </Card>
   );
-const printInvoice = (inv: ApiInvoice) => {
-  const printContents = document.getElementById(`invoice-${inv.id}`)?.innerHTML;
 
-  if (!printContents) return;
 
-  const printWindow = window.open("", "_blank");
 
-  if (!printWindow) return;
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Invoice</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-
-          th,
-          td {
-            border: 1px solid #ddd;
-            padding: 8px;
-          }
-        </style>
-      </head>
-      <body>
-        ${printContents}
-      </body>
-    </html>
-  `);
-
-  printWindow.document.close();
-
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 300);
-};
+const handlePrint = useReactToPrint({
+  contentRef: invoiceRef,
+});
   /* ---------------- View Mode ---------------- */
   const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => (
-  <div id={`invoice-${inv.id}`}>
+<div ref={invoiceRef}>
     <Card className="shadow-natural">
       <CardHeader className="border-b border-border">
         <div className="flex items-start justify-between">
@@ -883,11 +847,7 @@ const printInvoice = (inv: ApiInvoice) => {
             <Button variant="outline" size="sm">
               <Eye className="h-4 w-4 mr-2" /> Preview
             </Button>
-            <Button
-  variant="outline"
-  size="sm"
-  onClick={() => printInvoice(inv)}
->
+         <Button variant="outline" size="sm" onClick={handlePrint}>
   <Printer className="h-4 w-4 mr-2" /> Print
 </Button>
              
