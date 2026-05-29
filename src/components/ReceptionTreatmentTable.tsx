@@ -384,15 +384,20 @@ export default function ReceptionTreatmentTable() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeRow, setActiveRow] = useState<TreatmentRow | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      await fetchMasterTreatments();
-      await fetchTherapists();
-      await fetchTreatments();
-    };
-    load();
-  }, []);
+useEffect(() => {
+  const load = async () => {
+    await fetchMasterTreatments();
+    await fetchTherapists();
+  };
 
+  load();
+}, []);
+
+useEffect(() => {
+  if (therapists.length > 0) {
+    fetchTreatments();
+  }
+}, [therapists, masterTreatments]);
   const fetchMasterTreatments = async () => {
     try {
       const [treatmentRes, therapyRes] = await Promise.all([
