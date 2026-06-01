@@ -533,40 +533,7 @@ const payload = {
   knowCase:
     doctorData.pastMedicalHistory.knowCase || {},
 
-  // ✅ ADD THESE FIELDS
-  bloodPressure: patient?.bloodPressure || "",
-  pulse: Number(patient?.pulse) || 0,
-  weightKg: Number(patient?.weightKg) || 0,
-  heightCm: Number(patient?.heightCm) || 0,
-  bmi: Number(patient?.bmi) || 0,
-  temperatureF: Number(patient?.temperatureF) || 0,
-  painScale: patient?.painScale || "",
-
-  midUpperArmCircumferenceCm:
-    Number(patient?.midUpperArmCircumferenceCm) || 0,
-
-  waistCircumferenceCm:
-    Number(patient?.waistCircumferenceCm) || 0,
-
-  hipCircumferenceCm:
-    Number(patient?.hipCircumferenceCm) || 0,
-
-  whr: Number(patient?.whr) || 0,
-
-  skinfoldTricepsMm:
-    Number(patient?.skinfoldTricepsMm) || 0,
-
-  skinfoldBicepsMm:
-    Number(patient?.skinfoldBicepsMm) || 0,
-
-  skinfoldSubscapularMm:
-    Number(patient?.skinfoldSubscapularMm) || 0,
-
-  skinfoldSuprailiacMm:
-    Number(patient?.skinfoldSuprailiacMm) || 0,
-
-  bodyFatPercent:
-    Number(patient?.bodyFatPercent) || 0,
+ 
 
   physical: doctorData.physical,
 

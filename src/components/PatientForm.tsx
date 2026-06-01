@@ -270,7 +270,9 @@ const PatientRegistrationForm = () => {
     familyHistory: "",
   });
   const [language, setLanguage] = useState("en");
-  const [vitals, setVitals] = useState<Record<string, any>>({});
+  const [vitals, setVitals] = useState<Record<string, any>>({
+  "Blood Pressure": "120/",
+});
   // const [consentGiven, setConsentGiven] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   // const [signature, setSignature] = useState("");
@@ -1389,21 +1391,33 @@ const PatientRegistrationForm = () => {
                           <p className="text-xs text-gray-500">
                             Normal: {v.normal}
                           </p>
-                          <Input
-                            value={vitals[v.label] || ""}
-                            onChange={(e) =>
-                              handleVitalsChange(v.label, e.target.value)
-                            }
-                            onBlur={() => handleBlur(v.label)}
-                            disabled={isAuto}
-                            placeholder={
-                              isAuto ? "Auto-calculated" : "Enter value"
-                            }
-                            className={`${errors[v.label]
-                              ? "border-red-500"
-                              : ""
-                              } ${isAuto ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                          />
+                         {v.label === "Blood Pressure" ? (
+  <Input
+    value={
+      vitals["Blood Pressure"]?.includes("/")
+        ? vitals["Blood Pressure"].split("/")[1]
+        : vitals["Blood Pressure"] || ""
+    }
+    onChange={(e) => {
+      const diastolic = e.target.value.replace(/\D/g, "");
+      handleVitalsChange(
+        "Blood Pressure",
+        diastolic ? `120/${diastolic}` : "120/"
+      );
+    }}
+    placeholder="80"
+  />
+) : (
+  <Input
+    value={vitals[v.label] || ""}
+    onChange={(e) =>
+      handleVitalsChange(v.label, e.target.value)
+    }
+    onBlur={() => handleBlur(v.label)}
+    disabled={v.auto}
+    placeholder={v.auto ? "Auto-calculated" : "Enter value"}
+  />
+)}
                           {errors[v.label] &&
                             !["BMI", "Temperature", "Weight", "Height"].includes(v.label) && (
                               <p className="text-red-500 text-xs mt-1">{errors[v.label]}</p>
