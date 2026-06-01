@@ -594,18 +594,31 @@ if (!date) {
     try {
       const res = await appointmentPost("/appointment/create", payload);
       if ((res as any)?.id) {
-        await refetchForActiveTab();
-        toast({
-          title: "Appointment booked",
-          description: "Successfully added.",
-        });
-      }
+  await refetchForActiveTab();
+
+  toast({
+    title: "Appointment booked",
+    description: "Successfully added.",
+  });
+
+  // Reset form
+  setPatientName("");
+  setPatientNumber("");
+  setDate("");
+  setTime("");
+  setType("");
+  setDoctorId("");
+  setDoctorDisplay("");
+  setNotes("");
+  setErrors({});
+
+  // Close dialog
+  setNewAppointmentOpen(false);
+}
     } catch (error) {
       console.error(error);
       toast({ title: "Error", description: "Failed to book appointment." });
-    } finally {
-      setNewAppointmentOpen(false);
-    }
+    } 
   };
 
   const handleUpdateAppointment = async () => {

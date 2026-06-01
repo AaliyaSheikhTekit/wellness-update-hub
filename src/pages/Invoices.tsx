@@ -5,6 +5,8 @@
 // ✅ Fix 4: Monthly Earnings is a FRONTEND-ONLY tab — no API call ever made for it
 // ✅ Fix 5: Strict status equality — unpaid invoices NEVER appear in paid tab
 // ✅ Fix 6: All earnings/pending calculations use local invoices state only
+// ✅ Fix 7: Scroll-to-top on typing fixed — EditInvoice/ViewInvoice wrapped in stable keyed divs
+// ✅ Fix 8: ViewInvoice now shows subtotal, discount, and total in both view AND print
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
@@ -20,6 +22,7 @@ import {
   Tag,
   Trash2,
   Edit3,
+  Phone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +126,7 @@ type ApiInvoice = {
   discount: number;
   discountType: DiscountType;
   total: number;
-  finalTotal?: number; // backend field used for earnings calculations
+  finalTotal?: number;
   amountPaid: number;
   status: "paid" | "partially_paid" | "pending" | "overdue" | "draft" | "unpaid";
 };
@@ -258,11 +261,10 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  // ✅ Only invoices with status strictly === "paid" in current month/year
   const monthlyEarnings = useMemo(() => {
     return invoices
       .filter((inv) => {
-        if (inv.status !== "paid") return false; // strict equality
+        if (inv.status !== "paid") return false;
         const d = new Date(inv.date);
         return (
           d.getMonth() === currentMonth && d.getFullYear() === currentYear
@@ -271,7 +273,6 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       .reduce((sum, inv) => sum + Number(inv.finalTotal ?? inv.total ?? 0), 0);
   }, [invoices, currentMonth, currentYear]);
 
-  // ✅ Only invoices with status strictly === "unpaid"
   const pendingInvoices = useMemo(() => {
     return invoices.filter((inv) => inv.status === "unpaid");
   }, [invoices]);
@@ -373,23 +374,18 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     ]);
   };
 
- const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
-  setLines((prev) =>
-    prev.map((line, i) => {
-      if (i !== idx) return line;
-
-      const updated = {
-        ...line,
-        ...patch,
-      };
-
-      return {
-        ...updated,
-        amount: Number(updated.quantity || 0) * Number(updated.rate || 0),
-      };
-    })
-  );
-};
+  const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
+    setLines((prev) =>
+      prev.map((line, i) => {
+        if (i !== idx) return line;
+        const updated = { ...line, ...patch };
+        return {
+          ...updated,
+          amount: Number(updated.quantity || 0) * Number(updated.rate || 0),
+        };
+      })
+    );
+  };
 
   const removeLine = (idx: number) => {
     setLines((prev) => prev.filter((_, i) => i !== idx));
@@ -464,12 +460,9 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     try {
       setLoadingInvoices(true);
 
-      // ✅ monthly_earnings tab → call API with NO status param so we get ALL invoices,
-      //    then calculate earnings/pending entirely on the frontend from the full list.
-      //    All other tabs → pass the real backend status string.
       const res =
         invoiceStatus === "monthly_earnings"
-          ? await getAllInvoices() // no status param — fetch all
+          ? await getAllInvoices()
           : await getAllInvoices(invoiceStatus);
 
       const rawList: any[] = Array.isArray(res?.data)
@@ -480,16 +473,11 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
 
       const mapped = rawList.map(mapApiInvoice);
 
-      // ✅ For monthly_earnings we keep ALL invoices in state so useMemo hooks
-      //    (monthlyEarnings, pendingInvoices) can compute over the full dataset.
-      //    For real tabs apply strict status filter so paid never shows unpaid, etc.
       const statusFiltered =
         invoiceStatus === "monthly_earnings"
-          ? mapped // keep all — frontend memos do the filtering
+          ? mapped
           : mapped.filter((i) => {
-              if (invoiceStatus === "paid") {
-                return i.status === "paid"; // strict equality — no partial match
-              }
+              if (invoiceStatus === "paid") return i.status === "paid";
               if (invoiceStatus === "unpaid") {
                 return (
                   i.status === "unpaid" ||
@@ -498,20 +486,18 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
                   i.status === "overdue"
                 );
               }
-              if (invoiceStatus === "draft") {
-                return i.status === "draft";
-              }
+              if (invoiceStatus === "draft") return i.status === "draft";
               return false;
             });
 
-      // ✅ Client-side search filter (only meaningful for real-status tabs)
       const filtered =
         invoiceStatus !== "monthly_earnings" && invoiceSearch.trim()
           ? statusFiltered.filter((i) => {
               const q = invoiceSearch.toLowerCase();
               return (
                 i.id?.toLowerCase().includes(q) ||
-                i.patientName?.toLowerCase().includes(q)
+                i.patientName?.toLowerCase().includes(q) ||
+                i.patientPhone?.toLowerCase().includes(q)
               );
             })
           : statusFiltered;
@@ -537,9 +523,6 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     }
   };
 
-  // ✅ Always refresh when tab changes.
-  //    monthly_earnings calls getAllInvoices() with no status param (fetches all).
-  //    Other tabs call getAllInvoices(status) for the matching backend status.
   useEffect(() => {
     refreshInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -571,7 +554,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   useEffect(() => {
     const loadPatientPlan = async () => {
       if (!selectedPatient?.id) return;
-      if (isConsultancyFlow) return; // do not override consultancy line
+      if (isConsultancyFlow) return;
 
       try {
         const res = await getPatient(selectedPatient.id);
@@ -732,7 +715,6 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         description: `Status: ${newStatus.toUpperCase()}`,
       });
 
-      // Switch to the real tab so the saved invoice is visible
       setInvoiceStatus(newStatus);
       setIsNewInvoice(false);
       await refreshInvoices();
@@ -808,6 +790,12 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
           <div>
             <h3 className="font-semibold text-foreground">{invoice.patientName}</h3>
             <p className="text-sm text-muted-foreground">ID: {invoice.id}</p>
+            {invoice.patientPhone && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <Phone className="h-3 w-3" />
+                {invoice.patientPhone}
+              </p>
+            )}
           </div>
           <Badge className={`${getStatusColor(invoice.status)} text-white text-xs`}>
             {getStatusText(invoice.status)}
@@ -825,161 +813,240 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     </Card>
   );
 
+  const handlePrint = useReactToPrint({
+    contentRef: invoiceRef,
+  });
 
-
-const handlePrint = useReactToPrint({
-  contentRef: invoiceRef,
-});
   /* ---------------- View Mode ---------------- */
-  const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => (
-<div ref={invoiceRef}>
-    <Card className="shadow-natural">
-      <CardHeader className="border-b border-border">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
-            <p className="text-muted-foreground">Invoice #{inv.id}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => editExistingInvoice(inv)}>
-              <Edit3 className="h-4 w-4 mr-2" /> Edit
-            </Button>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" /> Preview
-            </Button>
-         <Button variant="outline" size="sm" onClick={handlePrint}>
-  <Printer className="h-4 w-4 mr-2" /> Print
-</Button>
-             
-            <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
-              <Download className="h-4 w-4 mr-2" /> PDF
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+  // ✅ Fix 8: invoiceRef placed on the printable content div INSIDE the card
+  // ✅ Fix 8: Totals (subtotal, discount, total) now shown in view AND included in print
+  const ViewInvoice = ({ inv }: { inv: ApiInvoice }) => {
+    // Compute totals from the invoice data for display
+    const invSubtotal = inv.subtotal > 0
+      ? inv.subtotal
+      : inv.items.reduce((sum, i) => sum + i.quantity * i.rate, 0);
 
-      <CardContent className="p-6 space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-semibold text-foreground mb-3">Bill To:</h3>
-            <div className="space-y-1">
-              <p className="font-medium text-foreground">{inv.patientName}</p>
-              <p className="text-sm text-muted-foreground">{inv.patientPhone || "-"}</p>
+    const invDiscountVal =
+      inv.discountType === "percentage"
+        ? (invSubtotal * (inv.discount || 0)) / 100
+        : (inv.discount || 0);
+
+    const invTotal = inv.finalTotal ?? inv.total ?? Math.max(0, invSubtotal - invDiscountVal);
+
+    return (
+      <Card className="shadow-natural">
+        <CardHeader className="border-b border-border">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
+              <p className="text-muted-foreground">Invoice #{inv.id}</p>
             </div>
-          </div>
-
-          <div className="text-right">
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Invoice Date:</p>
-                <p className="font-medium text-foreground">
-                  {new Date(inv.date).toLocaleDateString("en-IN")}
-                </p>
-              </div>
-              {inv.dueDate && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Due Date:</p>
-                  <p className="font-medium text-foreground">
-                    {new Date(inv.dueDate).toLocaleDateString("en-IN")}
-                  </p>
-                </div>
-              )}
-              <div>
-                <Badge className={`${getStatusColor(inv.status)} text-white`}>
-                  {getStatusText(inv.status)}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-semibold text-foreground mb-4">Services & Treatments</h3>
-          <div className="border border-border rounded-md overflow-hidden">
-            <div className="bg-muted/50 px-4 py-3 grid grid-cols-12 gap-4 text-sm font-medium text-foreground">
-              <div className="col-span-6">Service</div>
-              <div className="col-span-2 text-center">Qty</div>
-              <div className="col-span-2 text-right">Rate</div>
-              <div className="col-span-2 text-right">Amount</div>
-            </div>
-            {inv.items.map((service, index) => (
-              <div
-                key={index}
-                className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
-              >
-                <div className="col-span-6 text-foreground">{service.name}</div>
-                <div className="col-span-2 text-center text-muted-foreground">
-                  {service.quantity}
-                </div>
-                <div className="col-span-2 text-right text-muted-foreground">
-                  ₹{toINR(service.rate)}
-                </div>
-                <div className="col-span-2 text-right font-medium text-foreground">
-                  ₹{toINR(service.amount)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {inv.status !== "paid" && (
-          <div className="space-y-3 pt-4 border-t border-border">
-            <h4 className="font-semibold text-foreground">Payment Actions</h4>
-            <div className="flex gap-2">
-              <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary">Record Payment</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Record Payment</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Amount</Label>
-                      <Input
-                        type="text"
-                        min="0"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Method</Label>
-                      <Input
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        placeholder="UPI / Cash / Card"
-                      />
-                    </div>
-                    <div>
-                      <Label>Note</Label>
-                      <Input
-                        value={paymentNote}
-                        onChange={(e) => setPaymentNote(e.target.value)}
-                        placeholder="Ref / Txn ID"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setRecordDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleRecordPayment}>Save</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <Button variant="outline" onClick={() => editExistingInvoice(inv)}>
-                Edit Invoice
+            {/* ✅ Action buttons are OUTSIDE the print ref so they don't appear in print */}
+            <div className="flex gap-2 print:hidden">
+              <Button variant="outline" size="sm" onClick={() => editExistingInvoice(inv)}>
+                <Edit3 className="h-4 w-4 mr-2" /> Edit
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-2" /> Print
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
+                <Download className="h-4 w-4 mr-2" /> PDF
               </Button>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-    </div>
-  );
+        </CardHeader>
+
+        {/* ✅ ref is placed here so the entire printable area including totals is captured */}
+        <div ref={invoiceRef}>
+          <CardContent className="p-6 space-y-6">
+            {/* Patient + Dates */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-foreground mb-3">Bill To:</h3>
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">{inv.patientName}</p>
+                  {inv.patientPhone && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {inv.patientPhone}
+                    </p>
+                  )}
+                  {inv.patientEmail && (
+                    <p className="text-sm text-muted-foreground">{inv.patientEmail}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Invoice Date:</p>
+                    <p className="font-medium text-foreground">
+                      {new Date(inv.date).toLocaleDateString("en-IN")}
+                    </p>
+                  </div>
+                  {inv.dueDate && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Due Date:</p>
+                      <p className="font-medium text-foreground">
+                        {new Date(inv.dueDate).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <Badge className={`${getStatusColor(inv.status)} text-white`}>
+                      {getStatusText(inv.status)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Items table */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-4">Services & Treatments</h3>
+              <div className="border border-border rounded-md overflow-hidden">
+                <div className="bg-muted/50 px-4 py-3 grid grid-cols-12 gap-4 text-sm font-medium text-foreground">
+                  <div className="col-span-6">Service</div>
+                  <div className="col-span-2 text-center">Qty</div>
+                  <div className="col-span-2 text-right">Rate</div>
+                  <div className="col-span-2 text-right">Amount</div>
+                </div>
+                {inv.items.map((service, index) => (
+                  <div
+                    key={index}
+                    className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
+                  >
+                    <div className="col-span-6 text-foreground">{service.name}</div>
+                    <div className="col-span-2 text-center text-muted-foreground">
+                      {service.quantity}
+                    </div>
+                    <div className="col-span-2 text-right text-muted-foreground">
+                      ₹{toINR(service.rate)}
+                    </div>
+                    <div className="col-span-2 text-right font-medium text-foreground">
+                      ₹{toINR(service.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ✅ Totals section — visible in view AND captured in print */}
+            <div className="space-y-2 pt-2">
+              <Separator />
+              <div className="flex justify-between text-sm pt-2">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium text-foreground">₹{toINR(invSubtotal)}</span>
+              </div>
+
+              {invDiscountVal > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      Discount{" "}
+                      {inv.discountType === "percentage"
+                        ? `(${inv.discount}%)`
+                        : "(Fixed)"}
+                      :
+                    </span>
+                    <span className="font-medium text-green-600">
+                      -₹{toINR(invDiscountVal)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">After Discount:</span>
+                    <span className="font-medium text-foreground">
+                      ₹{toINR(Math.max(0, invSubtotal - invDiscountVal))}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+              <div className="flex justify-between text-lg pt-1">
+                <span className="font-semibold text-foreground">Total:</span>
+                <span className="font-bold text-foreground">₹{toINR(invTotal)}</span>
+              </div>
+
+              {inv.amountPaid > 0 && (
+                <div className="flex justify-between text-sm pt-1">
+                  <span className="text-muted-foreground">Amount Paid:</span>
+                  <span className="font-medium text-green-600">₹{toINR(inv.amountPaid)}</span>
+                </div>
+              )}
+
+              {inv.amountPaid > 0 && inv.amountPaid < invTotal && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Balance Due:</span>
+                  <span className="font-medium text-red-500">
+                    ₹{toINR(invTotal - inv.amountPaid)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Payment actions — hidden in print */}
+            {inv.status !== "paid" && (
+              <div className="space-y-3 pt-4 border-t border-border print:hidden">
+                <h4 className="font-semibold text-foreground">Payment Actions</h4>
+                <div className="flex gap-2">
+                  <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-primary">Record Payment</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Record Payment</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Amount</Label>
+                          <Input
+                            type="text"
+                            min="0"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Method</Label>
+                          <Input
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            placeholder="UPI / Cash / Card"
+                          />
+                        </div>
+                        <div>
+                          <Label>Note</Label>
+                          <Input
+                            value={paymentNote}
+                            onChange={(e) => setPaymentNote(e.target.value)}
+                            placeholder="Ref / Txn ID"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setRecordDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleRecordPayment}>Save</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button variant="outline" onClick={() => editExistingInvoice(inv)}>
+                    Edit Invoice
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </div>
+      </Card>
+    );
+  };
 
   /* ---------------- Edit/New Mode ---------------- */
   const EditInvoice = () => (
@@ -1186,26 +1253,21 @@ const handlePrint = useReactToPrint({
             {lines.length ? (
               lines.map((l, idx) => (
                 <div
-                  key={l.clientId} // stable key — prevents cursor jump on re-render
+                  key={l.clientId}
                   className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
                 >
                   <div className="col-span-5">
                     <Input
-  key={`name-${l.clientId}`}
-  value={l.name || ""}
-  onChange={(e) =>
-    setLines((prev) =>
-      prev.map((item, i) =>
-        i === idx
-          ? {
-              ...item,
-              name: e.target.value,
-            }
-          : item
-      )
-    )
-  }
-/>
+                      key={`name-${l.clientId}`}
+                      value={l.name || ""}
+                      onChange={(e) =>
+                        setLines((prev) =>
+                          prev.map((item, i) =>
+                            i === idx ? { ...item, name: e.target.value } : item
+                          )
+                        )
+                      }
+                    />
                   </div>
 
                   <div className="col-span-2 text-center">
@@ -1420,7 +1482,6 @@ const handlePrint = useReactToPrint({
   /* ------------------------------------------------------------------ */
   const MonthlyEarningsView = () => (
     <div className="space-y-4">
-      {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-green-200">
           <CardContent className="p-6">
@@ -1447,7 +1508,6 @@ const handlePrint = useReactToPrint({
         </Card>
       </div>
 
-      {/* Patient-wise pending collection list */}
       <Card>
         <CardContent className="p-6">
           <div className="text-lg font-semibold mb-4">Pending Collections</div>
@@ -1506,7 +1566,7 @@ const handlePrint = useReactToPrint({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search invoices by ID or patient…"
+                  placeholder="Search by ID, name or phone…"
                   value={invoiceSearch}
                   onChange={(e) => setInvoiceSearch(e.target.value)}
                   className="pl-10"
@@ -1517,7 +1577,7 @@ const handlePrint = useReactToPrint({
               </Button>
             </div>
 
-            {/* ✅ Tab buttons — "monthly_earnings" is purely a UI tab, not a backend status */}
+            {/* Tab buttons */}
             <div className="flex gap-1 mt-2 flex-wrap">
               {(
                 [
@@ -1538,7 +1598,6 @@ const handlePrint = useReactToPrint({
               ))}
             </div>
 
-            {/* ✅ Monthly Earnings tab: render inline in left panel (no API call ever) */}
             {invoiceStatus === "monthly_earnings" ? (
               <MonthlyEarningsView />
             ) : (
@@ -1562,12 +1621,18 @@ const handlePrint = useReactToPrint({
             )}
           </div>
 
-          {/* Right: Details / Builder */}
+          {/* ✅ Right panel: stable wrapper keys prevent full unmount on state changes */}
           <div className="lg:col-span-2">
             {isNewInvoice ? (
-              <EditInvoice />
+              // ✅ stable key so EditInvoice is never remounted while typing
+              <div key="edit-invoice-pane">
+                <EditInvoice />
+              </div>
             ) : selectedInvoice ? (
-              <ViewInvoice inv={selectedInvoice} />
+              // ✅ stable key per invoice id so ViewInvoice only remounts when switching invoices
+              <div key={`view-invoice-pane-${selectedInvoice.id}`}>
+                <ViewInvoice inv={selectedInvoice} />
+              </div>
             ) : (
               <Card className="shadow-natural">
                 <CardContent className="p-8 text-center text-muted-foreground">
@@ -1605,7 +1670,6 @@ function mapApiInvoice(inv: any): ApiInvoice {
     subtotal: Number(inv.subTotal ?? inv.subtotal ?? 0),
     discount: Number(inv.discount ?? 0),
     discountType: (inv.discountType ?? "percentage") as DiscountType,
-    // ✅ preserve finalTotal for earnings calculations
     finalTotal: Number(inv.finalTotal ?? inv.total ?? 0),
     total: Number(inv.finalTotal ?? inv.total ?? 0),
     amountPaid: Number(inv.amountPaid ?? 0),

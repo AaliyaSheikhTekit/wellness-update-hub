@@ -1985,27 +1985,7 @@ const payload = {
                       </p>
                     )}
 
-                   <Button
-  type="button"
-  onClick={saveDoctorSignature}
->
-  Save Doctor Signature
-</Button>
 
-{signature &&
-  typeof signature === "string" && (
-    <div className="mt-3">
-      <p className="text-xs text-green-700">
-        Doctor signature uploaded.
-      </p>
-
-      <img
-        src={signature}
-        alt="Doctor Signature"
-        className="border border-gray-300 h-20 mt-1 rounded-md"
-      />
-    </div>
-)}
                   </div>
                   <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
                     <p className="text-green-800 font-semibold mb-2">
@@ -2035,6 +2015,27 @@ const payload = {
                     <label className="font-semibold text-gray-700 block mb-2">
                       Doctor's Signature
                     </label>
+                                       <Button
+  type="button"
+  onClick={saveDoctorSignature}
+>
+  Save Doctor Signature
+</Button>
+
+{signature &&
+  typeof signature === "string" && (
+    <div className="mt-3">
+      <p className="text-xs text-green-700">
+        Doctor signature uploaded.
+      </p>
+
+      <img
+        src={signature}
+        alt="Doctor Signature"
+        className="border border-gray-300 h-20 mt-1 rounded-md"
+      />
+    </div>
+)}
                     <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
                       <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
                       <SignatureCanvas

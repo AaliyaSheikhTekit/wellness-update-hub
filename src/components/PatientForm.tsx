@@ -14,7 +14,13 @@ import {
   getPaymentQr,
   getPatientById,
 } from "@/lib/api";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // Validation helper functions
 const validators = {
   required: (value: any) => {
@@ -199,7 +205,7 @@ const LIFESTYLE_FIELDS: Record<
       "Low - Less than 1.5 ltr",
       "Normal - 1.5 to 3 ltr",
       "Excess - Above 3.5 ltr",
-    ], other: true
+    ]
   },
   stress: { options: ["Low", "Moderate", "High"], other: false },
   mentalState: {
@@ -944,23 +950,37 @@ const PatientRegistrationForm = () => {
                       )}
                     </div>
 
-                    <div>
-                      <Input
-                        name="sex"
-                        placeholder="Sex *"
-                        value={formData.sex}
-                        onChange={handleInputChange}
-                        onBlur={() => handleBlur("sex")}
-                        className={
-                          errors.sex && touched.sex ? "border-red-500" : ""
-                        }
-                      />
-                      {errors.sex && touched.sex && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.sex}
-                        </p>
-                      )}
-                    </div>
+                  <div>
+  <Select
+    value={formData.sex}
+    onValueChange={(value) => {
+      setFormData({
+        ...formData,
+        sex: value,
+      });
+    }}
+  >
+    <SelectTrigger
+      className={
+        errors.sex && touched.sex ? "border-red-500" : ""
+      }
+    >
+      <SelectValue placeholder="Select Sex" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="Male">Male</SelectItem>
+      <SelectItem value="Female">Female</SelectItem>
+      <SelectItem value="Other">Other</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {errors.sex && touched.sex && (
+    <p className="text-red-500 text-xs mt-1">
+      {errors.sex}
+    </p>
+  )}
+</div>
 
                     <div>
                       <Input
@@ -1004,25 +1024,41 @@ const PatientRegistrationForm = () => {
                       )}
                     </div>
 
-                    <div>
-                      <Input
-                        name="maritalStatus"
-                        placeholder="Marital Status *"
-                        value={formData.maritalStatus}
-                        onChange={handleInputChange}
-                        onBlur={() => handleBlur("maritalStatus")}
-                        className={
-                          errors.maritalStatus && touched.maritalStatus
-                            ? "border-red-500"
-                            : ""
-                        }
-                      />
-                      {errors.maritalStatus && touched.maritalStatus && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.maritalStatus}
-                        </p>
-                      )}
-                    </div>
+                <div>
+  <Select
+    value={formData.maritalStatus}
+    onValueChange={(value) => {
+      setFormData({
+        ...formData,
+        maritalStatus: value,
+      });
+    }}
+  >
+    <SelectTrigger
+      className={
+        errors.maritalStatus && touched.maritalStatus
+          ? "border-red-500"
+          : ""
+      }
+    >
+      <SelectValue placeholder="Select Marital Status" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="Single">Single</SelectItem>
+      <SelectItem value="Married">Married</SelectItem>
+      <SelectItem value="Divorced">Divorced</SelectItem>
+      <SelectItem value="Widowed">Widowed</SelectItem>
+      <SelectItem value="Separated">Separated</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {errors.maritalStatus && touched.maritalStatus && (
+    <p className="text-red-500 text-xs mt-1">
+      {errors.maritalStatus}
+    </p>
+  )}
+</div>
 
                     <div className="flex flex-col">
                       <label
@@ -1506,13 +1542,26 @@ const PatientRegistrationForm = () => {
           setSubmitting(true);
 
           setPaymentMethod("");
+await updatePatient(id, {
+  ...buildUpdatePayload({ includeConsent: true }),
+  paymentMethod: "",
+});
 
-          await updatePatient(id, {
-            ...buildUpdatePayload({ includeConsent: true }),
-            paymentMethod: "",
-            amount: 0,
-            isExempted: true,
-          });
+navigate("/dashboard", {
+  state: {
+    openTab: "invoices",
+    invoicePayload: {
+      from: "patient-registration",
+      patientId: id,
+      patientName: formData.name,
+      patientPhone: formData.contactNumber,
+      invoiceType: "consultancy",
+      paymentMethod: "EXEMPTED",
+      amount: 0,
+      isExempted: true,
+    },
+  },
+});
 
           navigate(`/patient/${id}`);
         } catch (err) {

@@ -398,6 +398,7 @@ useEffect(() => {
     fetchTreatments();
   }
 }, [therapists, masterTreatments]);
+
   const fetchMasterTreatments = async () => {
     try {
       const [treatmentRes, therapyRes] = await Promise.all([
