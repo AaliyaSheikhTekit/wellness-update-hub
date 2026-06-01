@@ -699,7 +699,7 @@ setAllInvoices((prev) => {
           ? invoicePayload.patientId
           : selectedPatient.id,
       invoiceItems: lines.map((l) => ({
-        treatment: l.serviceId,
+        treatment: l.serviceId?l.serviceId: invoicePayload?.treatmentId,
         name: l.name,
         rate: l.rate,
         amount: (Number(l.quantity) || 0) *

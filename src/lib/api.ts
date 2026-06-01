@@ -329,6 +329,7 @@ export const getDoctors = async (search = "") => {
       },
     }
   );
+  console.log(res)
   if (!res.ok) throw new Error(`Failed to fetch doctors: ${res.status}`);
   return res.json(); // expect { data: [{ id, username, ...}] }
 };
@@ -842,7 +843,23 @@ export const generatetPrescriptionPDF = async (prescriptionId: string) => {
   return blob;
 };
 //feedback
-
+export const generateMedicalPDF = async (patientId: string) => {
+  const backendToken = getBackendToken();
+  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+  const response = await fetch(
+    `${API_BASE_URL}/appointment/generate-medical-pdf/${patientId}`,
+    { 
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+  const blob = await response.blob();
+  return blob;
+}
 
 // feedback.api.ts
 export const createFeedback = async (feedbackData: {

@@ -110,7 +110,7 @@ const EditInvoice = ({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-xl text-foreground">
-              {selectedInvoice ? `Edit Invoice #${selectedInvoice.id}` : "New Invoice"}
+              {selectedInvoice ? `Edit Invoice #${selectedInvoice.patientPhone}` : "New Invoice"}
             </CardTitle>
             <p className="text-muted-foreground">
               {selectedInvoice

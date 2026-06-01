@@ -79,8 +79,9 @@ const [
     null
   );
   const [diagnosisFile, setDiagnosisFile] = useState<File | null>(null);
-
-  console.log("Patient ID from params:", patient, id);
+const [activeTab, setActiveTab] = useState<
+  "recommendation" | "diet" | "treatment"
+>("recommendation");
   const [yogaCategories, setYogaCategories] = useState<any[]>([]);
   const [selectedAsanas, setSelectedAsanas] = useState<string[]>([]);
   const [openCategory, setOpenCategory] = useState<string | null>(null);
@@ -1355,9 +1356,56 @@ signature:
               {step === 6 && (
                 <div className="space-y-4">
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
-                    Treatment Plan
+                    Patient Recommendations & Treatment Plan
                   </h3>
-                  <div className="space-y-4">
+                  <div className="flex gap-2 mb-6">
+  <button
+    onClick={() => setActiveTab("recommendation")}
+    className={`px-4 py-2 rounded-lg font-medium ${
+      activeTab === "recommendation"
+        ? "bg-amber-600 text-white"
+        : "bg-gray-100 text-gray-700"
+    }`}
+  >
+    Recommendations
+  </button>
+
+  <button
+    onClick={() => setActiveTab("diet")}
+    className={`px-4 py-2 rounded-lg font-medium ${
+      activeTab === "diet"
+        ? "bg-green-600 text-white"
+        : "bg-gray-100 text-gray-700"
+    }`}
+  >
+    Weekly Diet
+  </button>
+
+  <button
+    onClick={() => setActiveTab("treatment")}
+    className={`px-4 py-2 rounded-lg font-medium ${
+      activeTab === "treatment"
+        ? "bg-blue-600 text-white"
+        : "bg-gray-100 text-gray-700"
+    }`}
+  >
+    Treatment Plan
+  </button>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+{activeTab === "recommendation" && (
+  <>
+ <div className="space-y-4">
                     {/* 🔹 Yoga / Lifestyle Recommendations */}
                     <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <h3 className="font-semibold text-blue-800 text-lg">
@@ -1384,7 +1432,6 @@ signature:
                         }
                       />
 
-                      {/* Yoga Category List */}
                       {/* Yoga Category List */}
                       <div className="mt-6 border-t border-blue-200 pt-4">
                         <h4 className="text-sm font-semibold text-blue-700 mb-3">
@@ -1679,7 +1726,14 @@ signature:
                           }
                         />
                       </div>
-                      <div>
+                    
+                    </div>
+
+                  </div>
+  </>
+)}
+ {activeTab === "treatment" && ( <>
+                        <div>
                         <label className="font-semibold text-gray-700 block mb-2">
                           Treatment Plan
                         </label>
@@ -1690,6 +1744,9 @@ signature:
                           includeYoga={true} // or a state you already have
                         />
                       </div>
+                      </> )}
+{activeTab === "diet" && (<>
+
                       <div>
                         <label className="font-semibold text-gray-700 block mb-2">
                           Diet Chart
@@ -1702,9 +1759,9 @@ signature:
                             consultationId={consultationId}
                           />
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </div></>)}
+                     
+                  
                 </div>
               )}
               {/* Step 7: Doctor's Signature */}
@@ -1992,12 +2049,7 @@ signature:
                     <label className="font-semibold text-gray-700 block mb-2">
                       Doctor's Signature
                     </label>
-                                       <Button
-  type="button"
-  onClick={saveDoctorSignature}
->
-  Save Doctor Signature
-</Button>
+                   
 
 {signature &&
   typeof signature === "string" && (
@@ -2013,6 +2065,7 @@ signature:
       />
     </div>
 )}
+
                     <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
                       <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
                       <SignatureCanvas
@@ -2038,8 +2091,16 @@ signature:
                             />
                           </div>
                         )}
+                                      
                       </div>
                     </div>
+                          <Button
+                          className="mt-4"
+  type="button"
+  onClick={saveDoctorSignature}
+>
+  Save Doctor Signature
+</Button>
                   </div>
                 </div>
               )}

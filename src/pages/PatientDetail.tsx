@@ -57,6 +57,7 @@ import {
   generatePDF,
   generatetInvoicePDF,
   generatetPrescriptionPDF,
+  generateMedicalPDF,
   getMedicines,
   getPatient,
   postData,
@@ -1585,7 +1586,7 @@ className="flex  overflow-x-auto w-full "
                                       "🧾 Generating PDF for appointment:",
                                       a.id
                                     );
-                                    const blob = await generatetPrescriptionPDF(
+                                    const blob = await generateMedicalPDF(
                                       a.id
                                     );
 

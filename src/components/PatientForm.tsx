@@ -13,6 +13,7 @@ import {
   updatePatient,
   getPaymentQr,
   getPatientById,
+  getTreatmentAll,
 } from "@/lib/api";
 import {
   Select,
@@ -221,6 +222,8 @@ const PatientRegistrationForm = () => {
   const [showPrint, setShowPrint] = useState(false);
   const printRef = useRef<HTMLDivElement | null>(null);
   const [cashAmount, setCashAmount] = useState<string>("");
+  const [treatmentList, setTreatmentList] = useState<any[]>([]);
+const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -286,7 +289,25 @@ const PatientRegistrationForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [apiSuccess, setApiSuccess] = useState("");
+useEffect(() => {
+  const loadTreatments = async () => {
+    if (step !== 4) return;
 
+    try {
+      const res = await getTreatmentAll();
+
+      setTreatmentList(
+        res?.data ||
+        res?.treatments ||
+        []
+      );
+    } catch (err) {
+      console.error("Failed to load treatments", err);
+    }
+  };
+
+  loadTreatments();
+}, [step]);
   // Auto-calculate vitals
   useEffect(() => {
     const newVitals = { ...vitals };
@@ -1434,7 +1455,31 @@ const PatientRegistrationForm = () => {
                   <h3 className="font-bold text-2xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Select Payment Method
                   </h3>
+<div className="mb-6">
+  <label className="block text-sm font-medium mb-2">
+    Select Treatment *
+  </label>
 
+  <Select
+    value={selectedTreatmentId}
+    onValueChange={setSelectedTreatmentId}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select Treatment" />
+    </SelectTrigger>
+
+    <SelectContent>
+      {treatmentList.map((t) => (
+        <SelectItem
+          key={t.id}
+          value={t.id}
+        >
+          {t.title || t.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
                   {/* UPI/QR Payment Option */}
                   <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-amber-400 transition-all">
                     <button
@@ -1504,7 +1549,11 @@ const PatientRegistrationForm = () => {
                       {/* ✅ Action button */}
                       <button
                         type="button"
-                        disabled={!Number(cashAmount) || Number(cashAmount) <= 0}
+                      disabled={
+  !selectedTreatmentId ||
+  !Number(cashAmount) ||
+  Number(cashAmount) <= 0
+}
                         onClick={() => {
                           setPaymentMethod("CASH");
 
@@ -1514,22 +1563,23 @@ const PatientRegistrationForm = () => {
                               invoicePayload: {
                                 from: "patient-registration",
                                 patientId: id,
+                                 treatmentId: selectedTreatmentId,
                                 patientName: formData.name,
-                                patientPhone: formData.contactNumber,
-                                invoiceType: "consultancy",
-                                paymentMethod: "CASH",
-                                amount: Number(cashAmount), // ✅ send amount
+                                  patientPhone: formData.contactNumber,
+                                  invoiceType: "consultancy",
+                                  paymentMethod: "CASH",
+                                  amount: Number(cashAmount), // ✅ send amount
+                                },
                               },
-                            },
-                          });
-                        }}
-                        className={`mt-4 w-full px-4 py-3 rounded-md text-white font-semibold transition ${!Number(cashAmount) || Number(cashAmount) <= 0
-                            ? "bg-gray-300 cursor-not-allowed"
-                            : "bg-amber-500 hover:bg-amber-600"
-                          }`}
-                      >
-                        Continue with Cash
-                      </button>
+                            });
+                          }}
+                          className={`mt-4 w-full px-4 py-3 rounded-md text-white font-semibold transition ${!Number(cashAmount) || Number(cashAmount) <= 0
+                              ? "bg-gray-300 cursor-not-allowed"
+                              : "bg-amber-500 hover:bg-amber-600"
+                            }`}
+                        >
+                          Continue with Cash
+                        </button>
                     </div>
                   </div>
 {/* Payment Exemption */}
@@ -1567,6 +1617,7 @@ navigate("/dashboard", {
     invoicePayload: {
       from: "patient-registration",
       patientId: id,
+       treatmentId: selectedTreatmentId,
       patientName: formData.name,
       patientPhone: formData.contactNumber,
       invoiceType: "consultancy",

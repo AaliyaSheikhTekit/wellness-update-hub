@@ -1027,7 +1027,7 @@ export function TreatmentPlanView({ patient }) {
           <strong>Patient Name:</strong> {localPatient.fullName}
         </div>
         <div>
-          <strong>Patient ID:</strong> {localPatient.id}
+          <strong>Patient Contact number:</strong> {localPatient.contactNumber || "N/A"}
         </div>
         <div>
           <strong>Age/Gender:</strong>{" "}

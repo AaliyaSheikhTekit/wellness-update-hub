@@ -89,7 +89,6 @@ type MealTiming = { time: string; label: string; placeholder: string };
 
 const DEFAULT_MEAL_TIMINGS: MealTiming[] = [
   { time: "04:30AM-05:00AM", label: "Early Morning", placeholder: "Pranayam" },
-  { time: "07:30AM-08:00AM", label: "Yoga Time", placeholder: "Yoga" },
   { time: "08:00AM-09:00AM", label: "Breakfast", placeholder: "Breakfast" },
   { time: "11:00AM-01:00PM", label: "Mid-Morning", placeholder: "Snack" },
   { time: "01:30PM-02:30PM", label: "Lunch", placeholder: "Lunch" },
