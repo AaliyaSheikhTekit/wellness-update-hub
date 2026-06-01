@@ -236,8 +236,15 @@ export default function TreatmentPlanTable({
                               </Button>
                             </PopoverTrigger>
 
-                            <PopoverContent className="w-80 sm:w-96 p-0" align="start">
-                              <div className="max-h-96 overflow-y-auto">
+                            <PopoverContent
+  className="w-80 sm:w-96 p-0"
+  align="start"
+  onWheel={(e) => e.stopPropagation()}
+>
+  <div
+    className="max-h-96 overflow-y-auto overscroll-contain"
+    onWheel={(e) => e.stopPropagation()}
+  >
                                 {yogaCategories.map((cat: any) => (
                                   <div key={cat.id}>
                                     <div className="font-semibold px-3 py-2 bg-gray-100 border-b text-xs sm:text-sm">
@@ -385,8 +392,15 @@ export default function TreatmentPlanTable({
                             </Button>
                           </PopoverTrigger>
 
-                          <PopoverContent className="w-80 sm:w-96 p-0" align="start">
-                            <div className="max-h-96 overflow-y-auto">
+                        <PopoverContent
+  className="w-80 sm:w-96 p-0"
+  align="start"
+  onWheel={(e) => e.stopPropagation()}
+>
+  <div
+    className="max-h-96 overflow-y-auto overscroll-contain"
+    onWheel={(e) => e.stopPropagation()}
+  >
                               {treatmentOptions.map((opt) => {
                                 const checked = row.treatments.includes(opt.id);
                                 return (

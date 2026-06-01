@@ -155,17 +155,25 @@ const DoctorDashboard: React.FC = () => {
   const [opentherapies, setOpenTherapies] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedTherapies, setSelectedTherapies] = useState<any[]>([]);
-  const filteredTherapies = useMemo(
-    () =>
-      therapyList.filter((t: any) =>
-        (t.treatment || t.title || "")
-          .toString()
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      ),
-    [therapyList, search]
-  );
+ const filteredTherapies = useMemo(() => {
+  const searchText = search.toLowerCase().trim();
 
+  return therapyList.filter((t: any) => {
+    const treatment = (t.treatment || t.title || "")
+      .toString()
+      .toLowerCase();
+
+    const shortForm = (t.shortForm || "")
+      .toString()
+      .toLowerCase();
+
+    return (
+      treatment.includes(searchText) ||
+      shortForm.includes(searchText)
+    );
+  });
+}, [therapyList, search]);
+console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList);
   // treatment plan rows
   const [treatmentPlanData, setTreatmentPlanData] = useState<any[]>([]);
 
@@ -1068,9 +1076,17 @@ console.log(consultationId, payload);
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                <span className="text-sm">
-                                  {therapy.treatment || therapy.title}
-                                </span>
+                               <div className="flex flex-col">
+  <span className="text-sm font-medium">
+    {therapy.treatment || therapy.title}
+  </span>
+
+  {therapy.shortForm && (
+    <span className="text-xs text-gray-500">
+      {therapy.shortForm}
+    </span>
+  )}
+</div>
                                 {therapy.duration && (
                                   <span className="text-xs text-muted-foreground ml-2">
                                     ({therapy.duration} min)
