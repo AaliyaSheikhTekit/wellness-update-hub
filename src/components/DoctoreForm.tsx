@@ -576,11 +576,21 @@ const payload = {
   },
 
   doctorName: doctorData.doctorName || "",
+patientSignature:
+  patientSigRef.current &&
+  !patientSigRef.current.isEmpty()
+    ? patientSigRef.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png")
+    : "",
 
-  signature: signature || "",
-
-  patientSignature:
-    signaturePatient || "",
+signature:
+  doctorSigRef.current &&
+  !doctorSigRef.current.isEmpty()
+    ? doctorSigRef.current
+        .getTrimmedCanvas()
+        .toDataURL("image/png")
+    : "",
 
   includeYoga: includeYoga,
 
@@ -588,7 +598,7 @@ const payload = {
 
   treatmentPlan: treatmentPlanData,
 
-  consent: consentGiven ? "true" : "false",
+  consent: consentGiven,
 };
       console.log("Updating consultation with payload:", payload);
 

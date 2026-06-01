@@ -280,7 +280,15 @@ const [activeTab, setActiveTab] = useState("appointments");
         : sortedAppointments[0]
     );
   }, [sortedAppointments]);
+const activeConsultation = useMemo(() => {
+  if (!activeAppointment?.consultation?.length) return null;
 
+  return [...activeAppointment.consultation].sort(
+    (a, b) =>
+      new Date(b.createdAt || 0).getTime() -
+      new Date(a.createdAt || 0).getTime()
+  )[0];
+}, [activeAppointment]);
   // Optional tiny helper
   const fmtDate = (v?: string) =>
     v
@@ -1318,10 +1326,10 @@ className="flex  overflow-x-auto w-full "
                     <p className="font-medium">Consent Status</p>
                     <Badge
                       variant={
-                        activeAppointment?.consent ? "default" : "secondary"
+                        activeConsultation?.consent ? "default" : "secondary"
                       }
                     >
-                      {activeAppointment?.consent ? "Given" : "Not Given"}
+                      {activeConsultation?.consent ? "Given" : "Not Given"}
                     </Badge>
                   </div>
                 </CardContent>
@@ -1332,13 +1340,34 @@ className="flex  overflow-x-auto w-full "
                 <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Signature
+                    Signature Doctor
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 text-sm">
-                  {activeAppointment?.signature ? (
+                  {activeConsultation?.signature ? (
                     <img
-                      src={activeAppointment.signature}
+                      src={activeConsultation.signature}
+                      alt="Signature"
+                      className="h-32 w-full object-contain border rounded bg-white"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No signature on file.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+               <Card className="border rounded-lg shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Signature Patient
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 text-sm">
+                  {activeConsultation?.patientSignature ? (
+                    <img
+                      src={activeConsultation.patientSignature}
                       alt="Signature"
                       className="h-32 w-full object-contain border rounded bg-white"
                     />
@@ -1725,9 +1754,10 @@ className="flex  overflow-x-auto w-full "
             </div>
           </TabsContent>
           <TabsContent value="consultations">
+  
             <ConsultationHistory
-              consultations={sortedConsultations}
-              appointment={activeAppointment}
+              consultations={activeAppointment?.consultation || []}
+  appointment={activeAppointment}
               dateFormatter={fmtDT}
               showHeader={true}
               embedded={true}

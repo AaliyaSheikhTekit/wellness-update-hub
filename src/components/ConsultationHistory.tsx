@@ -37,9 +37,20 @@ interface InvestigationsOrDiagnosis {
   provisionalDiagnosisUrl?: string;
 }
 
+interface DietChart {
+  title?: string;
+  restrictions?: string;
+}
+
+interface YogaChart {
+  title?: string;
+  duration?: string;
+}
+
 interface Treatment {
-  dietChart?: string;
-  yogaChart?: string;
+  recommendation: any;
+  dietChart?: DietChart | string;
+  yogaChart?: YogaChart | string;
   treatmentPlan?: string;
 }
 
@@ -72,6 +83,8 @@ interface Consultation {
   note?: string;
   notes?: string;
   prescriptions?: any[];
+  consent?: boolean;
+  patientSignature?: string | null;
 }
 
 interface ConsultationHistoryProps {
@@ -86,40 +99,6 @@ interface ConsultationHistoryProps {
   embedded?: boolean;
 }
 
-const mockConsultations: Consultation[] = [
-  {
-    id: "9a797bc1-f79c-4578-b47d-fe34984284da",
-    chronicIllnesses: "Diabetes, Hypertension (BP)",
-    surgeriesOrInjuries: "Appendix removal in 2018",
-    allergies: "Penicillin",
-    familyHistory: "Father has CAD, mother has asthma",
-    systemic: {
-      nrvousSystem: "Alert, oriented, reflexes normal",
-      respiratorySystem: "NAD",
-      cardioVascularSystem: "S1 S2 heard, no murmurs",
-      musculoskeletalSystem: "Normal range of motion, no deformities",
-      gastroIntestinalSystem: "Soft, non-tender, no organomegaly"
-    },
-    investigationsOrDiagnosis: {
-      investigations: "Blood test shows mild anemia, chest X-ray normal",
-      investigationsUrl: "",
-      provisionalDiagnosis: "Iron deficiency anemia",
-      provisionalDiagnosisUrl: "https://api.ikshanaturopathy.com/public/1761630760607-report.pdf"
-    },
-    treatment: {
-      dietChart: "",
-      yogaChart: "test",
-      treatmentPlan: "t"
-    },
-    doctorName: "Dr. Smith",
-    yogaChart: null,
-    includeYoga: true,
-    signature: "",
-    createdAt: "2025-10-28T05:49:33.438Z",
-    updatedAt: "2025-10-28T05:56:00.636Z",
-    deletedAt: null
-  }
-];
 
 const ConsultationHistory = ({ 
   consultations: propConsultations,
@@ -128,7 +107,7 @@ const ConsultationHistory = ({
   showHeader = true,
   embedded = false
 }: ConsultationHistoryProps = {}) => {
-  const consultations = propConsultations || mockConsultations;
+  const consultations = propConsultations ;
 
   const formatDate = (dateString: string) => {
     if (dateFormatter) {
@@ -143,28 +122,69 @@ const ConsultationHistory = ({
     });
   };
 
-  const InfoSection = ({ icon: Icon, title, content }: { icon: any; title: string; content?: string | null }) => {
-    if (!content) return null;
-    
-    return (
-      <div className="flex gap-3 p-4 rounded-lg bg-muted/50 border border-border/50">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-muted-foreground mb-1">{title}</p>
-          <p className="text-sm text-foreground break-words">{content}</p>
-        </div>
+const InfoSection = ({
+  icon: Icon,
+  title,
+  content,
+}: {
+  icon: any;
+  title: string;
+  content?: any;
+}) => {
+  if (
+    content === null ||
+    content === undefined ||
+    content === "" ||
+    (typeof content === "object" && Object.keys(content).length === 0)
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-3 p-4 rounded-lg bg-muted/50 border border-border/50">
+      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <Icon className="w-5 h-5 text-primary" />
       </div>
-    );
-  };
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-muted-foreground mb-1">
+          {title}
+        </p>
+
+        <p className="text-sm text-foreground break-words">
+          {typeof content === "object"
+            ? JSON.stringify(content)
+            : content}
+        </p>
+      </div>
+    </div>
+  );
+};
 
   const containerClass = embedded 
     ? "" 
     : "min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6";
 
   const contentWrapperClass = embedded ? "" : "max-w-7xl mx-auto space-y-6";
+const getSystemicValue = (system: any) => {
+  if (!system) return "";
 
+  if (typeof system === "string") {
+    return system;
+  }
+
+  if (system.ad) {
+    return `AD${
+      system.adDescription ? ` - ${system.adDescription}` : ""
+    }`;
+  }
+
+  if (system.nad) {
+    return "NAD";
+  }
+
+  return "";
+};
   return (
     <div className={containerClass}>
       <div className={contentWrapperClass}>
@@ -281,39 +301,55 @@ const ConsultationHistory = ({
                       </TabsContent>
 
                       {/* Examination Tab */}
-                      <TabsContent value="examination" className="space-y-4">
-                        {consultation.systemic ? (
-                          <>
-                            <InfoSection 
-                              icon={Brain} 
-                              title="Nervous System" 
-                              content={consultation.systemic.nrvousSystem}
-                            />
-                            <InfoSection 
-                              icon={Wind} 
-                              title="Respiratory System" 
-                              content={consultation.systemic.respiratorySystem}
-                            />
-                            <InfoSection 
-                              icon={Heart} 
-                              title="Cardiovascular System" 
-                              content={consultation.systemic.cardioVascularSystem}
-                            />
-                            <InfoSection 
-                              icon={Bone} 
-                              title="Musculoskeletal System" 
-                              content={consultation.systemic.musculoskeletalSystem}
-                            />
-                            <InfoSection 
-                              icon={Apple} 
-                              title="Gastrointestinal System" 
-                              content={consultation.systemic.gastroIntestinalSystem}
-                            />
-                          </>
-                        ) : (
-                          <p className="text-center text-muted-foreground py-8">No systemic examination data available</p>
-                        )}
-                      </TabsContent>
+                     <TabsContent value="examination" className="space-y-4">
+  {consultation.systemic ? (
+    <>
+      <InfoSection
+        icon={Brain}
+        title="Nervous System"
+        content={getSystemicValue(
+          consultation.systemic?.nrvousSystem
+        )}
+      />
+
+      <InfoSection
+        icon={Wind}
+        title="Respiratory System"
+        content={getSystemicValue(
+          consultation.systemic?.respiratorySystem
+        )}
+      />
+
+      <InfoSection
+        icon={Heart}
+        title="Cardiovascular System"
+        content={getSystemicValue(
+          consultation.systemic?.cardioVascularSystem
+        )}
+      />
+
+      <InfoSection
+        icon={Bone}
+        title="Musculoskeletal System"
+        content={getSystemicValue(
+          consultation.systemic?.musculoskeletalSystem
+        )}
+      />
+
+      <InfoSection
+        icon={Apple}
+        title="Gastrointestinal System"
+        content={getSystemicValue(
+          consultation.systemic?.gastroIntestinalSystem
+        )}
+      />
+    </>
+  ) : (
+    <p className="text-center text-muted-foreground py-8">
+      No systemic examination data available
+    </p>
+  )}
+</TabsContent>
 
                       {/* Diagnosis Tab */}
                       <TabsContent value="diagnosis" className="space-y-4">
@@ -379,44 +415,113 @@ const ConsultationHistory = ({
                       </TabsContent>
 
                       {/* Treatment Tab */}
-                      <TabsContent value="treatment" className="space-y-4">
-                        {consultation.treatment ? (
-                          <>
-                            <InfoSection 
-                              icon={Apple} 
-                              title="Diet Chart" 
-                              content={consultation.treatment.dietChart}
-                            />
-                            {consultation.includeYoga && (
-                              <InfoSection 
-                                icon={Activity} 
-                                title="Yoga Chart" 
-                                content={consultation.treatment.yogaChart}
-                              />
-                            )}
-                            <InfoSection 
-                              icon={Pill} 
-                              title="Treatment Plan" 
-                              content={consultation.treatment.treatmentPlan}
-                            />
-                          </>
-                        ) : (
-                          <p className="text-center text-muted-foreground py-8">No treatment plan available</p>
-                        )}
-
-                        {consultation.signature && (
-                          <div className="mt-6 pt-6 border-t">
-                            <p className="text-sm text-muted-foreground mb-2">Doctor's Signature</p>
-                            <div className="p-4 bg-muted/30 rounded-lg">
-                             <img
-        src={consultation.signature}
-        alt="Doctor's Signature"
-        className="h-20 object-contain"
+                    <TabsContent value="treatment" className="space-y-4">
+  {consultation.treatment ? (
+    <>
+      <InfoSection
+        icon={Apple}
+        title="Diet Chart"
+        content={
+          consultation.treatment?.dietChart && typeof consultation.treatment.dietChart === "object"
+            ? `
+Title: ${
+                consultation.treatment.dietChart.title || "-"
+              }
+Restrictions: ${
+                consultation.treatment.dietChart.restrictions || "-"
+              }
+`
+            : ""
+        }
       />
-                            </div>
-                          </div>
-                        )}
-                      </TabsContent>
+
+      {consultation.includeYoga && (
+        <InfoSection
+          icon={Activity}
+          title="Yoga Chart"
+          content={
+              consultation.treatment?.yogaChart
+                ? typeof consultation.treatment.yogaChart === "object"
+                  ? `
+  Title: ${consultation.treatment.yogaChart.title || "-"}
+  Duration: ${consultation.treatment.yogaChart.duration || "-"}
+  `
+                  : `
+  Title: ${consultation.treatment.yogaChart || "-"}
+  `
+                : ""
+            }
+        />
+      )}
+
+      <InfoSection
+        icon={Pill}
+        title="Recommendations"
+        content={
+          consultation.treatment?.recommendation?.title?.length
+            ? consultation.treatment.recommendation.title.join(
+                ", "
+              )
+            : "No recommendation provided"
+        }
+      />
+    </>
+  ) : (
+    <p className="text-center text-muted-foreground py-8">
+      No treatment plan available
+    </p>
+  )}
+
+  {consultation.signature && (
+    <div className="mt-6 pt-6 border-t">
+      <p className="text-sm text-muted-foreground mb-2">
+        Doctor Signature
+      </p>
+
+      <div className="p-4 bg-muted/30 rounded-lg">
+        <img
+          src={consultation.signature}
+          alt="Doctor Signature"
+          className="h-20 object-contain"
+        />
+      </div>
+    </div>
+  )}
+
+  {consultation.patientSignature && (
+    <div className="mt-6">
+      <p className="text-sm text-muted-foreground mb-2">
+        Patient Signature
+      </p>
+
+      <div className="p-4 bg-muted/30 rounded-lg">
+        <img
+          src={consultation.patientSignature}
+          alt="Patient Signature"
+          className="h-20 object-contain"
+        />
+      </div>
+    </div>
+  )}
+
+  {consultation.consent !== undefined && (
+    <div className="mt-4">
+      <p className="text-sm text-muted-foreground mb-2">
+        Consent Status
+      </p>
+
+      <Badge
+        variant={
+          consultation.consent ? "default" : "destructive"
+        }
+      >
+        {consultation.consent
+          ? "Consent Given"
+          : "Consent Not Given"}
+      </Badge>
+    </div>
+  )}
+</TabsContent>
                     </Tabs>
 
                     {/* Updated timestamp */}
