@@ -120,6 +120,7 @@ export default function DietChartView({ patient }: { patient: any }) {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-background p-4">
       <Card className="shadow-lg max-w-7xl mx-auto">
@@ -160,9 +161,13 @@ export default function DietChartView({ patient }: { patient: any }) {
           {appointmentsWithDiet.map((apt: any, aptIndex: number) => {
             const mergedPlan = {
               restrictions: apt.dietPlan.find((p: any) => p.restrictions)?.restrictions || "",
+              vegetables: apt.dietPlan.flatMap((p: any) => p.vegetables || []),
+              fruits: apt.dietPlan.flatMap((p: any) => p.fruits || []),
+              atta: apt.dietPlan.flatMap((p: any) => p.atta || []),
+              dal: apt.dietPlan.flatMap((p: any) => p.dal || []),
               patientDietPlan: apt.dietPlan.flatMap((p: any) => p.patientDietPlan || []),
             };
-
+console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
             const allTimeSlotsSet = new Set<string>();
             mergedPlan.patientDietPlan.forEach((pdp: any) => {
               pdp.dietPlanItem.forEach((item: any) => {
@@ -226,11 +231,6 @@ export default function DietChartView({ patient }: { patient: any }) {
                   Weekly Diet Plan
                 </h3>
 
-                {mergedPlan.restrictions && (
-                  <div className="mb-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
-                    <strong>Restrictions:</strong> {mergedPlan.restrictions}
-                  </div>
-                )}
 
                 <div className="overflow-x-auto">
                   <table className="w-full border-2 border-gray-800 text-xs">
@@ -315,6 +315,36 @@ export default function DietChartView({ patient }: { patient: any }) {
                     </tbody>
                   </table>
                 </div>
+                
+                {mergedPlan.restrictions && (
+                  <div className="mb-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
+                    <strong>Restrictions:</strong> {mergedPlan.restrictions}
+                  </div>
+                )}
+                {mergedPlan.vegetables.length > 0 && (
+                  <div className="mb-4">
+                    <strong className="font-semibold">Vegetables:</strong>{" "}
+                    {mergedPlan.vegetables.join(", ")}
+                  </div>
+                )}
+                {mergedPlan.fruits.length > 0 && (
+                  <div className="mb-4">
+                    <strong className="font-semibold">Fruits:</strong>{" "}
+                    {mergedPlan.fruits.join(", ")}
+                  </div>
+                )}
+                {mergedPlan.atta.length > 0 && (
+                  <div className="mb-4">
+                    <strong className="font-semibold">Atta:</strong>{" "}
+                    {mergedPlan.atta.join(", ")}
+                  </div>
+                )}
+                {mergedPlan.dal.length > 0 && (
+                  <div className="mb-4">
+                    <strong className="font-semibold">Dal:</strong>{" "}
+                    {mergedPlan.dal.join(", ")}
+                  </div>
+                )}  
               </div>
             );
           })}

@@ -259,7 +259,7 @@ const ReceptionDashboard = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
                 Reception Dashboard
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500">Wellness Healthcare Center</p>
+              <p className="text-xs sm:text-sm text-gray-500">Iksha Naturopathy</p>
             </div>
           </div>
 
