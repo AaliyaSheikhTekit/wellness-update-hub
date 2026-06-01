@@ -64,6 +64,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import InvoiceLineItem from "../components/InvoiceLineItem";
+import EditInvoice from "@/components/EditInvoice";
 
 /* ---------------- Types ---------------- */
 type DiscountType = "percentage" | "fixed";
@@ -83,12 +85,12 @@ type ServiceItem = {
 };
 
 type InvoiceLine = {
-  clientId: string; // stable key to prevent input remount/cursor jump
+  clientId: string;
   id?: string;
   serviceId?: string;
   name: string;
-  quantity: number;
-  rate: number;
+  quantity: string;
+  rate: string;
   amount: number;
 };
 
@@ -209,7 +211,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
 
   // Selection
   const [selectedInvoice, setSelectedInvoice] = useState<ApiInvoice | null>(null);
-
+const [allInvoices, setAllInvoices] = useState<ApiInvoice[]>([]);
   // Editing invoice (builder)
   const [isNewInvoice, setIsNewInvoice] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState<string>(() =>
@@ -261,21 +263,20 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const monthlyEarnings = useMemo(() => {
-    return invoices
-      .filter((inv) => {
-        if (inv.status !== "paid") return false;
-        const d = new Date(inv.date);
-        return (
-          d.getMonth() === currentMonth && d.getFullYear() === currentYear
-        );
-      })
-      .reduce((sum, inv) => sum + Number(inv.finalTotal ?? inv.total ?? 0), 0);
-  }, [invoices, currentMonth, currentYear]);
-
-  const pendingInvoices = useMemo(() => {
-    return invoices.filter((inv) => inv.status === "unpaid");
-  }, [invoices]);
+const monthlyEarnings = useMemo(() => {
+  return invoices
+    .filter((inv) => inv.status === "paid")
+    .reduce(
+      (sum, inv) =>
+        sum + Number(inv.finalTotal ?? inv.total ?? 0),
+      0
+    );
+}, [invoices]);
+const pendingInvoices = useMemo(() => {
+  return invoices.filter(
+    (inv) => inv.status === "unpaid"
+  );
+}, [invoices]);
 
   const totalPendingCollection = useMemo(() => {
     return pendingInvoices.reduce(
@@ -286,6 +287,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
 
   /* ---------------- Builders ---------------- */
   const startNewInvoice = (opts?: { keepLockedPatient?: boolean }) => {
+
     setIsNewInvoice(true);
     setSelectedInvoice(null);
 
@@ -325,17 +327,17 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     setInvoiceDate(inv.date?.slice(0, 10) || new Date().toISOString().slice(0, 10));
     setDueDate(inv.dueDate?.slice(0, 10) || "");
 
-    setLines(
-      inv.items.map((i) => ({
-        clientId: i.id || newClientId(),
-        id: i.id,
-        serviceId: i.serviceId,
-        name: i.name,
-        quantity: i.quantity,
-        rate: i.rate,
-        amount: i.amount,
-      }))
-    );
+  setLines(
+  inv.items.map((i) => ({
+    clientId: i.id || newClientId(),
+    id: i.id,
+    serviceId: i.serviceId,
+    name: i.name,
+    quantity: String(i.quantity ?? ""),
+    rate: String(i.rate ?? ""),
+    amount: Number(i.amount ?? 0),
+  }))
+);
 
     setDiscountAmount(String(inv.discount ?? 0));
     setDiscountType(inv.discountType ?? "percentage");
@@ -356,39 +358,64 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     const rate = Number(s.rate ?? s.price ?? 0);
     setLines((prev) => [
       ...prev,
-      {
-        clientId: newClientId(),
-        serviceId: s.id,
-        name: s.title,
-        quantity: 1,
-        rate,
-        amount: rate,
-      },
+     {
+  clientId: newClientId(),
+  serviceId: s.id,
+  name: s.title,
+  quantity: "1",
+  rate: String(rate),
+  amount: rate,
+}
     ]);
   };
 
   const addCustomLine = () => {
     setLines((prev) => [
       ...prev,
-      { clientId: newClientId(), name: "Custom Line Item", quantity: 1, rate: 0, amount: 0 },
-    ]);
+{
+  clientId: newClientId(),
+  name: "Custom Line Item",
+  quantity: "1",
+  rate: "0",
+  amount: 0,
+}    ]);
   };
 
-  const updateLine = (idx: number, patch: Partial<InvoiceLine>) => {
-    setLines((prev) =>
-      prev.map((line, i) => {
-        if (i !== idx) return line;
-        const updated = { ...line, ...patch };
-        return {
-          ...updated,
-          amount: Number(updated.quantity || 0) * Number(updated.rate || 0),
-        };
-      })
+const updateLine = (
+  clientId: string,
+  patch: Partial<InvoiceLine>
+) => {
+  setLines((prev) => {
+    const index = prev.findIndex(
+      (x) => x.clientId === clientId
     );
-  };
 
-  const removeLine = (idx: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== idx));
+    if (index === -1) return prev;
+
+    const next = [...prev];
+
+    const current = next[index];
+
+    next[index] = {
+      ...current,
+      ...patch,
+      amount:
+        Number(
+          patch.quantity ??
+            current.quantity
+        ) *
+        Number(
+          patch.rate ??
+            current.rate
+        ),
+    };
+
+    return next;
+  });
+};
+
+  const removeLine = (clientId: string) => {
+    setLines((prev) => prev.filter((line) => line.clientId !== clientId));
   };
 
   /* ---------------- Payload (LOCK patient + init once) ---------------- */
@@ -438,13 +465,13 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         setInvoiceStatus("unpaid");
         const amt = Number(invoicePayload?.amount ?? 0);
         setLines([
-          {
-            clientId: newClientId(),
-            name: "consultancy",
-            quantity: 1,
-            rate: amt > 0 ? amt : 0,
-            amount: amt > 0 ? amt : 0,
-          },
+         {
+  clientId: newClientId(),
+  name: "consultancy",
+  quantity: "1",
+  rate: String(amt > 0 ? amt : 0),
+  amount: amt > 0 ? amt : 0,
+}
         ]);
         setStatus("unpaid");
         setDiscountAmount("0");
@@ -471,8 +498,21 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         ? res
         : [];
 
-      const mapped = rawList.map(mapApiInvoice);
+   const mapped = rawList.map(mapApiInvoice);
 
+setAllInvoices((prev) => {
+  const merged = [...prev];
+
+  mapped.forEach((inv) => {
+    const exists = merged.find((x) => x.id === inv.id);
+
+    if (!exists) {
+      merged.push(inv);
+    }
+  });
+
+  return merged;
+});
       const statusFiltered =
         invoiceStatus === "monthly_earnings"
           ? mapped
@@ -550,45 +590,6 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     loadPatients();
   }, [patientSearch, toast, lockPatient]);
 
-  /* ---------------- Auto-load treatment plan lines (skip for consultancy flow) ---------------- */
-  useEffect(() => {
-    const loadPatientPlan = async () => {
-      if (!selectedPatient?.id) return;
-      if (isConsultancyFlow) return;
-
-      try {
-        const res = await getPatient(selectedPatient.id);
-        const data = res?.data ?? res;
-        const p0 = Array.isArray(data) ? data[0] : data;
-        const plan = p0?.treatmentPlan || [];
-        const allAssignments = (plan || []).flatMap(
-          (p: any) => p.treatmentAssign || []
-        );
-
-        if (allAssignments.length > 0) {
-          const mapped: InvoiceLine[] = allAssignments.map((assign: any) => {
-            const t = assign?.treatment || {};
-            const price = Number(t.price || 0);
-            return {
-              clientId: newClientId(),
-              serviceId: t.id,
-              name: t.title || "Treatment",
-              quantity: 1,
-              rate: price,
-              amount: price,
-            };
-          });
-          setLines(mapped);
-        } else {
-          setLines([]);
-        }
-      } catch (error) {
-        console.error("Error fetching patient plan:", error);
-      }
-    };
-
-    loadPatientPlan();
-  }, [selectedPatient?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- Fetch: services catalog ---------------- */
   useEffect(() => {
@@ -621,7 +622,8 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
 
   /* ---------------- Calculations (invoice builder) ---------------- */
   const subtotal = useMemo(
-    () => lines.reduce((sum, l) => sum + l.quantity * l.rate, 0),
+    () => lines.reduce((sum, l) => sum + (Number(l.quantity) || 0) *
+(Number(l.rate) || 0), 0),
     [lines]
   );
 
@@ -670,7 +672,13 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       return;
     }
 
-    const _subtotal = lines.reduce((a, b) => a + b.quantity * b.rate, 0);
+ const _subtotal = lines.reduce(
+  (a, b) =>
+    a +
+    (Number(b.quantity) || 0) *
+    (Number(b.rate) || 0),
+  0
+);
     const _discountVal =
       discountType === "percentage"
         ? (_subtotal * parseFloat(discountAmount || "0")) / 100
@@ -694,7 +702,8 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
         treatment: l.serviceId,
         name: l.name,
         rate: l.rate,
-        amount: l.quantity * l.rate,
+        amount: (Number(l.quantity) || 0) *
+(Number(l.rate) || 0),
         qty: l.quantity,
       })),
     };
@@ -836,12 +845,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     return (
       <Card className="shadow-natural">
         <CardHeader className="border-b border-border">
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
-              <p className="text-muted-foreground">Invoice #{inv.id}</p>
-            </div>
-            {/* ✅ Action buttons are OUTSIDE the print ref so they don't appear in print */}
+           {/* ✅ Action buttons are OUTSIDE the print ref so they don't appear in print */}
             <div className="flex gap-2 print:hidden">
               <Button variant="outline" size="sm" onClick={() => editExistingInvoice(inv)}>
                 <Edit3 className="h-4 w-4 mr-2" /> Edit
@@ -853,13 +857,42 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
                 <Download className="h-4 w-4 mr-2" /> PDF
               </Button>
             </div>
-          </div>
+        
         </CardHeader>
 
         {/* ✅ ref is placed here so the entire printable area including totals is captured */}
         <div ref={invoiceRef}>
           <CardContent className="p-6 space-y-6">
             {/* Patient + Dates */}
+              <div className="border-b-2 border-[#7b5e57] pb-4 mb-6">
+  <div className="flex flex-col items-center text-center">
+    <img
+      src="https://www.ikshanaturopathy.com/assets/iksha_logo-DegYGxOY.png"
+      alt="Iksha"
+      className="w-20 h-auto mb-2"
+    />
+
+    <h2 className="text-2xl font-semibold text-[#7b5e57]">
+      Ikshā Naturopathy
+    </h2>
+
+    <p className="text-xs text-gray-600 max-w-2xl mt-1">
+      Empire Market Place, in front of bypass, next to Empire Estate,
+      opp. Sahara city homes, Indore, Deoguradia, Madhya Pradesh - 452016
+    </p>
+
+    <p className="text-xs text-gray-600">
+      Phone: +91 7879168791 | +91 9343922950
+    </p>
+  </div>
+</div>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
+              <p className="text-muted-foreground">Invoice #{inv.id}</p>
+            </div>
+           
+          </div>
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-foreground mb-3">Bill To:</h3>
@@ -902,36 +935,36 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
               </div>
             </div>
 
-            {/* Items table */}
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Services & Treatments</h3>
-              <div className="border border-border rounded-md overflow-hidden">
-                <div className="bg-muted/50 px-4 py-3 grid grid-cols-12 gap-4 text-sm font-medium text-foreground">
-                  <div className="col-span-6">Service</div>
-                  <div className="col-span-2 text-center">Qty</div>
-                  <div className="col-span-2 text-right">Rate</div>
-                  <div className="col-span-2 text-right">Amount</div>
-                </div>
-                {inv.items.map((service, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
-                  >
-                    <div className="col-span-6 text-foreground">{service.name}</div>
-                    <div className="col-span-2 text-center text-muted-foreground">
-                      {service.quantity}
-                    </div>
-                    <div className="col-span-2 text-right text-muted-foreground">
-                      ₹{toINR(service.rate)}
-                    </div>
-                    <div className="col-span-2 text-right font-medium text-foreground">
-                      ₹{toINR(service.amount)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+           <div className="overflow-hidden border rounded-lg">
+  <table className="w-full">
+    <thead>
+      <tr className="bg-[#efe6e4]">
+        <th className="p-3 text-left">Service</th>
+        <th className="p-3 text-center">Qty</th>
+        <th className="p-3 text-right">Rate</th>
+        <th className="p-3 text-right">Amount</th>
+      </tr>
+    </thead>
 
+    <tbody>
+      {inv.items.map((item, index) => (
+        <tr
+          key={index}
+          className="border-t"
+        >
+          <td className="p-3">{item.name}</td>
+          <td className="p-3 text-center">{item.quantity}</td>
+          <td className="p-3 text-right">
+            ₹{toINR(item.rate)}
+          </td>
+          <td className="p-3 text-right font-semibold">
+            ₹{toINR(item.amount)}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
             {/* ✅ Totals section — visible in view AND captured in print */}
             <div className="space-y-2 pt-2">
               <Separator />
@@ -985,6 +1018,27 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
                   </span>
                 </div>
               )}
+              <div className="mt-10 border-t pt-6">
+  <div className="flex justify-end">
+    <div className="text-right">
+      <div className="font-semibold ">
+        Authorized By
+      </div>
+
+      <img
+        src="https://api.ikshanaturopathy.com/assets/stamp.png"
+        alt="Iksha Stamp"
+        className="w-40 ml-auto"
+      />
+
+    
+
+      <div className="text-sm text-gray-500">
+        {new Date().toLocaleString()}
+      </div>
+    </div>
+  </div>
+</div>
             </div>
 
             {/* Payment actions — hidden in print */}
@@ -1049,433 +1103,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   };
 
   /* ---------------- Edit/New Mode ---------------- */
-  const EditInvoice = () => (
-    <Card className="shadow-natural">
-      <CardHeader className="border-b border-border">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-xl text-foreground">
-              {selectedInvoice ? `Edit Invoice #${selectedInvoice.id}` : "New Invoice"}
-            </CardTitle>
-            <p className="text-muted-foreground">
-              {selectedInvoice
-                ? "Update items and amounts"
-                : "Create a new invoice"}
-            </p>
-          </div>
 
-          {selectedInvoice && (
-            <div className="flex items-center gap-2">
-              <Label>Status</Label>
-              <Select
-                value={status}
-                onValueChange={(val: "draft" | "unpaid" | "paid") => setStatus(val)}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-6 space-y-6">
-        {/* Patient + Dates */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-semibold text-foreground mb-3">Bill To (Patient)</h3>
-            <div className="space-y-2">
-              <Label>Search Patient</Label>
-              <Input
-                placeholder="Type name or phone to search…"
-                value={patientSearch}
-                disabled={lockPatient}
-                onChange={(e) => setPatientSearch(e.target.value)}
-              />
-
-              <div className="max-h-40 overflow-auto border rounded">
-                {lockPatient ? (
-                  selectedPatient ? (
-                    <div className="p-3 text-sm">
-                      <div className="font-medium">{selectedPatient.fullName}</div>
-                      <div className="text-muted-foreground">
-                        {selectedPatient.contactNumber || "-"}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 text-sm text-muted-foreground">
-                      Loading patient…
-                    </div>
-                  )
-                ) : patientLoading ? (
-                  <div className="p-3 text-sm text-muted-foreground">Loading…</div>
-                ) : patients.length ? (
-                  patients.map((p) => (
-                    <div
-                      key={p.id}
-                      className={`p-2 text-sm cursor-pointer hover:bg-muted/50 ${
-                        selectedPatient?.id === p.id ? "bg-muted/60" : ""
-                      }`}
-                      onClick={() => setSelectedPatient(p)}
-                    >
-                      <div className="font-medium">{p.fullName}</div>
-                      <div className="text-muted-foreground">
-                        {p.contactNumber || "-"}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    No patients found.
-                  </div>
-                )}
-              </div>
-
-              {selectedPatient && (
-                <div className="mt-3 text-sm bg-muted/20 p-3 rounded border">
-                  <div className="font-medium">{selectedPatient.fullName}</div>
-                  <div className="text-muted-foreground">
-                    {selectedPatient.contactNumber || "-"}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {selectedPatient.email || "-"}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Invoice Date</Label>
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Due Date</Label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Items */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground">Services & Treatments</h3>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" /> Add from catalog
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[520px] p-3">
-                  <div className="space-y-3">
-                    <Input
-                      placeholder="Search service…"
-                      value={serviceQuery}
-                      onChange={(e) => setServiceQuery(e.target.value)}
-                    />
-                    <div className="max-h-64 overflow-auto border rounded">
-                      {servicesLoading ? (
-                        <div className="p-3 text-sm text-muted-foreground">Loading…</div>
-                      ) : catalogFiltered.length ? (
-                        catalogFiltered.map((s) => (
-                          <div
-                            key={s.id}
-                            className="p-3 hover:bg-muted/50 cursor-pointer border-b text-sm"
-                            onClick={() => addLineFromService(s)}
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="font-medium text-foreground">
-                                  {s.title}
-                                </div>
-                                {s.subTitle && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {s.subTitle}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-600 mt-1">
-                                  🕒 {s.duration || "N/A"}
-                                  {s.validity ? ` | ⏳ ${s.validity}` : ""}
-                                </div>
-                                {s.category && (
-                                  <div className="text-xs text-amber-700 font-semibold mt-1">
-                                    🏷️ {String(s.category)}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="font-bold text-green-700 text-right">
-                                ₹{toINR(s.price ?? 0)}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-3 text-sm text-muted-foreground">
-                          No services found.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Button variant="outline" size="sm" onClick={addCustomLine}>
-                <Plus className="h-4 w-4 mr-2" /> Add custom
-              </Button>
-            </div>
-          </div>
-
-          <div className="border border-border rounded-md overflow-hidden">
-            <div className="bg-muted/50 px-4 py-3 grid grid-cols-12 gap-4 text-sm font-medium text-foreground">
-              <div className="col-span-5">Service</div>
-              <div className="col-span-2 text-center">Qty</div>
-              <div className="col-span-2 text-right">Rate</div>
-              <div className="col-span-2 text-right">Amount</div>
-              <div className="col-span-1 text-right"></div>
-            </div>
-
-            {lines.length ? (
-              lines.map((l, idx) => (
-                <div
-                  key={l.clientId}
-                  className="px-4 py-3 grid grid-cols-12 gap-4 text-sm border-t border-border"
-                >
-                  <div className="col-span-5">
-                    <Input
-                      key={`name-${l.clientId}`}
-                      value={l.name || ""}
-                      onChange={(e) =>
-                        setLines((prev) =>
-                          prev.map((item, i) =>
-                            i === idx ? { ...item, name: e.target.value } : item
-                          )
-                        )
-                      }
-                    />
-                  </div>
-
-                  <div className="col-span-2 text-center">
-                    <Input
-                      type="text"
-                      min="1"
-                      value={l.quantity}
-                      onChange={(e) =>
-                        updateLine(idx, {
-                          quantity: Math.max(1, Number(e.target.value) || 1),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="col-span-2 text-right">
-                    <Input
-                      className="text-right"
-                      type="text"
-                      value={l.rate}
-                      onChange={(e) =>
-                        updateLine(idx, {
-                          rate: Math.max(0, Number(e.target.value) || 0),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="col-span-2 text-right font-medium text-foreground pt-2">
-                    ₹{toINR(l.quantity * l.rate)}
-                  </div>
-
-                  <div className="col-span-1 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeLine(idx)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-4 text-sm text-muted-foreground">
-                No items yet — add from catalog or custom.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Discount */}
-        <div className="space-y-4 pt-4 border-t border-border">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              Discount
-            </h3>
-            {!isEditingDiscount && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditingDiscount(true)}
-              >
-                Edit Discount
-              </Button>
-            )}
-          </div>
-
-          {isEditingDiscount && (
-            <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
-              <div className="space-y-3">
-                <Label>Discount Type</Label>
-                <RadioGroup
-                  value={discountType}
-                  onValueChange={(v: DiscountType) => setDiscountType(v)}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="percentage" id="percentage" />
-                    <Label
-                      htmlFor="percentage"
-                      className="flex items-center gap-1 cursor-pointer"
-                    >
-                      <Percent className="h-3 w-3" />
-                      Percentage
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="fixed" id="fixed" />
-                    <Label
-                      htmlFor="fixed"
-                      className="flex items-center gap-1 cursor-pointer"
-                    >
-                      <IndianRupee className="h-3 w-3" />
-                      Fixed Amount
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="discount-amount">
-                  {discountType === "percentage"
-                    ? "Discount Percentage"
-                    : "Discount Amount"}
-                </Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="discount-amount"
-                      type="text"
-                      min="0"
-                      max={discountType === "percentage" ? "100" : undefined}
-                      step={discountType === "percentage" ? "0.1" : "1"}
-                      value={discountAmount}
-                      onChange={(e) => setDiscountAmount(e.target.value)}
-                      className="pr-8"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      {discountType === "percentage" ? "%" : "₹"}
-                    </span>
-                  </div>
-                  <Button onClick={() => setIsEditingDiscount(false)}>Apply</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditingDiscount(false);
-                      setDiscountAmount("0");
-                      setDiscountType("percentage");
-                    }}
-                  >
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Totals */}
-        <div className="space-y-4">
-          <Separator />
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal:</span>
-              <span className="font-medium text-foreground">₹{toINR(subtotal)}</span>
-            </div>
-
-            {discountVal > 0 && (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Tag className="h-3 w-3" />
-                    Discount{" "}
-                    {discountType === "percentage"
-                      ? `(${discountAmount}%)`
-                      : "(Fixed)"}
-                    :
-                  </span>
-                  <span className="font-medium text-green-600">
-                    -₹{toINR(discountVal)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">After Discount:</span>
-                  <span className="font-medium text-foreground">
-                    ₹{toINR(afterDiscount)}
-                  </span>
-                </div>
-              </>
-            )}
-            <Separator />
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold text-foreground">Total:</span>
-              <span className="font-bold text-foreground">₹{toINR(total)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button
-            onClick={() => handleSaveInvoice("draft")}
-            disabled={isConsultancyAmountInvalid}
-          >
-            Save Draft
-          </Button>
-
-          <Button
-            className="bg-yellow-600 hover:bg-yellow-700"
-            onClick={() => handleSaveInvoice("unpaid")}
-            disabled={isConsultancyAmountInvalid}
-          >
-            Save & Mark Unpaid
-          </Button>
-
-          <Button
-            className="bg-green-600 hover:bg-green-700"
-            onClick={() => handleSaveInvoice("paid")}
-            disabled={isConsultancyAmountInvalid}
-          >
-            Save & Mark Paid
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   /* ------------------------------------------------------------------ */
   /* ✅ Monthly Earnings Tab — pure frontend UI, no API, no loading state */
@@ -1625,9 +1253,44 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
           <div className="lg:col-span-2">
             {isNewInvoice ? (
               // ✅ stable key so EditInvoice is never remounted while typing
-              <div key="edit-invoice-pane">
-                <EditInvoice />
-              </div>
+             
+              <EditInvoice {...({
+                selectedInvoice,
+                status,
+                setStatus,
+                patientSearch,
+                setPatientSearch,
+                lockPatient,
+                selectedPatient,
+                patientLoading,
+                patients,
+                setSelectedPatient,
+                invoiceDate,
+                setInvoiceDate,
+                dueDate,
+                setDueDate,
+                servicesLoading,
+                serviceQuery,
+                setServiceQuery,
+                catalogFiltered,
+                addLineFromService,
+                addCustomLine,
+                lines,
+                updateLine,
+                removeLine,
+                discountType,
+                setDiscountType,
+                discountAmount,
+                setDiscountAmount,
+                subtotal,
+                discountVal,
+                afterDiscount,
+                total,
+                isEditingDiscount,
+                setIsEditingDiscount,
+                handleSaveInvoice,
+                isConsultancyAmountInvalid,
+              } as any)} />
             ) : selectedInvoice ? (
               // ✅ stable key per invoice id so ViewInvoice only remounts when switching invoices
               <div key={`view-invoice-pane-${selectedInvoice.id}`}>

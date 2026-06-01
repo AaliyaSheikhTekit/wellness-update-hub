@@ -13,6 +13,7 @@ type TreatmentRow = {
   asanas: string[];
   treatments: string[];
   duration: string;
+   isDurationEdited?: boolean;
 };
 
 type ApiTreatmentPlanItem = {
@@ -260,35 +261,12 @@ export default function TreatmentPlanTable({
                                             className={`p-2 sm:p-3 border-b hover:bg-gray-50 cursor-pointer ${
                                               checked ? "bg-blue-50" : ""
                                             }`}
-                                         onClick={() => {
-  const next = checked
-    ? row.treatments.filter((t) => t !== opt.id)
-    : [...row.treatments, opt.id];
-
-  const totalDuration = next.reduce((sum, treatmentId) => {
-    const treatment = treatmentOptions.find(
-      (t) => t.id === treatmentId
-    );
-
-    const minutes = parseInt(
-      treatment?.duration?.match(/\d+/)?.[0] || "0",
-      10
-    );
-
-    return sum + minutes;
-  }, 0);
-
-  const newRows = [...rows];
-
-  newRows[i] = {
-    ...newRows[i],
-    treatments: next,
-    duration: totalDuration > 0 ? `${totalDuration} min` : "",
-  };
-
-  setRows(newRows);
-  updateParent(newRows);
-}}
+                                            onClick={() => {
+                                              const next = checked
+                                                ? row.asanas.filter((a) => a !== yogaId)
+                                                : [...row.asanas, yogaId];
+                                              handleChange(i, "asanas", next);
+                                            }}
                                           >
                                             <div className="flex items-start gap-2">
                                               <Checkbox checked={checked} className="mt-0.5" />
@@ -433,11 +411,44 @@ export default function TreatmentPlanTable({
                                       checked ? "bg-blue-50" : ""
                                     }`}
                                     onClick={() => {
-                                      const next = checked
-                                        ? row.treatments.filter((t) => t !== opt.id)
-                                        : [...row.treatments, opt.id];
-                                      handleChange(i, "treatments", next);
-                                    }}
+  const next = checked
+    ? row.treatments.filter((t) => t !== opt.id)
+    : [...row.treatments, opt.id];
+
+  const totalDuration = next.reduce((sum, treatmentId) => {
+    const treatment = treatmentOptions.find(
+      (t) => t.id === treatmentId
+    );
+
+    if (!treatment?.duration) return sum;
+
+    const matches = treatment.duration.match(/\d+/g);
+
+    if (!matches?.length) return sum;
+
+    // Handle:
+    // "25 mins" => 25
+    // "20-25 mins" => 25
+    // "30-45 mins" => 45
+    const duration =
+      matches.length > 1
+        ? parseInt(matches[matches.length - 1], 10)
+        : parseInt(matches[0], 10);
+
+    return sum + duration;
+  }, 0);
+
+  const newRows = [...rows];
+
+  newRows[i] = {
+    ...newRows[i],
+    treatments: next,
+    duration: totalDuration > 0 ? `${totalDuration} mins` : "",
+  };
+
+  setRows(newRows);
+  updateParent(newRows);
+}}
                                   >
                                     <div className="flex items-start gap-2">
                                       <Checkbox checked={checked} className="mt-0.5" />
@@ -506,16 +517,42 @@ export default function TreatmentPlanTable({
           <button
             type="button"
             onClick={(e) => {
-              e.stopPropagation();
+  e.stopPropagation();
 
-              handleChange(
-                i,
-                "treatments",
-                row.treatments.filter(
-                  (tid) => tid !== treatmentId
-                )
-              );
-            }}
+  const nextTreatments = row.treatments.filter(
+    (tid) => tid !== treatmentId
+  );
+
+  const totalDuration = nextTreatments.reduce((sum, id) => {
+    const treatment = treatmentOptions.find(
+      (t) => t.id === id
+    );
+
+    if (!treatment?.duration) return sum;
+
+    const matches = treatment.duration.match(/\d+/g);
+
+    if (!matches?.length) return sum;
+
+    const duration =
+      matches.length > 1
+        ? parseInt(matches[matches.length - 1], 10)
+        : parseInt(matches[0], 10);
+
+    return sum + duration;
+  }, 0);
+
+  const newRows = [...rows];
+
+  newRows[i] = {
+    ...newRows[i],
+    treatments: nextTreatments,
+    duration: totalDuration > 0 ? `${totalDuration} mins` : "",
+  };
+
+  setRows(newRows);
+  updateParent(newRows);
+}}
             className="
               hover:text-red-500
               transition-colors
@@ -554,11 +591,20 @@ export default function TreatmentPlanTable({
 
                     {/* ⏳ Duration */}
                     <td className="px-2 py-2 sm:py-3">
-                      <Input
-                         placeholder="Auto calculated"
+                     <Input
   value={row.duration}
-  readOnly
-  className="bg-gray-100"
+  onChange={(e) => {
+    const newRows = [...rows];
+
+    newRows[i] = {
+      ...newRows[i],
+      duration: e.target.value,
+      isDurationEdited: true,
+    };
+
+    setRows(newRows);
+    updateParent(newRows);
+  }}
 />
                     </td>
 
