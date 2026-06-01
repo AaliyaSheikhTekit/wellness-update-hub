@@ -260,12 +260,35 @@ export default function TreatmentPlanTable({
                                             className={`p-2 sm:p-3 border-b hover:bg-gray-50 cursor-pointer ${
                                               checked ? "bg-blue-50" : ""
                                             }`}
-                                            onClick={() => {
-                                              const next = checked
-                                                ? row.asanas.filter((a) => a !== yogaId)
-                                                : [...row.asanas, yogaId];
-                                              handleChange(i, "asanas", next);
-                                            }}
+                                         onClick={() => {
+  const next = checked
+    ? row.treatments.filter((t) => t !== opt.id)
+    : [...row.treatments, opt.id];
+
+  const totalDuration = next.reduce((sum, treatmentId) => {
+    const treatment = treatmentOptions.find(
+      (t) => t.id === treatmentId
+    );
+
+    const minutes = parseInt(
+      treatment?.duration?.match(/\d+/)?.[0] || "0",
+      10
+    );
+
+    return sum + minutes;
+  }, 0);
+
+  const newRows = [...rows];
+
+  newRows[i] = {
+    ...newRows[i],
+    treatments: next,
+    duration: totalDuration > 0 ? `${totalDuration} min` : "",
+  };
+
+  setRows(newRows);
+  updateParent(newRows);
+}}
                                           >
                                             <div className="flex items-start gap-2">
                                               <Checkbox checked={checked} className="mt-0.5" />
@@ -532,11 +555,11 @@ export default function TreatmentPlanTable({
                     {/* ⏳ Duration */}
                     <td className="px-2 py-2 sm:py-3">
                       <Input
-                        placeholder="Duration"
-                        value={row.duration}
-                        onChange={(e) => handleChange(i, "duration", e.target.value)}
-                        className="w-full min-w-[100px] text-xs sm:text-sm"
-                      />
+                         placeholder="Auto calculated"
+  value={row.duration}
+  readOnly
+  className="bg-gray-100"
+/>
                     </td>
 
                     {/* ❌ Remove Row */}
