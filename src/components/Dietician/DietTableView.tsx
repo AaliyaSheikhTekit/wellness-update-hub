@@ -446,22 +446,32 @@ const DietTableView = ({
       }
 
       const payload = {
-        appointmentId: String(appointmentId),
-        consultationId: String(consultationId),
-        patientId,
-        restrictions: commonRestrictions,
-        weekPlan: groupedByDate,
-      };
+  appointmentId: String(appointmentId),
+  consultationId: String(consultationId),
+  patientId,
+  restrictions: commonRestrictions,
+
+  vegetables: selectedVeg.join(", "),
+  fruits: selectedFruits.join(", "),
+  dal: selectedDal.join(", "),
+  atta: selectedAtta.join(", "),
+
+  weekPlan: groupedByDate,
+};
 
       console.log("📦 Sending payload:", JSON.stringify(payload, null, 2));
 
       await createDietPlan(
-        patientId,
-        String(appointmentId),
-        String(consultationId),
-        groupedByDate,
-        commonRestrictions
-      );
+  patientId,
+  String(appointmentId),
+  String(consultationId),
+  groupedByDate,
+  commonRestrictions,
+  selectedVeg.join(", "),
+  selectedFruits.join(", "),
+  selectedDal.join(", "),
+  selectedAtta.join(", ")
+);
 
       toast({
         title: "Success",

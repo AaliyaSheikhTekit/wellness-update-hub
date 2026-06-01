@@ -417,12 +417,23 @@ export const createDietPlan = async (
   consultationId: string,
   weekPlan: {
     date: string;
-    dietPlanItems: { time: string; dietItem: string[]; yogaItem?: string[];  }[];
+    dietPlanItems: {
+      time: string;
+      dietItem: string[];
+      yogaItem?: string[];
+    }[];
   }[],
-  restrictions: string
+  restrictions: string,
+  vegetables: string,
+  fruits: string,
+  dal: string,
+  atta: string
 ) => {
   const backendToken = getBackendToken();
-  if (!backendToken) throw new Error("Missing backend token. Please login first.");
+
+  if (!backendToken) {
+    throw new Error("Missing backend token. Please login first.");
+  }
 
   const response = await fetch(`${API_BASE_URL}/diet-plan/create`, {
     method: "POST",
@@ -435,13 +446,21 @@ export const createDietPlan = async (
       consultationId,
       patientId,
       restrictions,
-      weekPlan, // ✅ single array for all 7 days
+
+      vegetables,
+      fruits,
+      dal,
+      atta,
+
+      weekPlan,
     }),
   });
 
   if (!response.ok) {
     const errorData = await response.text();
-    throw new Error(`Failed to create diet plan: ${response.status} - ${errorData}`);
+    throw new Error(
+      `Failed to create diet plan: ${response.status} - ${errorData}`
+    );
   }
 
   return await response.json();
