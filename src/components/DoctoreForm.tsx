@@ -603,7 +603,7 @@ signature:
 };
       console.log("Updating consultation with payload:", payload);
 
-      const result = await updatePatientConsult(consultationId, payload);
+      const result = await updatePatientConsult(  consultationId || "", payload);
 
       console.log("Consultation updated successfully:", result);
       alert("Doctor consultation form submitted successfully!");

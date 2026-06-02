@@ -1039,119 +1039,106 @@ export function TreatmentPlanView({ patient }) {
       <div className="mt-6 overflow-x-auto">
         <table className="w-full border-2 border-gray-800 text-sm">
           <thead>
-            <tr>
-              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                Date
-              </th>
-              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                Time Slot
-              </th>
-              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                Yoga/Asanas
-              </th>
-              <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
-                Treatments
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(groupedPlans).map(([date, plansRaw], idx) => {
-              const plans = plansRaw as TreatmentPlanEntry[];
-              // combine all plans of the same date
-              const allTimeSlots = plans.map((p) => p.timeSlot || "N/A").join(", ");
-              const allAsanas =
-                plans
-                  .map(
-                    (p) =>
-                      p.yogaPlan ||
-                      (p.asanas?.length ? p.asanas.map((a) => a.name).join(", ") : "")
-                  )
-                  .filter(Boolean)
-                  .join(", ") || "N/A";
+  <tr>
+    <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+      Date
+    </th>
+    <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+      Time Slot
+    </th>
+    <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+      Yoga / Asanas
+    </th>
+    <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+      Treatments
+    </th>
+    <th className="border-2 border-gray-800 bg-gray-200 p-3 text-left">
+      Therapist
+    </th>
+  </tr>
+</thead>
+         <tbody>
+  {Object.entries(groupedPlans).map(([date, plansRaw]) => {
+    const plans = plansRaw as TreatmentPlanEntry[];
 
-              // collect all treatments across all plans of same date
-              const allTreatments = plans.flatMap((plan:any) => {
-                if (!plan.treatmentAssign?.length)
-                  return [
-                    <span
-                      key={plan.id}
-                      className="text-gray-500 italic block"
-                    >
-                      No treatments assigned
-                    </span>,
-                  ];
+    const allTimeSlots =
+      plans.map((p) => p.timeSlot || "-").join(", ") || "-";
 
-                return plan.treatmentAssign.map((assign, tIdx) => {
-                  const t = assign.treatment;
-                  const therapist = assign.therapist;
-                  const existing = sessions.find(
-                    (s) => s.treatmentId === t.id && s.date === toYMD(plan.date)
-                  );
+    const allAsanas =
+      plans
+        .flatMap((p) => p.asanas || [])
+        .map((a) => a.name)
+        .join(", ") || "-";
 
-                  return (
-                    <div
-                      key={assign.id}
-                      className="border-l-4 border-amber-500 pl-3 py-2 bg-gray-50 rounded mb-2 last:mb-0"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-semibold text-gray-800">
-                            {t?.title || `Treatment ${tIdx + 1}`}
-                          </div>
-                          {t?.subTitle && (
-                            <div className="text-xs text-gray-600 mt-1">
-                              {t.subTitle}
-                            </div>
-                          )}
-                       
-                          {existing && therapist && (
-                            <div className="mt-2 text-xs text-emerald-700">
-                              Assigned to: {therapist.name}
-                            </div>
-                          )}
-                        </div>
+    const treatmentNames: string[] = [];
+    const therapistCells: React.ReactNode[] = [];
 
-                        <div className="flex gap-2">
-                          <button
-                            className="px-2.5 py-1.5 rounded-lg border text-sm"
-                            onClick={() => openAssign(plan, t.id)}
-                          >
-                            {existing ? "Edit" : "Assign"}
-                          </button>
-                          <button
-                            className="px-2.5 py-1.5 rounded-lg border text-sm bg-blue-50 hover:bg-blue-100"
-                            onClick={() => {
-                              setUpdateInitial({
-                                patientId: localPatient.id,
-                                treatmentPlanId: plan.id,
-                                treatmentAssignId: assign.id,
-                              });
-                              setUpdateOpen(true);
-                            }}
-                          >
-                            Change
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
+    plans.forEach((plan: any) => {
+      (plan.treatmentAssign || []).forEach((assign: any) => {
+        treatmentNames.push(assign.treatment?.title || "-");
+
+        therapistCells.push(
+          <div
+            key={assign.id}
+            className="flex items-center justify-between border rounded px-2 py-1 mb-2"
+          >
+            <span>
+              {assign.therapist?.name || "Not Assigned"}
+            </span>
+
+            <button
+              className="px-2 py-1 text-xs rounded bg-amber-500 text-white hover:bg-amber-600"
+              onClick={() => {
+                setDraft({
+                  open: true,
+                  initial: {
+                    patientId: localPatient.id,
+                    patientName: localPatient.fullName,
+                    treatmentPlanId: plan.id,
+                    treatmentAssignId: assign.id,
+                    therapistId: assign.therapist?.id || "",
+                    treatmentId: assign.treatment?.id,
+                    date: toYMD(plan.date),
+                  },
                 });
-              });
+              }}
+            >
+              {assign.therapist ? "Edit" : "Assign"}
+            </button>
+          </div>
+        );
+      });
+    });
 
-              return (
-                <tr key={date}>
-                  <td className="border-2 border-gray-800 p-3 font-semibold">
-                    {formatDate(date)}
-                  </td>
-                  <td className="border-2 border-gray-800 p-3">{allTimeSlots}</td>
-                  <td className="border-2 border-gray-800 p-3 whitespace-pre-line">
-                    {allAsanas}
-                  </td>
-                  <td className="border-2 border-gray-800 p-3">{allTreatments}</td>
-                </tr>
-              );
-            })}
-          </tbody>
+    return (
+      <tr key={date}>
+        <td className="border-2 border-gray-800 p-3 font-semibold">
+          {formatDate(date)}
+        </td>
+
+        <td className="border-2 border-gray-800 p-3">
+          {allTimeSlots}
+        </td>
+
+        <td className="border-2 border-gray-800 p-3">
+          {allAsanas}
+        </td>
+
+        <td className="border-2 border-gray-800 p-3">
+          {treatmentNames.length
+            ? treatmentNames.join(", ")
+            : "-"}
+        </td>
+
+        <td className="border-2 border-gray-800 p-3">
+          {therapistCells.length
+            ? therapistCells
+            : "Not Assigned"}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
         </table>
       </div>
 

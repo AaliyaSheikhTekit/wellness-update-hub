@@ -704,7 +704,7 @@ const activeConsultation = useMemo(() => {
           </div>
           
           {/* Conditionally render button */}
-          {["Naturopathy Doctor", "superAdmin"].includes(
+          {/* {["Naturopathy Doctor", "superAdmin"].includes(
             localStorage.getItem("userName") || ""
           ) && (
             <Button
@@ -717,7 +717,7 @@ const activeConsultation = useMemo(() => {
             >
               Give Consultancy
             </Button>
-          )}
+          )} */}
           
           <p className="text-xs sm:text-sm text-muted-foreground break-words">
             {patient.address || "—"}
