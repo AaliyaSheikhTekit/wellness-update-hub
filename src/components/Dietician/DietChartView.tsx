@@ -73,8 +73,8 @@ export default function DietChartView({ patient }: { patient: any }) {
   );
 
   const getLocationLabel = (time: string) => {
-    if (time === "04:30AM-05:00AM" || time === "07:30AM-08:00AM") return "(Yoga Bhawan)";
-    if (time === "05:00PM-06:00PM") return "(Canteen)";
+    if (time === "04:30AM-05:00AM" || time === "07:30AM-08:00AM") return "";
+    if (time === "05:00PM-06:00PM") return "";
     return "";
   };
 
@@ -233,91 +233,120 @@ console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
 
 
                 <div className="overflow-x-auto">
-                  <table className="w-full border-2 border-gray-800 text-xs">
-                    <thead>
-                      <tr>
-                        <th className="border-2 border-gray-800 bg-amber-500 text-white p-3 text-center font-bold">
-                          Date
-                        </th>
-                        {allTimeSlots.map((time) => (
-                          <th
-                            key={time}
-                            className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-semibold"
-                          >
-                            <div>{time}</div>
-                            {getLocationLabel(time) && (
-                              <div className="text-[10px] text-gray-600 font-normal mt-1">
-                                {getLocationLabel(time)}
-                              </div>
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedDates.map((date) => {
-                        const pdpsForDate = dateMap.get(date)!;
+  <table className="w-full border-2 border-gray-800 text-sm">
+    <thead>
+      <tr>
+        <th className="border-2 border-gray-800 bg-amber-500 text-white p-3 text-center font-bold w-[150px]">
+          Date
+        </th>
 
-                        return (
-                          <tr key={date}>
-                            <td className="border-2 border-gray-800 p-3 font-bold bg-gray-50 text-center align-top">
-                              {new Date(date).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              })}
-                            </td>
-                            {allTimeSlots.map((timeSlot) => {
-                              const allDietItems: any[] = [];
-                              pdpsForDate.forEach((pdp: any) => {
-                                const dietItem = pdp.dietPlanItem.find(
-                                  (item: any) => item.time === timeSlot
-                                );
-                                if (dietItem && dietItem.dietItem.length > 0) {
-                                  allDietItems.push(...dietItem.dietItem);
-                                }
-                              });
+        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold w-[220px]">
+          Time Slot
+        </th>
 
-                              return (
-                                <td
-                                  key={timeSlot}
-                                  className="border-2 border-gray-800 p-3 align-top bg-white"
-                                >
-                                  {allDietItems.length > 0 ? (
-                                    <div className="space-y-2">
-                                      {allDietItems.map((food: any, idx: number) => (
-                                        <div
-                                          key={food.id || idx}
-                                          className="leading-tight"
-                                        >
-                                          <div className="font-semibold text-gray-800">
-                                            {food.name}
-                                          </div>
-                                          {food.subForm && (
-                                            <div className="text-[10px] text-gray-500 mt-0.5">
-                                              {food.subForm}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="text-gray-400 italic text-center">
-                                      —
-                                    </div>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold">
+          Diet Plan
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {sortedDates.map((date) => {
+        const pdpsForDate = dateMap.get(date)!;
+
+        const rows: {
+          timeSlot: string;
+          dietItems: any[];
+        }[] = [];
+
+        allTimeSlots.forEach((timeSlot) => {
+          const allDietItems: any[] = [];
+
+          pdpsForDate.forEach((pdp: any) => {
+            const dietItem = pdp.dietPlanItem.find(
+              (item: any) => item.time === timeSlot
+            );
+
+            if (
+              dietItem &&
+              dietItem.dietItem &&
+              dietItem.dietItem.length > 0
+            ) {
+              allDietItems.push(...dietItem.dietItem);
+            }
+          });
+
+          rows.push({
+            timeSlot,
+            dietItems: allDietItems,
+          });
+        });
+
+        return rows.map((row, index) => (
+          <tr key={`${date}-${row.timeSlot}`}>
+            {index === 0 && (
+              <td
+                rowSpan={rows.length}
+                className="border-2 border-gray-800 p-3 font-bold bg-gray-50 text-center align-top"
+              >
+                {new Date(date).toLocaleDateString(
+                  "en-IN",
+                  {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  }
+                )}
+              </td>
+            )}
+
+            <td className="border-2 border-gray-800 p-3 font-semibold bg-amber-50 align-top">
+              <div>{row.timeSlot}</div>
+
+              {getLocationLabel(row.timeSlot) && (
+                <div className="text-[11px] text-gray-500 mt-1">
+                  {getLocationLabel(row.timeSlot)}
                 </div>
+              )}
+            </td>
+
+            <td className="border-2 border-gray-800 p-3 align-top">
+              {row.dietItems.length > 0 ? (
+                <div className="space-y-3">
+                  {row.dietItems.map(
+                    (food: any, idx: number) => (
+                      <div
+                        key={food.id || idx}
+                        className="border-b border-gray-100 pb-2 last:border-0"
+                      >
+                        <div className="font-semibold text-gray-800">
+                          {food.name}
+                        </div>
+
+                        {food.subForm && (
+                          <div className="text-xs text-gray-500">
+                            {food.subForm}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="text-gray-400 italic">
+                  No Diet Assigned
+                </div>
+              )}
+            </td>
+          </tr>
+        ));
+      })}
+    </tbody>
+  </table>
+</div>
                 
                 {mergedPlan.restrictions && (
-                  <div className="mb-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
+                  <div className="mb-4 mt-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
                     <strong>Restrictions:</strong> {mergedPlan.restrictions}
                   </div>
                 )}
