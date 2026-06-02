@@ -333,6 +333,68 @@ export const getDoctors = async (search = "") => {
   if (!res.ok) throw new Error(`Failed to fetch doctors: ${res.status}`);
   return res.json(); // expect { data: [{ id, username, ...}] }
 };
+// ---------------------- Doctor Master ----------------------
+
+export const createDoctor = async (payload: {
+  name: string;
+  designation?: string;
+}) => {
+  const backendToken = getBackendToken();
+
+  const response = await fetch(
+    `${API_BASE_URL}/doctor/create`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(backendToken
+          ? {
+              Authorization: `Bearer ${backendToken}`,
+            }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok)
+    throw new Error(
+      `Create Doctor failed: ${response.status}`
+    );
+
+  return await response.json();
+};
+
+export const getAllDoctors = async (
+  search = ""
+) => {
+  const backendToken = getBackendToken();
+
+  if (!backendToken)
+    throw new Error(
+      "Missing backend token. Please login first."
+    );
+
+  const response = await fetch(
+    `${API_BASE_URL}/doctor/get?search=${encodeURIComponent(
+      search
+    )}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${backendToken}`,
+      },
+    }
+  );
+
+  if (!response.ok)
+    throw new Error(
+      `Fetch Doctor failed: ${response.status}`
+    );
+
+  return await response.json();
+};
 export async function getPatientById(id: string) {
   const token = getBackendToken();
   const res = await fetch(`${API_BASE_URL}/patient/${id}`, {

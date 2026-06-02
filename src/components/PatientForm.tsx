@@ -800,34 +800,77 @@ useEffect(() => {
   });
 
 
-  const mapPatientToVitals = (p: any) => ({
-    "Blood Pressure": p.bloodPressure || "",
-    Pulse: p.pulse ?? "",
-    Weight: p.weightKg ?? "",
-    Height: p.heightCm ?? "",
-    BMI: p.bmi ?? "",
-    Temperature: p.temperatureF ?? "",
-  });
+const mapPatientToVitals = (p: any) => ({
+  "Blood Pressure": p.bloodPressure || "",
+  Pulse: p.pulse ?? "",
+  Weight: p.weightKg ?? "",
+  Height: p.heightCm ?? "",
+  BMI: p.bmi ?? "",
+  Temperature: p.temperatureF ?? "",
+  "Pain Scale": p.painScale ?? "",
+  "Mid-Upper Arm Circumference":
+    p.midUpperArmCircumferenceCm ?? "",
+  "Waist Circumference":
+    p.waistCircumferenceCm ?? "",
+  "Hip Circumference":
+    p.hipCircumferenceCm ?? "",
+  "Waist-Hip Ratio (WHR)":
+    p.whr ?? "",
+  "Skinfold Thickness (Triceps)":
+    p.skinfoldTricepsMm ?? "",
+  "Skinfold Thickness (Biceps)":
+    p.skinfoldBicepsMm ?? "",
+  "Skinfold (Subscapular)":
+    p.skinfoldSubscapularMm ?? "",
+  "Skinfold (Suprailiac)":
+    p.skinfoldSuprailiacMm ?? "",
+  "Body Fat %":
+    p.bodyFatPercent ?? "",
+});
 
-  const mapPatientToLifestyle = (p: any) => ({
-    diet: p.diet || "",
-    appetite: p.appetite ? p.appetite.split(",") : [],
-    taste: p.taste ? p.taste.split(",") : [],
-    bowelmovements: p.bowelmovements ? p.bowelmovements.split(",") : [],
-    sleep: p.sleep ? p.sleep.split(",") : [],
-    addictions: p.addictions ? p.addictions.split(",") : [],
-    physicalActivity: p.physicalActivity ? p.physicalActivity.split(",") : [],
-    waterIntake: p.waterIntakeLiters || "",
-    otherWaterIntake: p.otherWaterIntake || "",
-    stress: p.stress ? p.stress.split(",") : [],
-    mentalState: p.mentalState ? p.mentalState.split(",") : [],
-    wakeTime: p.sleepWakeUpTime || "",
-    sleepTime: p.sleepTime || "",
-    otherDiet: p.otherDiet || "",
-    otherAddictions: p.otherAddictions || "",
-    otherBowel: p.otherBowel || "",
-    otherSleep: p.otherSleep || "",
-  });
+ const mapPatientToLifestyle = (p: any) => ({
+  diet: p.diet ? [p.diet] : [],
+  appetite: p.appetite ? [p.appetite] : [],
+  taste: p.taste ? [p.taste] : [],
+
+  bowelMovements: p.bowel
+    ? p.bowel.split(",").map((x: string) => x.trim())
+    : [],
+
+  sleep: p.sleep ? [p.sleep] : [],
+
+  addictions: Array.isArray(p.addictions)
+    ? p.addictions
+    : p.addictions
+      ? String(p.addictions)
+          .split(",")
+          .map((x: string) => x.trim())
+      : [],
+
+  physicalActivity: Array.isArray(p.physicalActivity)
+    ? p.physicalActivity
+    : p.physicalActivity
+      ? String(p.physicalActivity)
+          .split(",")
+          .map((x: string) => x.trim())
+      : [],
+
+  waterIntake: p.waterIntakeLiters || "",
+
+  stress: p.stress ? [p.stress] : [],
+  mentalState: p.mentalState ? [p.mentalState] : [],
+
+  wakeTime: p.sleepWakeUpTime || "",
+  sleepTime: p.sleepTime || "",
+
+  otherDiet: p.otherDiet || "",
+  otherAddictions: p.otherAddictions || "",
+  otherBowelMovements: p.otherBowel || "",
+  otherPhysicalActivity: p.otherPhysicalActivity || "",
+  otherWaterIntake: p.otherWaterIntake || "",
+
+  frequency_bowelMovements: p.bowelFrequency || "",
+});
 
   useEffect(() => {
     const load = async () => {
@@ -1192,7 +1235,7 @@ useEffect(() => {
 
                   <div>
 
-                    <h4 className="font-semibold text-amber-700 mt-4">
+                    <h4 className="font-semibold text-amber-700 mt-4 mb-2">
                       Your primary health concern and please specify how long you
                       have had this condition.
                     </h4>

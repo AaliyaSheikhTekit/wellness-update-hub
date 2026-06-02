@@ -23,16 +23,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { appointmentPost, getBackendToken, getDoctors } from "@/lib/api";
+import { appointmentPost, getAllDoctors, getBackendToken,createDoctor, } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { StatusButtons } from "@/components/StatusButtons";
 
 /* ------------------------ Types ------------------------ */
 interface Doctor {
   id: string;
-  username: string;
-  status?: string;
-  role?: string;
+  name: string;
+  designation?: string;
 }
 interface Appointment {
   id: string;
@@ -318,6 +317,8 @@ const Appointments = () => {
   const [type, setType] = useState("");
   const [doctor, setDoctors] = useState<Doctor[]>([]);
   const [doctorSearch, setDoctorSearch] = useState("");
+ const [newDoctorName, setNewDoctorName] = useState("");
+const [newDoctorDesignation, setNewDoctorDesignation] = useState("");
   const [doctorId, setDoctorId] = useState<string>("");
   const [doctorDisplay, setDoctorDisplay] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -331,8 +332,8 @@ const Appointments = () => {
     let ignore = false;
     (async () => {
       try {
-        const res = await getDoctors(doctorSearch);
-        if (!ignore) setDoctors(res?.data ?? []);
+        const res = await getAllDoctors(doctorSearch);
+if (!ignore) setDoctors(res?.data ?? []);
       } catch (e) {
         console.error(e);
       }
@@ -359,11 +360,13 @@ const Appointments = () => {
     doctor: appt.doctor
       ? {
           id: appt.doctor.id || "unknown",
-          username: appt.doctor.username || "N/A",
+          name: appt.doctor.name || "N/A",
+          designation: appt.doctor.designation || undefined,
         }
       : {
           id: "unknown",
-          username: typeof appt.doctor === "string" ? appt.doctor : "N/A",
+          name: typeof appt.doctor === "string" ? appt.doctor : "N/A",
+          designation: undefined,
         },
     date: appt.date ? appt.date.split("T")[0] : "",
     time: appt.date
@@ -592,8 +595,9 @@ if (!date) {
     };
 
     try {
-      const res = await appointmentPost("/appointment/create", payload);
-      if ((res as any)?.id) {
+const res = await appointmentPost("/appointment/create", payload);
+
+if (res?.data?.id) {
   await refetchForActiveTab();
 
   toast({
@@ -601,7 +605,6 @@ if (!date) {
     description: "Successfully added.",
   });
 
-  // Reset form
   setPatientName("");
   setPatientNumber("");
   setDate("");
@@ -612,7 +615,6 @@ if (!date) {
   setNotes("");
   setErrors({});
 
-  // Close dialog
   setNewAppointmentOpen(false);
 }
     } catch (error) {
@@ -764,7 +766,7 @@ if (!date) {
                           <div className="flex items-center gap-2 text-gray-600">
                             <MapPin className="h-4 w-4" />
                             <span>
-                              {appointment.doctor?.username ||
+                              {appointment.doctor?.name ||
                                 "No doctor assigned"}
                             </span>
                           </div>
@@ -848,7 +850,7 @@ if (!date) {
                 + Book Appointment
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[480px] overflow-y-auto">
+            <DialogContent className="max-w-md max-h-[480px] overflow-y-auto scrollbar-hidden">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">
                   Schedule Appointment
@@ -941,7 +943,7 @@ if (!date) {
                     onValueChange={(val) => {
                       setDoctorId(val);
                       const doc = doctor.find((d) => d.id === val);
-                      setDoctorDisplay(doc?.username || "");
+                      setDoctorDisplay(doc?.name || "");
                     }}
                   >
                     <SelectTrigger>
@@ -949,14 +951,65 @@ if (!date) {
                     </SelectTrigger>
                     <SelectContent>
                       {doctor.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.username}
-                        </SelectItem>
+                       <SelectItem key={d.id} value={d.id}>
+  {d.name} {d.designation ? `(${d.designation})` : ""}
+</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+<div className="border rounded-lg p-3 mb-3 bg-gray-50">
+  <p className="text-sm font-semibold mb-2">Add New Doctor</p>
 
+  <Input
+    placeholder="Doctor Name"
+    value={newDoctorName}
+    onChange={(e) => setNewDoctorName(e.target.value)}
+    className="mb-2"
+  />
+
+  <Input
+    placeholder="Designation"
+    value={newDoctorDesignation}
+    onChange={(e) => setNewDoctorDesignation(e.target.value)}
+    className="mb-2"
+  />
+
+  <Button
+    type="button"
+    size="sm"
+    onClick={async () => {
+      try {
+        const res = await createDoctor({
+          name: newDoctorName,
+          designation: newDoctorDesignation,
+        });
+
+        const created = res?.data;
+
+        setDoctors((prev) => [...prev, created]);
+
+        setDoctorId(created.id);
+        setDoctorDisplay(created.name);
+
+        setNewDoctorName("");
+        setNewDoctorDesignation("");
+
+        toast({
+          title: "Doctor Added",
+          description: "Doctor created successfully",
+        });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to create doctor",
+        });
+      }
+    }}
+  >
+    Add Doctor
+  </Button>
+</div>
                 <div>
                   <Label htmlFor="appointmentType">Appointment Type</Label>
                   <Select value={type} onValueChange={(val) => setType(val)}>
@@ -1057,7 +1110,7 @@ if (!date) {
                           <div className="flex items-center gap-2 text-gray-600">
                             <MapPin className="h-4 w-4" />
                             <span>
-                              {appointment.doctor?.username ||
+                              {appointment.doctor?.name ||
                                 "No doctor assigned"}
                             </span>
                           </div>
@@ -1314,7 +1367,7 @@ if (!date) {
                   onValueChange={(val) => {
                     setDoctorId(val);
                     const doc = doctor.find((d) => d.id === val);
-                    setDoctorDisplay(doc?.username || "");
+                    setDoctorDisplay(doc?.name || "");
                   }}
                 >
                   <SelectTrigger>
@@ -1323,7 +1376,7 @@ if (!date) {
                   <SelectContent>
                     {doctor.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
-                        {d.username}
+                        {d.name} {d.designation ? `(${d.designation})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1369,7 +1422,7 @@ if (!date) {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  <span>{selectedEvent.doctor?.username}</span>
+                  <span>{selectedEvent.doctor?.name}</span>
                 </div>
                 <div>
                   <span className="font-medium">Status:</span>{" "}
