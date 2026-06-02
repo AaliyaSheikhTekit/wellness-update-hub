@@ -208,7 +208,7 @@ const DietTableView = ({
   // timings state
   const [mealTimingsState, setMealTimingsState] =
     useState<MealTiming[]>(DEFAULT_MEAL_TIMINGS);
-
+const [dietDuration, setDietDuration] = useState(1);
   // NEW: one common restrictions/notes field for the whole week
   const [commonRestrictions, setCommonRestrictions] = useState("");
 
@@ -449,7 +449,7 @@ const DietTableView = ({
   consultationId: String(consultationId),
   patientId,
   restrictions: commonRestrictions,
-
+duration: dietDuration,
   vegetables: selectedVeg.join(", "),
   fruits: selectedFruits.join(", "),
   dal: selectedDal.join(", "),
@@ -458,7 +458,6 @@ const DietTableView = ({
   weekPlan: groupedByDate,
 };
 
-      console.log("📦 Sending payload:", JSON.stringify(payload, null, 2));
 
       await createDietPlan(
   patientId,
@@ -469,7 +468,8 @@ const DietTableView = ({
   selectedVeg.join(", "),
   selectedFruits.join(", "),
   selectedDal.join(", "),
-  selectedAtta.join(", ")
+  selectedAtta.join(", "),
+  dietDuration
 );
 
       toast({
@@ -1052,7 +1052,27 @@ const DietTableView = ({
           </table>
         </div>
       </div>
+<Card className="wellness-card">
+  <CardHeader className="pb-2">
+    <CardTitle className="text-base">
+      Diet Duration
+    </CardTitle>
+  </CardHeader>
 
+  <CardContent>
+    <Input
+      type="number"
+      min={1}
+      value={dietDuration}
+      onChange={(e) =>
+        setDietDuration(
+          Number(e.target.value) || 1
+        )
+      }
+      placeholder="Number of days"
+    />
+  </CardContent>
+</Card>
       {/* NEW: Common restrictions/notes under the table */}
       <Card className="wellness-card">
         <CardHeader className="pb-2">

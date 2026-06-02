@@ -490,7 +490,8 @@ export const createDietPlan = async (
   vegetables: string,
   fruits: string,
   dal: string,
-  atta: string
+  atta: string,
+  duration: number
 ) => {
   const backendToken = getBackendToken();
 
@@ -509,7 +510,7 @@ export const createDietPlan = async (
       consultationId,
       patientId,
       restrictions,
-
+      duration,
       vegetables,
       fruits,
       dal,
