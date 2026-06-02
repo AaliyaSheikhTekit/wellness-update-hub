@@ -223,7 +223,7 @@ const PatientRegistrationForm = () => {
   const printRef = useRef<HTMLDivElement | null>(null);
   const [cashAmount, setCashAmount] = useState<string>("");
   const [treatmentList, setTreatmentList] = useState<any[]>([]);
-const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
+  const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -274,8 +274,8 @@ const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
   });
   const [language, setLanguage] = useState("en");
   const [vitals, setVitals] = useState<Record<string, any>>({
-  "Blood Pressure": "120/",
-});
+    "Blood Pressure": "120/",
+  });
   // const [consentGiven, setConsentGiven] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   // const [signature, setSignature] = useState("");
@@ -289,25 +289,25 @@ const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [apiSuccess, setApiSuccess] = useState("");
-useEffect(() => {
-  const loadTreatments = async () => {
-    if (step !== 4) return;
+  useEffect(() => {
+    const loadTreatments = async () => {
+      if (step !== 4) return;
 
-    try {
-      const res = await getTreatmentAll();
+      try {
+        const res = await getTreatmentAll();
 
-      setTreatmentList(
-        res?.data ||
-        res?.treatments ||
-        []
-      );
-    } catch (err) {
-      console.error("Failed to load treatments", err);
-    }
-  };
+        setTreatmentList(
+          res?.data ||
+          res?.treatments ||
+          []
+        );
+      } catch (err) {
+        console.error("Failed to load treatments", err);
+      }
+    };
 
-  loadTreatments();
-}, [step]);
+    loadTreatments();
+  }, [step]);
   // Auto-calculate vitals
   useEffect(() => {
     const newVitals = { ...vitals };
@@ -590,8 +590,16 @@ useEffect(() => {
         : [],
       otherPhysicalActivity: toStringOrNull(lifestyle.otherPhysicalActivity),
 
-      waterIntakeLiters: toNumberOrNull(lifestyle.waterIntake),
-      otherWaterIntake: toStringOrNull(lifestyle.otherWaterIntake),
+      waterIntakeLiters:
+  typeof lifestyle.waterIntake === "number"
+    ? lifestyle.waterIntake
+    : null,
+
+otherWaterIntake:
+  toStringOrNull(
+    lifestyle.otherWaterIntake ||
+      lifestyle.waterIntake
+  ),
 
       stress: Array.isArray(lifestyle.stress) && lifestyle.stress.length
         ? lifestyle.stress[0]
@@ -653,13 +661,76 @@ useEffect(() => {
       setApiError("");
 
       if (step === 1) {
-        setSubmitting(true);
-        await updatePatient(id, buildUpdatePayload({ includeConsent: false }));
-        setSubmitting(false);
+  setSubmitting(true);
 
-        setPatientId(id);
-        setApiSuccess("Patient created.");
+  try {
+    let currentPatientId = id;
+
+    // NEW PATIENT
+    if (!currentPatientId) {
+      const createRes = await createPatient({
+        fullName: formData.name,
+        age: Number(formData.age),
+        sex: formData.sex,
+        fatherOrHusbandName:
+          formData.fatherOrHusbandName,
+        contactNumber:
+          formData.contactNumber,
+        maritalStatus:
+          formData.maritalStatus,
+        dateOfBirth:
+          formData.dateOfBirth,
+        bloodType:
+          formData.bloodType,
+        occupation:
+          formData.occupation,
+        reference:
+          formData.reference,
+        registrationDate:
+          new Date()
+            .toISOString()
+            .split("T")[0],
+        address:
+          formData.address,
+        primaryHealthConcern:
+          formData.primaryHealthConcern,
+        chronicIllnesses:
+          formData.chronicIllnesses,
+        surgeriesOrInjuries:
+          formData.surgeriesOrInjuries,
+        allergies:
+          formData.allergies,
+        familyHistory:
+          formData.familyHistory,
+      });
+
+      currentPatientId =
+        createRes?.data?.id;
+
+      if (!currentPatientId) {
+        throw new Error(
+          "Failed to create patient"
+        );
       }
+
+      setPatientId(currentPatientId);
+    }
+
+    // IMMEDIATELY SAVE VITALS + LIFESTYLE
+    await updatePatient(
+      currentPatientId,
+      buildUpdatePayload({
+        includeConsent: false,
+      })
+    );
+
+    setApiSuccess(
+      "Patient saved successfully"
+    );
+  } finally {
+    setSubmitting(false);
+  }
+}
 
       if (step === 3) {
         try {
@@ -683,7 +754,7 @@ useEffect(() => {
 
       if (step === 4 && id) {
         setSubmitting(true);
-        await updatePatient(id, buildUpdatePayload({ includeConsent: false }));
+        await updatePatient(patientId || id, buildUpdatePayload({ includeConsent: false }));
         setSubmitting(false);
       }
       if (step === 4) {
@@ -757,10 +828,6 @@ useEffect(() => {
       );
     }
 
-    // const sigToSend = signatureOverride ?? signature;
-    // if (!sigToSend)
-    //   return setApiError("Signature is required. Please sign first.");
-
     setSubmitting(true);
     setApiError("");
     setApiSuccess("");
@@ -769,7 +836,7 @@ useEffect(() => {
       payload.bloodPressure = normalizedBP;
       // payload.signature = sigToSend;
 
-      await updatePatient(id, payload);
+      await updatePatient(patientId || id, payload);
       // setSignature(sigToSend);
       setApiSuccess("Patient updated & forwarded successfully.");
       navigate(`/patient/${id}`);
@@ -800,77 +867,77 @@ useEffect(() => {
   });
 
 
-const mapPatientToVitals = (p: any) => ({
-  "Blood Pressure": p.bloodPressure || "",
-  Pulse: p.pulse ?? "",
-  Weight: p.weightKg ?? "",
-  Height: p.heightCm ?? "",
-  BMI: p.bmi ?? "",
-  Temperature: p.temperatureF ?? "",
-  "Pain Scale": p.painScale ?? "",
-  "Mid-Upper Arm Circumference":
-    p.midUpperArmCircumferenceCm ?? "",
-  "Waist Circumference":
-    p.waistCircumferenceCm ?? "",
-  "Hip Circumference":
-    p.hipCircumferenceCm ?? "",
-  "Waist-Hip Ratio (WHR)":
-    p.whr ?? "",
-  "Skinfold Thickness (Triceps)":
-    p.skinfoldTricepsMm ?? "",
-  "Skinfold Thickness (Biceps)":
-    p.skinfoldBicepsMm ?? "",
-  "Skinfold (Subscapular)":
-    p.skinfoldSubscapularMm ?? "",
-  "Skinfold (Suprailiac)":
-    p.skinfoldSuprailiacMm ?? "",
-  "Body Fat %":
-    p.bodyFatPercent ?? "",
-});
+  const mapPatientToVitals = (p: any) => ({
+    "Blood Pressure": p.bloodPressure || "",
+    Pulse: p.pulse ?? "",
+    Weight: p.weightKg ?? "",
+    Height: p.heightCm ?? "",
+    BMI: p.bmi ?? "",
+    Temperature: p.temperatureF ?? "",
+    "Pain Scale": p.painScale ?? "",
+    "Mid-Upper Arm Circumference":
+      p.midUpperArmCircumferenceCm ?? "",
+    "Waist Circumference":
+      p.waistCircumferenceCm ?? "",
+    "Hip Circumference":
+      p.hipCircumferenceCm ?? "",
+    "Waist-Hip Ratio (WHR)":
+      p.whr ?? "",
+    "Skinfold Thickness (Triceps)":
+      p.skinfoldTricepsMm ?? "",
+    "Skinfold Thickness (Biceps)":
+      p.skinfoldBicepsMm ?? "",
+    "Skinfold (Subscapular)":
+      p.skinfoldSubscapularMm ?? "",
+    "Skinfold (Suprailiac)":
+      p.skinfoldSuprailiacMm ?? "",
+    "Body Fat %":
+      p.bodyFatPercent ?? "",
+  });
 
- const mapPatientToLifestyle = (p: any) => ({
-  diet: p.diet ? [p.diet] : [],
-  appetite: p.appetite ? [p.appetite] : [],
-  taste: p.taste ? [p.taste] : [],
+  const mapPatientToLifestyle = (p: any) => ({
+    diet: p.diet ? [p.diet] : [],
+    appetite: p.appetite ? [p.appetite] : [],
+    taste: p.taste ? [p.taste] : [],
 
-  bowelMovements: p.bowel
-    ? p.bowel.split(",").map((x: string) => x.trim())
-    : [],
-
-  sleep: p.sleep ? [p.sleep] : [],
-
-  addictions: Array.isArray(p.addictions)
-    ? p.addictions
-    : p.addictions
-      ? String(p.addictions)
-          .split(",")
-          .map((x: string) => x.trim())
+    bowelMovements: p.bowel
+      ? p.bowel.split(",").map((x: string) => x.trim())
       : [],
 
-  physicalActivity: Array.isArray(p.physicalActivity)
-    ? p.physicalActivity
-    : p.physicalActivity
-      ? String(p.physicalActivity)
+    sleep: p.sleep ? [p.sleep] : [],
+
+    addictions: Array.isArray(p.addictions)
+      ? p.addictions
+      : p.addictions
+        ? String(p.addictions)
           .split(",")
           .map((x: string) => x.trim())
-      : [],
+        : [],
 
-  waterIntake: p.waterIntakeLiters || "",
+    physicalActivity: Array.isArray(p.physicalActivity)
+      ? p.physicalActivity
+      : p.physicalActivity
+        ? String(p.physicalActivity)
+          .split(",")
+          .map((x: string) => x.trim())
+        : [],
 
-  stress: p.stress ? [p.stress] : [],
-  mentalState: p.mentalState ? [p.mentalState] : [],
+    waterIntake: p.waterIntakeLiters || "",
 
-  wakeTime: p.sleepWakeUpTime || "",
-  sleepTime: p.sleepTime || "",
+    stress: p.stress ? [p.stress] : [],
+    mentalState: p.mentalState ? [p.mentalState] : [],
 
-  otherDiet: p.otherDiet || "",
-  otherAddictions: p.otherAddictions || "",
-  otherBowelMovements: p.otherBowel || "",
-  otherPhysicalActivity: p.otherPhysicalActivity || "",
-  otherWaterIntake: p.otherWaterIntake || "",
+    wakeTime: p.sleepWakeUpTime || "",
+    sleepTime: p.sleepTime || "",
 
-  frequency_bowelMovements: p.bowelFrequency || "",
-});
+    otherDiet: p.otherDiet || "",
+    otherAddictions: p.otherAddictions || "",
+    otherBowelMovements: p.otherBowel || "",
+    otherPhysicalActivity: p.otherPhysicalActivity || "",
+    otherWaterIntake: p.otherWaterIntake || "",
+
+    frequency_bowelMovements: p.bowelFrequency || "",
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -1016,37 +1083,37 @@ const mapPatientToVitals = (p: any) => ({
                       )}
                     </div>
 
-                  <div>
-  <Select
-    value={formData.sex}
-    onValueChange={(value) => {
-      setFormData({
-        ...formData,
-        sex: value,
-      });
-    }}
-  >
-    <SelectTrigger
-      className={
-        errors.sex && touched.sex ? "border-red-500" : ""
-      }
-    >
-      <SelectValue placeholder="Select Sex" />
-    </SelectTrigger>
+                    <div>
+                      <Select
+                        value={formData.sex}
+                        onValueChange={(value) => {
+                          setFormData({
+                            ...formData,
+                            sex: value,
+                          });
+                        }}
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.sex && touched.sex ? "border-red-500" : ""
+                          }
+                        >
+                          <SelectValue placeholder="Select Sex" />
+                        </SelectTrigger>
 
-    <SelectContent>
-      <SelectItem value="Male">Male</SelectItem>
-      <SelectItem value="Female">Female</SelectItem>
-      <SelectItem value="Other">Other</SelectItem>
-    </SelectContent>
-  </Select>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-  {errors.sex && touched.sex && (
-    <p className="text-red-500 text-xs mt-1">
-      {errors.sex}
-    </p>
-  )}
-</div>
+                      {errors.sex && touched.sex && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.sex}
+                        </p>
+                      )}
+                    </div>
 
                     <div>
                       <Input
@@ -1090,41 +1157,41 @@ const mapPatientToVitals = (p: any) => ({
                       )}
                     </div>
 
-                <div>
-  <Select
-    value={formData.maritalStatus}
-    onValueChange={(value) => {
-      setFormData({
-        ...formData,
-        maritalStatus: value,
-      });
-    }}
-  >
-    <SelectTrigger
-      className={
-        errors.maritalStatus && touched.maritalStatus
-          ? "border-red-500"
-          : ""
-      }
-    >
-      <SelectValue placeholder="Select Marital Status" />
-    </SelectTrigger>
+                    <div>
+                      <Select
+                        value={formData.maritalStatus}
+                        onValueChange={(value) => {
+                          setFormData({
+                            ...formData,
+                            maritalStatus: value,
+                          });
+                        }}
+                      >
+                        <SelectTrigger
+                          className={
+                            errors.maritalStatus && touched.maritalStatus
+                              ? "border-red-500"
+                              : ""
+                          }
+                        >
+                          <SelectValue placeholder="Select Marital Status" />
+                        </SelectTrigger>
 
-    <SelectContent>
-      <SelectItem value="Single">Single</SelectItem>
-      <SelectItem value="Married">Married</SelectItem>
-      <SelectItem value="Divorced">Divorced</SelectItem>
-      <SelectItem value="Widowed">Widowed</SelectItem>
-      <SelectItem value="Separated">Separated</SelectItem>
-    </SelectContent>
-  </Select>
+                        <SelectContent>
+                          <SelectItem value="Single">Single</SelectItem>
+                          <SelectItem value="Married">Married</SelectItem>
+                          <SelectItem value="Divorced">Divorced</SelectItem>
+                          <SelectItem value="Widowed">Widowed</SelectItem>
+                          <SelectItem value="Separated">Separated</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-  {errors.maritalStatus && touched.maritalStatus && (
-    <p className="text-red-500 text-xs mt-1">
-      {errors.maritalStatus}
-    </p>
-  )}
-</div>
+                      {errors.maritalStatus && touched.maritalStatus && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.maritalStatus}
+                        </p>
+                      )}
+                    </div>
 
                     <div className="flex flex-col">
                       <label
@@ -1455,33 +1522,33 @@ const mapPatientToVitals = (p: any) => ({
                           <p className="text-xs text-gray-500">
                             Normal: {v.normal}
                           </p>
-                         {v.label === "Blood Pressure" ? (
-  <Input
-    value={
-      vitals["Blood Pressure"]?.includes("/")
-        ? vitals["Blood Pressure"].split("/")[1]
-        : vitals["Blood Pressure"] || ""
-    }
-    onChange={(e) => {
-      const diastolic = e.target.value.replace(/\D/g, "");
-      handleVitalsChange(
-        "Blood Pressure",
-        diastolic ? `120/${diastolic}` : "120/"
-      );
-    }}
-    placeholder="80"
-  />
-) : (
-  <Input
-    value={vitals[v.label] || ""}
-    onChange={(e) =>
-      handleVitalsChange(v.label, e.target.value)
-    }
-    onBlur={() => handleBlur(v.label)}
-    disabled={v.auto}
-    placeholder={v.auto ? "Auto-calculated" : "Enter value"}
-  />
-)}
+                          {v.label === "Blood Pressure" ? (
+                            <Input
+                              value={
+                                vitals["Blood Pressure"]?.includes("/")
+                                  ? vitals["Blood Pressure"].split("/")[1]
+                                  : vitals["Blood Pressure"] || ""
+                              }
+                              onChange={(e) => {
+                                const diastolic = e.target.value.replace(/\D/g, "");
+                                handleVitalsChange(
+                                  "Blood Pressure",
+                                  diastolic ? `120/${diastolic}` : "120/"
+                                );
+                              }}
+                              placeholder="80"
+                            />
+                          ) : (
+                            <Input
+                              value={vitals[v.label] || ""}
+                              onChange={(e) =>
+                                handleVitalsChange(v.label, e.target.value)
+                              }
+                              onBlur={() => handleBlur(v.label)}
+                              disabled={v.auto}
+                              placeholder={v.auto ? "Auto-calculated" : "Enter value"}
+                            />
+                          )}
                           {errors[v.label] &&
                             !["BMI", "Temperature", "Weight", "Height"].includes(v.label) && (
                               <p className="text-red-500 text-xs mt-1">{errors[v.label]}</p>
@@ -1498,31 +1565,31 @@ const mapPatientToVitals = (p: any) => ({
                   <h3 className="font-bold text-2xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Select Payment Method
                   </h3>
-<div className="mb-6">
-  <label className="block text-sm font-medium mb-2">
-    Select Treatment *
-  </label>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2">
+                      Select Treatment *
+                    </label>
 
-  <Select
-    value={selectedTreatmentId}
-    onValueChange={setSelectedTreatmentId}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Select Treatment" />
-    </SelectTrigger>
+                    <Select
+                      value={selectedTreatmentId}
+                      onValueChange={setSelectedTreatmentId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Treatment" />
+                      </SelectTrigger>
 
-    <SelectContent>
-      {treatmentList.map((t) => (
-        <SelectItem
-          key={t.id}
-          value={t.id}
-        >
-          {t.title || t.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+                      <SelectContent>
+                        {treatmentList.map((t) => (
+                          <SelectItem
+                            key={t.id}
+                            value={t.id}
+                          >
+                            {t.title || t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {/* UPI/QR Payment Option */}
                   <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-amber-400 transition-all">
                     <button
@@ -1592,11 +1659,11 @@ const mapPatientToVitals = (p: any) => ({
                       {/* ✅ Action button */}
                       <button
                         type="button"
-                      disabled={
-  !selectedTreatmentId ||
-  !Number(cashAmount) ||
-  Number(cashAmount) <= 0
-}
+                        disabled={
+                          !selectedTreatmentId ||
+                          !Number(cashAmount) ||
+                          Number(cashAmount) <= 0
+                        }
                         onClick={() => {
                           setPaymentMethod("CASH");
 
@@ -1606,84 +1673,84 @@ const mapPatientToVitals = (p: any) => ({
                               invoicePayload: {
                                 from: "patient-registration",
                                 patientId: id,
-                                 treatmentId: selectedTreatmentId,
+                                treatmentId: selectedTreatmentId,
                                 patientName: formData.name,
+                                patientPhone: formData.contactNumber,
+                                invoiceType: "consultancy",
+                                paymentMethod: "CASH",
+                                amount: Number(cashAmount), // ✅ send amount
+                              },
+                            },
+                          });
+                        }}
+                        className={`mt-4 w-full px-4 py-3 rounded-md text-white font-semibold transition ${!Number(cashAmount) || Number(cashAmount) <= 0
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-amber-500 hover:bg-amber-600"
+                          }`}
+                      >
+                        Continue with Cash
+                      </button>
+                    </div>
+                  </div>
+                  {/* Payment Exemption */}
+                  <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-green-400 transition-all">
+                    <div className="w-full p-6 bg-white hover:bg-green-50 transition-colors text-left">
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl">🆓</div>
+
+                        <div className="flex-1">
+                          <h4 className="text-xl font-semibold text-gray-800">
+                            Payment Exemption
+                          </h4>
+
+                          <p className="text-sm text-gray-600">
+                            Skip payment and complete registration
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setSubmitting(true);
+
+                            setPaymentMethod("");
+                            await updatePatient(patientId || id, {
+                              ...buildUpdatePayload({ includeConsent: true }),
+                              paymentMethod: "",
+                            });
+
+                            navigate("/dashboard", {
+                              state: {
+                                openTab: "invoices",
+                                invoicePayload: {
+                                  from: "patient-registration",
+                                  patientId: id,
+                                  treatmentId: selectedTreatmentId,
+                                  patientName: formData.name,
                                   patientPhone: formData.contactNumber,
                                   invoiceType: "consultancy",
-                                  paymentMethod: "CASH",
-                                  amount: Number(cashAmount), // ✅ send amount
+                                  paymentMethod: "EXEMPTED",
+                                  amount: 0,
+                                  isExempted: true,
                                 },
                               },
                             });
-                          }}
-                          className={`mt-4 w-full px-4 py-3 rounded-md text-white font-semibold transition ${!Number(cashAmount) || Number(cashAmount) <= 0
-                              ? "bg-gray-300 cursor-not-allowed"
-                              : "bg-amber-500 hover:bg-amber-600"
-                            }`}
-                        >
-                          Continue with Cash
-                        </button>
+
+                            navigate(`/patient/${id}`);
+                          } catch (err) {
+                            console.error(err);
+                          } finally {
+                            setSubmitting(false);
+                          }
+                        }}
+                        className="mt-4 w-full px-4 py-3 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700 transition"
+                      >
+                        Submit Without Payment
+                      </button>
                     </div>
                   </div>
-{/* Payment Exemption */}
-<div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-green-400 transition-all">
-  <div className="w-full p-6 bg-white hover:bg-green-50 transition-colors text-left">
-    <div className="flex items-center gap-4">
-      <div className="text-4xl">🆓</div>
-
-      <div className="flex-1">
-        <h4 className="text-xl font-semibold text-gray-800">
-          Payment Exemption
-        </h4>
-
-        <p className="text-sm text-gray-600">
-          Skip payment and complete registration
-        </p>
-      </div>
-    </div>
-
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          setSubmitting(true);
-
-          setPaymentMethod("");
-await updatePatient(id, {
-  ...buildUpdatePayload({ includeConsent: true }),
-  paymentMethod: "",
-});
-
-navigate("/dashboard", {
-  state: {
-    openTab: "invoices",
-    invoicePayload: {
-      from: "patient-registration",
-      patientId: id,
-       treatmentId: selectedTreatmentId,
-      patientName: formData.name,
-      patientPhone: formData.contactNumber,
-      invoiceType: "consultancy",
-      paymentMethod: "EXEMPTED",
-      amount: 0,
-      isExempted: true,
-    },
-  },
-});
-
-          navigate(`/patient/${id}`);
-        } catch (err) {
-          console.error(err);
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-      className="mt-4 w-full px-4 py-3 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700 transition"
-    >
-      Submit Without Payment
-    </button>
-  </div>
-</div> 
                 </div>
               )}
 
