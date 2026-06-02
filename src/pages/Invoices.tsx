@@ -928,7 +928,7 @@ const handleDeleteInvoice = async (
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl text-foreground">Invoice Details</CardTitle>
-              <p className="text-muted-foreground">Invoice #{inv.id}</p>
+              <p className="text-muted-foreground">Invoice {inv.patientPhone}</p>
             </div>
            
           </div>
