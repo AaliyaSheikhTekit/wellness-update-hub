@@ -393,9 +393,16 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
         toast({ title: "Missing patient id", variant: "destructive" });
         return;
       }
-      const resp = await getPatient(pId);
-      const pd = resp?.data || resp;
-      setPatientFullData(pd || null);
+     const resp = await getPatient(pId);
+
+const pd = Array.isArray(resp?.data)
+  ? resp.data[0]
+  : resp?.data || resp;
+
+console.log("Fetched patient response:", pd);
+
+setPatientFullData(pd);
+setPatient(pd);
 
       // try to extract existing treatmentPlan and treatment rows
       const existingTreatmentPlan =
@@ -470,6 +477,15 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
 
   /* ------------------------ Save Treatment (calls update API) ------------------------ */
   const handleSaveTreatment = async () => {
+    if (!consultationId) {
+  toast({
+    title: "Consultation Missing",
+    description:
+      "Please create consultation first.",
+    variant: "destructive",
+  });
+  return;
+}
     if (!selectedPatient?.id) {
       toast({ title: "No patient selected", variant: "destructive" });
       return;
@@ -502,10 +518,25 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
       };
 
       // If you require a consultationId you can derive from patientFullData
-      const consultationId =
-        patientFullData?.consultation?.id ||
-        patientFullData?.consultationId ||
-        patientFullData?.latestConsultationId;
+     const latestAppointment =
+  patientFullData?.appointment?.length
+    ? patientFullData.appointment.reduce(
+        (latest: any, current: any) =>
+          new Date(current.date) >
+          new Date(latest.date)
+            ? current
+            : latest
+      )
+    : null;
+
+const consultationId =
+  latestAppointment?.consultation?.length > 0
+    ? latestAppointment.consultation[
+        latestAppointment.consultation.length - 1
+      ]?.id
+    : null;
+
+console.log("Consultation Id:", consultationId);
 console.log(consultationId, payload);
       let result;
       if (consultationId) {
@@ -535,7 +566,15 @@ console.log(consultationId, payload);
     });
     try {
       const resp = await getPatient(apt.patientId || "");
-      setPatientFullData(resp?.data || resp);
+
+const pd = Array.isArray(resp?.data)
+  ? resp.data[0]
+  : resp?.data || resp;
+
+console.log("Fetched patient response:", pd);
+
+setPatientFullData(pd);
+setPatient(pd);
       // populate doctorData dietChart if existing
       setDoctorData((prev: any) => ({
         ...prev,
@@ -564,10 +603,25 @@ console.log(consultationId, payload);
           dietChart: doctorData.treatment?.dietChart,
         },
       };
-      const consultationId =
-        patientFullData?.consultation?.id ||
-        patientFullData?.consultationId ||
-        patientFullData?.latestConsultationId;
+     const latestAppointment =
+  patientFullData?.appointment?.length
+    ? patientFullData.appointment.reduce(
+        (latest: any, current: any) =>
+          new Date(current.date) >
+          new Date(latest.date)
+            ? current
+            : latest
+      )
+    : null;
+
+const consultationId =
+  latestAppointment?.consultation?.length > 0
+    ? latestAppointment.consultation[
+        latestAppointment.consultation.length - 1
+      ]?.id
+    : null;
+
+console.log("Consultation Id:", consultationId);
       if (consultationId) {
         await updatePatientConsult(consultationId, payload);
       }
@@ -578,18 +632,59 @@ console.log(consultationId, payload);
       toast({ title: "Failed to save diet", variant: "destructive" });
     }
   };
-  const latestAppointment =
-    Array.isArray(patient?.appointment) && patient.appointment.length > 0
-      ? patient.appointment.reduce((latest, current) => {
-          const latestDate = new Date(latest.date);
-          const currentDate = new Date(current.date);
-          return currentDate > latestDate ? current : latest;
-        })
-      : null;
 
-  const latestAppointmentId = latestAppointment?.id ?? null;
-  /* --------------------------- Render UI --------------------------- */
 
+const patientId = patient?.id || selectedPatient?.id || null;
+
+
+
+const latestAppointment =
+  patientFullData?.appointment?.length
+    ? patientFullData.appointment.reduce(
+        (latest: any, current: any) =>
+          new Date(current.date) >
+          new Date(latest.date)
+            ? current
+            : latest
+      )
+    : null;
+const appointmentId =
+  latestAppointment?.id ||
+  selectedPatient?.aptId ||
+  null;
+const consultationId =
+  latestAppointment?.consultation?.length > 0
+    ? latestAppointment.consultation[
+        latestAppointment.consultation.length - 1
+      ]?.id
+    : null;
+
+console.log("Diet/Treatment IDs", {
+  patientId,
+  appointmentId,
+  consultationId,
+});
+console.log(patient, patientFullData, selectedPatient,'------------------');
+const handleOpenCaseSheet = async (apt: Appointment) => {
+  try {
+    const resp = await getPatient(apt.patientId || "");
+
+    const pd = Array.isArray(resp?.data)
+      ? resp.data[0]
+      : resp?.data || resp;
+
+    setPatient(pd);
+    setDialogOpen(true);
+  } catch (err) {
+    console.error(err);
+
+    toast({
+      title: "Error",
+      description: "Unable to load patient details",
+      variant: "destructive",
+    });
+  }
+};
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -683,9 +778,11 @@ console.log(consultationId, payload);
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
-                        View Case Sheet
-                      </DropdownMenuItem>
+               <DropdownMenuItem
+  onClick={() => handleOpenCaseSheet(apt)}
+>
+  View Case Sheet
+</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleOpenAddTreatment(apt)}
@@ -1192,20 +1289,15 @@ console.log(consultationId, payload);
               {/* show existing diet table for patient */}
               {selectedPatient && (
                 <DietTableView
-                  patientId={selectedPatient.id}
-                  latestAppointmentId={latestAppointmentId}
-                  consultationId=""
-                  patientName=""
+                patientId={patientId}
+  latestAppointmentId={appointmentId}
+  consultationId={consultationId}
+   patientName={selectedPatient.name}
                 />
               )}
 
               <div className="flex gap-3">
-                <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                  onClick={handleSaveDiet}
-                >
-                  Save Diet
-                </Button>
+            
                 <Button
                   variant="outline"
                   onClick={() => setOpenDietModal(false)}
@@ -1217,13 +1309,13 @@ console.log(consultationId, payload);
           </DialogContent>
         </Dialog>
       )}
-       {/* ✅ Dialog at parent level */}
-     {dialogOpen && patient && (
-        <CaseSheetView
-          open={dialogOpen} 
-          onOpenChange={setDialogOpen}
-          patient={patient} 
-        />)}
+    {dialogOpen && patientFullData && (
+  <CaseSheetView
+    open={dialogOpen}
+    onOpenChange={setDialogOpen}
+    patient={patientFullData}
+  />
+)}
       
     </div>
   );

@@ -111,11 +111,29 @@ console.log("CaseSheetDialog patient:", patient);
      
           <div className="p-8 space-y-6">
             {/* HEADER */}
-            <div className="text-center border-b-2 border-[#8B6F47] pb-3">
-              <h1 className="text-3xl font-bold text-[#8B6F47]" style={{ fontFamily: 'serif' }}>Ikshā</h1>
-              <p className="text-sm text-[#8B6F47]">— Naturopathy —</p>
-              <p className="text-xs mt-2 italic">Patient Case Sheet</p>
-            </div>
+         {/* HEADER */}
+<div className="border-b-2 border-[#7b5e57] pb-4 mb-6">
+  <div className="flex flex-col items-center text-center">
+    <img
+      src="https://www.ikshanaturopathy.com/assets/iksha_logo-DegYGxOY.png"
+      alt="Iksha"
+      className="w-[100px] h-auto mb-2"
+    />
+
+    <h2 className="text-[20px] font-semibold text-[#7b5e57]">
+      Ikshā Naturopathy
+    </h2>
+
+    <p className="text-[12px] text-[#5a4945] max-w-[85%] leading-[1.4] mt-1">
+      Empire Market Place, in front of bypass, next to Empire Estate,
+      opp. Sahara city Homes, Indore, Deoguradia, Madhya Pradesh - 452016
+    </p>
+
+    <p className="text-[12px] text-[#5a4945]">
+      Phone: +91 7879168791 | +91 9343922950
+    </p>
+  </div>
+</div>
 
             {/* 1. PATIENT INFORMATION */}
             <div className="border-2 border-black">

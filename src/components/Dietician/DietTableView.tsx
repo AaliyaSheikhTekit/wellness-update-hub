@@ -212,9 +212,10 @@ const [dietDuration, setDietDuration] = useState(1);
   // NEW: one common restrictions/notes field for the whole week
   const [commonRestrictions, setCommonRestrictions] = useState("");
 
-  const weekDays = Array.from({ length: 1 }, (_, i) =>
-    addDays(currentWeekStart, i)
-  );
+const weekDays = Array.from(
+  { length: dietDuration },
+  (_, i) => addDays(currentWeekStart, i)
+);
   const getDateKey = (date: Date) => format(date, "yyyy-MM-dd");
 
   // ✅ Include Yoga items also in the lookup map
@@ -435,34 +436,33 @@ const [dietDuration, setDietDuration] = useState(1);
         return;
       }
 
-      if (!appointmentId || !consultationId) {
-        toast({
-          title: "Missing Info",
-          description: "Appointment or consultation ID is missing.",
-          variant: "destructive",
-        });
-        return;
-      }
+     if (!appointmentId || !patientId) {
+  toast({
+    title: "Missing Info",
+    description: "Patient or appointment ID is missing.",
+    variant: "destructive",
+  });
+  return;
+}
 
-      const payload = {
+ const payload = {
   appointmentId: String(appointmentId),
-  consultationId: String(consultationId),
+  consultationId: consultationId || undefined,
   patientId,
   restrictions: commonRestrictions,
-duration: dietDuration,
+  duration: dietDuration,
   vegetables: selectedVeg.join(", "),
   fruits: selectedFruits.join(", "),
   dal: selectedDal.join(", "),
   atta: selectedAtta.join(", "),
-
   weekPlan: groupedByDate,
 };
 
 
-      await createDietPlan(
+   await createDietPlan(
   patientId,
   String(appointmentId),
-  String(consultationId),
+  consultationId || "",
   groupedByDate,
   commonRestrictions,
   selectedVeg.join(", "),
@@ -471,7 +471,6 @@ duration: dietDuration,
   selectedAtta.join(", "),
   dietDuration
 );
-
       toast({
         title: "Success",
         description: `Successfully saved weekly diet & yoga plan (${groupedByDate.length} days)!`,
