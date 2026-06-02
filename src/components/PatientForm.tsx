@@ -657,116 +657,142 @@ otherWaterIntake:
       return;
     }
 
+   try {
+  setApiError("");
+
+  // STEP 1 - Create Patient + Save Initial Data
+  if (step === 1) {
+    setSubmitting(true);
+
     try {
-      setApiError("");
-
-      if (step === 1) {
-  setSubmitting(true);
-
-  try {
-    let currentPatientId = id;
-
-    // NEW PATIENT
-    if (!currentPatientId) {
-      const createRes = await createPatient({
-        fullName: formData.name,
-        age: Number(formData.age),
-        sex: formData.sex,
-        fatherOrHusbandName:
-          formData.fatherOrHusbandName,
-        contactNumber:
-          formData.contactNumber,
-        maritalStatus:
-          formData.maritalStatus,
-        dateOfBirth:
-          formData.dateOfBirth,
-        bloodType:
-          formData.bloodType,
-        occupation:
-          formData.occupation,
-        reference:
-          formData.reference,
-        registrationDate:
-          new Date()
-            .toISOString()
-            .split("T")[0],
-        address:
-          formData.address,
-        primaryHealthConcern:
-          formData.primaryHealthConcern,
-        chronicIllnesses:
-          formData.chronicIllnesses,
-        surgeriesOrInjuries:
-          formData.surgeriesOrInjuries,
-        allergies:
-          formData.allergies,
-        familyHistory:
-          formData.familyHistory,
-      });
-
-      currentPatientId =
-        createRes?.data?.id;
+      let currentPatientId = patientId || id;
 
       if (!currentPatientId) {
-        throw new Error(
-          "Failed to create patient"
-        );
-      }
+        const createRes = await createPatient({
+          fullName: formData.name,
+          age: Number(formData.age),
+          sex: formData.sex,
+          fatherOrHusbandName: formData.fatherOrHusbandName,
+          contactNumber: formData.contactNumber,
+          maritalStatus: formData.maritalStatus,
+          dateOfBirth: formData.dateOfBirth,
+          bloodType: formData.bloodType,
+          occupation: formData.occupation,
+          reference: formData.reference,
+          registrationDate: new Date()
+            .toISOString()
+            .split("T")[0],
+          address: formData.address,
+          primaryHealthConcern: formData.primaryHealthConcern,
+          chronicIllnesses: formData.chronicIllnesses,
+          surgeriesOrInjuries: formData.surgeriesOrInjuries,
+          allergies: formData.allergies,
+          familyHistory: formData.familyHistory,
+        });
 
-      setPatientId(currentPatientId);
-    }
+        currentPatientId = createRes?.data?.id;
 
-    // IMMEDIATELY SAVE VITALS + LIFESTYLE
-    await updatePatient(
-      currentPatientId,
-      buildUpdatePayload({
-        includeConsent: false,
-      })
-    );
-
-    setApiSuccess(
-      "Patient saved successfully"
-    );
-  } finally {
-    setSubmitting(false);
-  }
-}
-
-      if (step === 3) {
-        try {
-          const qrRes = await getPaymentQr();
-          console.log(qrRes)
-          const raw = qrRes?.data?.qrCodeUrl || "";
-
-          // keep the last https://... part (works even if backend concatenates)
-          const fixedQrUrl = raw.includes("https://")
-            ? "https://" + raw.split("https://").pop()
-            : raw;
-          setQr({
-            imageUrl: fixedQrUrl || fixedQrUrl,
-            upiId: qrRes?.data?.upi || qrRes?.upi,
-            id: qrRes?.data?.id || qrRes?.id,
-          });
-        } catch (e) {
-          console.error(e);
+        if (!currentPatientId) {
+          throw new Error("Failed to create patient");
         }
+
+        setPatientId(currentPatientId);
       }
 
-      if (step === 4 && id) {
-        setSubmitting(true);
-        await updatePatient(patientId || id, buildUpdatePayload({ includeConsent: false }));
-        setSubmitting(false);
-      }
-      if (step === 4) {
-        await submitFinal();
-        return;
-      }
-      setStep(step + 1);
-    } catch (err: any) {
-      console.error(err);
+      // Save whatever data exists currently
+      await updatePatient(
+        currentPatientId,
+        buildUpdatePayload({
+          includeConsent: false,
+        })
+      );
+
+      setApiSuccess("Patient saved successfully");
+
+      setStep(2);
+      return;
+    } finally {
       setSubmitting(false);
-      setApiError(err?.message || "Something went wrong.");
     }
+  }
+
+  // STEP 2 - SAVE LIFESTYLE
+  if (step === 2) {
+    setSubmitting(true);
+
+    try {
+      await updatePatient(
+        patientId || id,
+        buildUpdatePayload({
+          includeConsent: false,
+        })
+      );
+
+      setStep(3);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // STEP 3 - SAVE VITALS + LOAD QR
+  if (step === 3) {
+    setSubmitting(true);
+
+    try {
+      await updatePatient(
+        patientId || id,
+        buildUpdatePayload({
+          includeConsent: false,
+        })
+      );
+
+      const qrRes = await getPaymentQr();
+
+      const raw = qrRes?.data?.qrCodeUrl || "";
+
+      const fixedQrUrl = raw.includes("https://")
+        ? "https://" + raw.split("https://").pop()
+        : raw;
+
+      setQr({
+        imageUrl: fixedQrUrl,
+        upiId: qrRes?.data?.upi || qrRes?.upi,
+        id: qrRes?.data?.id || qrRes?.id,
+      });
+
+      setStep(4);
+      return;
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // STEP 4 - FINAL SAVE
+  if (step === 4) {
+    setSubmitting(true);
+
+    try {
+      await updatePatient(
+        patientId || id,
+        buildUpdatePayload({
+          includeConsent: false,
+        })
+      );
+
+      await submitFinal();
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+} catch (err: any) {
+  console.error(err);
+  setSubmitting(false);
+  setApiError(err?.message || "Something went wrong.");
+}
   };
   const STEP1_FIELDS = [
     "name",
