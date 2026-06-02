@@ -479,86 +479,112 @@ setPatient(pd);
   };
 
   /* ------------------------ Save Treatment (calls update API) ------------------------ */
-  const handleSaveTreatment = async () => {
-    if (!consultationId) {
-  toast({
-    title: "Consultation Missing",
-    description:
-      "Please create consultation first.",
-    variant: "destructive",
-  });
-  return;
-}
-    if (!selectedPatient?.id) {
-      toast({ title: "No patient selected", variant: "destructive" });
-      return;
-    }
+const handleSaveTreatment = async () => {
+  if (!selectedPatient?.id) {
+    toast({
+      title: "No patient selected",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    try {
-      // Build recommendation object
-      const recommendation = {
-        treatmentPlan: {
-          title: doctorData.treatment?.treatmentPlan?.title || "",
-          date: doctorData.treatment?.treatmentPlan?.date || "",
-          timeSlot: doctorData.treatment?.treatmentPlan?.timeSlot || "",
-          duration:
-            doctorData.treatment?.treatmentPlan?.duration ||
-            (totalSelectedDuration ? `${totalSelectedDuration} min` : ""),
-        },
-        // store therapy ids/titles in recommendation.title (as earlier code uses)
-        title: selectedTherapies.map(
-          (t) => t.id || t._id || t.treatment || t.title
-        ),
-        duration: totalSelectedDuration ? `${totalSelectedDuration} min` : "",
-      };
+  try {
+    const latestAppointment =
+      patientFullData?.appointment?.length > 0
+        ? patientFullData.appointment.reduce(
+            (latest: any, current: any) =>
+              new Date(current.date) >
+              new Date(latest.date)
+                ? current
+                : latest
+          )
+        : null;
 
-      const payload: any = {
-        recommendation: recommendation,
-        treatmentPlan:
-          treatmentPlanData && treatmentPlanData.length
-            ? treatmentPlanData
-            : undefined,
-      };
+    const consultationId =
+      latestAppointment?.consultation?.length > 0
+        ? latestAppointment.consultation[
+            latestAppointment.consultation.length - 1
+          ]?.id
+        : null;
 
-      // If you require a consultationId you can derive from patientFullData
-     const latestAppointment =
-  patientFullData?.appointment?.length
-    ? patientFullData.appointment.reduce(
-        (latest: any, current: any) =>
-          new Date(current.date) >
-          new Date(latest.date)
-            ? current
-            : latest
-      )
-    : null;
+    const appointmentId =
+      latestAppointment?.id ||
+      selectedPatient?.aptId;
 
-const consultationId =
-  latestAppointment?.consultation?.length > 0
-    ? latestAppointment.consultation[
-        latestAppointment.consultation.length - 1
-      ]?.id
-    : null;
+    const recommendation = {
+      title: selectedTherapies.map(
+        (t: any) =>
+          t.id ||
+          t._id ||
+          t.treatment ||
+          t.title
+      ),
+      duration: totalSelectedDuration
+        ? `${totalSelectedDuration} min`
+        : "",
+    };
 
-console.log("Consultation Id:", consultationId);
-console.log(consultationId, payload);
-      let result;
-      if (consultationId) {
-        result = await updatePatientConsult(consultationId, payload);
-      }
-      toast({ title: "Treatment saved" });
-      setOpenTreatmentModal(false);
+    const payload = {
+      // patientId: selectedPatient.id,
+      // id:appointmentId,
 
-      // refresh appointments/patient info
-      await fetchAppointments();
-    } catch (err: any) {
-      console.error("Error saving treatment", err);
-      toast({
-        title: "Failed to save treatment",
-        description: err?.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
+      treatment: {
+        recommendation,
+      },
+
+      treatmentPlan:
+        treatmentPlanData?.length > 0
+          ? treatmentPlanData
+          : [],
+    };
+
+    console.log(
+      "Saving treatment",
+      consultationId,
+      payload
+    );
+
+    await updatePatientConsult(
+      consultationId || "",
+      payload
+    );
+
+    toast({
+      title: "Treatment saved successfully",
+    });
+
+    setOpenTreatmentModal(false);
+
+    await fetchAppointments();
+
+    const refreshed =
+      await getPatientById(
+        selectedPatient.id
+      );
+
+    const patientData = Array.isArray(
+      refreshed?.data
+    )
+      ? refreshed.data[0]
+      : refreshed?.data;
+
+    setPatient(patientData);
+    setPatientFullData(patientData);
+  } catch (err: any) {
+    console.error(
+      "Error saving treatment",
+      err
+    );
+
+    toast({
+      title: "Failed to save treatment",
+      description:
+        err?.message ||
+        "Please try again",
+      variant: "destructive",
+    });
+  }
+};
 
   /* ------------------------ Save Diet ------------------------ */
   const handleOpenAddDiet = async (apt: Appointment) => {
