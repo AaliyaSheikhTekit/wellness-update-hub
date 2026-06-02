@@ -17,8 +17,6 @@ import {
   Download,
   Printer,
   Plus,
-  Eye,
-  Percent,
   Tag,
   Trash2,
   Edit3,
@@ -39,13 +37,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-
 import {
   getPatients,
   getTreatmentAll,
@@ -55,6 +47,7 @@ import {
   getInvoiceById,
   updateInvoice,
   getPatient,
+  deleteInvoice,
 } from "@/lib/api";
 
 import {
@@ -732,7 +725,42 @@ setAllInvoices((prev) => {
       toast({ title: "Failed to save invoice", description: e?.message || "Error" });
     }
   };
+const handleDeleteInvoice = async (
+  invoiceId: string
+) => {
+  try {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this invoice?"
+    );
 
+    if (!confirmed) return;
+
+    await deleteInvoice(invoiceId);
+
+    toast({
+      title: "Invoice deleted successfully",
+    });
+
+    if (
+      selectedInvoice?.id === invoiceId
+    ) {
+      setSelectedInvoice(null);
+      setIsNewInvoice(false);
+    }
+
+    await refreshInvoices();
+  } catch (error: any) {
+    console.error(error);
+
+    toast({
+      title: "Failed to delete invoice",
+      description:
+        error?.message ||
+        "Something went wrong",
+      variant: "destructive",
+    });
+  }
+};
   // Auto-create for consultancy flow once a valid amount is entered
   useEffect(() => {
     if (!isConsultancyFlow) return;
@@ -847,6 +875,7 @@ setAllInvoices((prev) => {
         <CardHeader className="border-b border-border">
            {/* ✅ Action buttons are OUTSIDE the print ref so they don't appear in print */}
             <div className="flex gap-2 print:hidden">
+              
               <Button variant="outline" size="sm" onClick={() => editExistingInvoice(inv)}>
                 <Edit3 className="h-4 w-4 mr-2" /> Edit
               </Button>
@@ -856,6 +885,16 @@ setAllInvoices((prev) => {
               <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
                 <Download className="h-4 w-4 mr-2" /> PDF
               </Button>
+              <Button
+  variant="destructive"
+  size="sm"
+  onClick={() =>
+    handleDeleteInvoice(inv.id)
+  }
+>
+  <Trash2 className="h-4 w-4 mr-2" />
+  Delete
+</Button>
             </div>
         
         </CardHeader>

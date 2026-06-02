@@ -669,6 +669,23 @@ export async function updateInvoice(id: string, payload: Record<string, any>) {
 
   return await res.json();
 }
+export const deleteInvoice = async (id: string) => {
+  const token = getBackendToken();
+  if (!token) throw new Error("Missing backend token. Please login first.");
+
+  const res = await fetch(`${API_BASE_URL}/invoice/delete/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to delete invoice: ${res.status} ${text}`);
+  }
+};
 //therapist 
 export const createTherapist = async (payload: any) => {
  const backendToken = getBackendToken();
