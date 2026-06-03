@@ -274,7 +274,7 @@ const PatientRegistrationForm = () => {
   });
   const [language, setLanguage] = useState("en");
   const [vitals, setVitals] = useState<Record<string, any>>({
-    "Blood Pressure": "120/",
+    "Blood Pressure": "",
   });
   // const [consentGiven, setConsentGiven] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
@@ -1550,20 +1550,23 @@ otherWaterIntake:
                           </p>
                           {v.label === "Blood Pressure" ? (
                             <Input
-                              value={
-                                vitals["Blood Pressure"]?.includes("/")
-                                  ? vitals["Blood Pressure"].split("/")[1]
-                                  : vitals["Blood Pressure"] || ""
-                              }
-                              onChange={(e) => {
-                                const diastolic = e.target.value.replace(/\D/g, "");
-                                handleVitalsChange(
-                                  "Blood Pressure",
-                                  diastolic ? `120/${diastolic}` : "120/"
-                                );
-                              }}
-                              placeholder="80"
-                            />
+  value={vitals["Blood Pressure"] || ""}
+  onChange={(e) => {
+    let value = e.target.value;
+
+    // allow only numbers and one slash
+    value = value.replace(/[^\d/]/g, "");
+
+    const parts = value.split("/");
+    if (parts.length > 2) {
+      value = `${parts[0]}/${parts[1]}`;
+    }
+
+    handleVitalsChange("Blood Pressure", value);
+  }}
+  onBlur={() => handleBlur("Blood Pressure")}
+  placeholder="120/80"
+/>
                           ) : (
                             <Input
                               value={vitals[v.label] || ""}
