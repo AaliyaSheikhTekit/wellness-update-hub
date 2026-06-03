@@ -374,7 +374,14 @@ const PatientRegistrationForm = () => {
     vitals["Skinfold (Suprailiac)"],
     formData.sex,
   ]);
-
+const selectedTreatment = treatmentList.find(
+  (t) => t.id === selectedTreatmentId
+);
+useEffect(() => {
+  if (selectedTreatment) {
+    setCashAmount(selectedTreatment.price || "0");
+  }
+}, [selectedTreatmentId, treatmentList]);
   // Validate single field
   const validateField = (fieldName: string, value: any): string => {
     const validation = FIELD_VALIDATIONS[fieldName];
@@ -1600,9 +1607,21 @@ otherWaterIntake:
                     </label>
 
                     <Select
-                      value={selectedTreatmentId}
-                      onValueChange={setSelectedTreatmentId}
-                    >
+  value={selectedTreatmentId}
+  onValueChange={(value) => {
+    setSelectedTreatmentId(value);
+
+    const treatment = treatmentList.find(
+      (t) => t.id === value
+    );
+
+    if (treatment) {
+      setCashAmount(
+        String(treatment.price || 0)
+      );
+    }
+  }}
+>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Treatment" />
                       </SelectTrigger>
@@ -1675,7 +1694,7 @@ otherWaterIntake:
                               Amount to be paid
                             </label>
                             <input
-                              type="number"
+                              type="text"
                               value={cashAmount}
                               onChange={(e) => setCashAmount(e.target.value)}
                               className="w-full border rounded-md px-3 py-2 text-sm"
@@ -1707,7 +1726,9 @@ otherWaterIntake:
                                 patientPhone: formData.contactNumber,
                                 invoiceType: "consultancy",
                                 paymentMethod: "CASH",
-                                amount: Number(cashAmount), // ✅ send amount
+                                amount: Number(
+          selectedTreatment?.price || cashAmount || 0
+        ),
                               },
                             },
                           });
