@@ -700,11 +700,6 @@ signature:
                 <p className="text-gray-600 text-sm">
                   Iksha Naturopathy - Complete Medical Assessment
                 </p>
-                {consultationId && (
-                  <p className="text-xs text-green-600 mt-2">
-                    ✓ Consultation ID: {consultationId}
-                  </p>
-                )}
               </div>
 
               {/* Error Display */}

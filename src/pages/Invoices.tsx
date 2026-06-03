@@ -1202,7 +1202,7 @@ const handlePrint = async (invoiceId: string) => {
                         <div>
                           <Label>Amount Receiving (₹)</Label>
                           <Input
-                            type="number"
+                            type="text"
                             min="0"
                             step="0.01"
                             value={paymentAmount}
