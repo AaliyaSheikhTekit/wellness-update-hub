@@ -164,9 +164,9 @@ const filtered = therapyList.filter((t: any) => {
   const saveDoctorSignature = () => {
   if (!doctorSigRef.current?.isEmpty()) {
     const sig =
-      doctorSigRef.current
-        .getTrimmedCanvas()
-        .toDataURL("image/png");
+  doctorSigRef.current
+    .getCanvas()
+    .toDataURL("image/png");
 
     setSignature(sig);
   }
@@ -175,9 +175,9 @@ const filtered = therapyList.filter((t: any) => {
 const savePatientSignature = () => {
   if (!patientSigRef.current?.isEmpty()) {
     const sig =
-      patientSigRef.current
-        .getTrimmedCanvas()
-        .toDataURL("image/png");
+  patientSigRef.current
+    .getCanvas()
+    .toDataURL("image/png");
 
     setSignaturePatient(sig);
   }
@@ -581,7 +581,7 @@ patientSignature:
   patientSigRef.current &&
   !patientSigRef.current.isEmpty()
     ? patientSigRef.current
-        .getTrimmedCanvas()
+        .getCanvas()
         .toDataURL("image/png")
     : "",
 
@@ -589,7 +589,7 @@ signature:
   doctorSigRef.current &&
   !doctorSigRef.current.isEmpty()
     ? doctorSigRef.current
-        .getTrimmedCanvas()
+        .getCanvas()
         .toDataURL("image/png")
     : "",
 
