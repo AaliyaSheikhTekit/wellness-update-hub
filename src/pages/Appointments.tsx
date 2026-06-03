@@ -551,14 +551,14 @@ if (!date) {
   newErrors.date = "Date is required.";
 } else {
   const today = new Date();
-  const selected = new Date(date);
+const selected = new Date(date);
 
-  today.setHours(0, 0, 0, 0);
-  selected.setHours(0, 0, 0, 0);
+today.setHours(0, 0, 0, 0);
+selected.setHours(0, 0, 0, 0);
 
-  if (selected <= today) {
-    newErrors.date = "Only future dates are allowed.";
-  }
+if (selected < today) {
+  newErrors.date = "Past dates are not allowed.";
+}
 }
 
   // ✅ Time: required
@@ -902,7 +902,7 @@ if (res?.data?.id) {
                   <Input
                     id="appointmentDate"
                     type="date"
-                    min={tomorrowISO}
+                    min={todayISO}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
