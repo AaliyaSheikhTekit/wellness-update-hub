@@ -136,6 +136,7 @@ function AssignTherapistModal({
           therapist: therapistId,
           timeSlot: `${inTime} - ${outTime}`,
           remark,
+          duration: `${durationMin} min`,
         },
       });
 
@@ -258,7 +259,7 @@ function AssignTherapistModal({
             <div>
               <label className="text-sm font-medium block mb-1">Check In</label>
               <Input
-                placeholder="9:00 AM"
+                placeholder="E.g. 9:00 AM"
                 value={inTime}
                 onChange={(e) => setInTime(e.target.value)}
               />
@@ -266,7 +267,7 @@ function AssignTherapistModal({
             <div>
               <label className="text-sm font-medium block mb-1">Check Out</label>
               <Input
-                placeholder="10:00 AM"
+                placeholder="E.g. 10:00 AM"
                 value={outTime}
                 onChange={(e) => setOutTime(e.target.value)}
               />
@@ -279,9 +280,9 @@ function AssignTherapistModal({
               Duration (minutes)
             </label>
             <Input
-              type="number"
-              min={5}
-              step={5}
+              type="text"
+              placeholder="Duration in minutes"
+              
               value={durationMin}
               onChange={(e) =>
                 setDurationMin(Math.max(5, Number(e.target.value)))
