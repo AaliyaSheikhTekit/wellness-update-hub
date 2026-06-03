@@ -519,6 +519,8 @@ const payload = {
       }));
 
   const payload = {
+           patientId: patient?.id,
+  appointmentId: latestAppointment?.id,
   cheifCompaints:
     doctorData.pastMedicalHistory.chiefComplaints || "",
 

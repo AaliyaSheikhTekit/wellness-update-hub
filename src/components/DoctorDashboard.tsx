@@ -525,8 +525,8 @@ const handleSaveTreatment = async () => {
     };
 
     const payload = {
-      // patientId: selectedPatient.id,
-      // id:appointmentId,
+       patientId: selectedPatient?.id,
+  appointmentId: latestAppointment?.id,
 
       treatment: {
         recommendation,
