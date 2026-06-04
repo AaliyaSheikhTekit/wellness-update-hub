@@ -37,6 +37,7 @@ type Patient = {
   age?: number;
   sex?: string;
   treatmentPlan: TreatmentPlanEntry[];
+  appointment?: any[];
   // plus any other fields your API returns
 };
 
@@ -48,6 +49,10 @@ type Therapist = {
 
 export type TreatmentSession = {
   id: string;
+
+  treatmentAssignId?: string;
+  treatmentPlanId?: string;
+
   patientId: string;
   patientName: string;
   date: string; // YYYY-MM-DD
@@ -134,9 +139,13 @@ function mapTreatmentPlansToSessions(plans: any[], patientName = "") {
       const therapist = assign.therapist;
 
       sessions.push({
-        id: assign.id,
-        treatmentPlanId, // ✅ associate session with its plan
-        date,
+  id: assign.id,
+
+  treatmentAssignId: assign.id,
+
+  treatmentPlanId,
+
+  date,
         time: start || "09:00AM",
         durationMin: Number(treatment?.duration?.replace(/\D/g, "")) || 60,
         treatmentId: treatment?.id,
@@ -851,10 +860,10 @@ const [newTherapistName, setNewTherapistName] = useState("");
               try {
                 // ✅ Assign therapist to this specific treatmentAssign
                 await assignTherapist(
-                  therapistId!,
-                  initial.treatmentPlanId!,
-                  initial.treatmentAssignId!
-                );
+  therapistId!,
+  initial.treatmentPlanId!,
+  treatmentId
+);
 
                 // ✅ Update local patient structure
                 const updatedTreatmentPlan = patient.treatmentPlan.map((plan) =>
@@ -1241,7 +1250,10 @@ function SchedulerRight({ patient }: { patient: Patient }) {
     useContext(SessionsContext);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [editing, setEditing] = useState<TreatmentSession | null>(null);
-
+const recommendations =
+  patient?.appointment?.[0]?.consultation?.flatMap(
+    (c: any) => c?.treatment?.recommendation?.title || []
+  ) || [];
   // ✅ Map treatmentPlan → sessions for calendar display
   const appointments = mapTreatmentPlansToSessions(
     patient.treatmentPlan,
@@ -1256,7 +1268,47 @@ function SchedulerRight({ patient }: { patient: Patient }) {
           Click a session to edit or assign therapist
         </div>
       </div>
+{recommendations.length > 0 && (
+  <div className="mb-4 rounded-lg border bg-white p-4">
+    <h3 className="font-semibold text-lg mb-3">
+      Recommended Treatments
+    </h3>
 
+    <table className="w-full border">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="border p-2 text-left">
+            Treatment
+          </th>
+          <th className="border p-2 text-left">
+            Duration
+          </th>
+          <th className="border p-2 text-left">
+            Price
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {recommendations.map((rec: any) => (
+          <tr key={rec.id}>
+            <td className="border p-2">
+              {rec.treatment}
+            </td>
+
+            <td className="border p-2">
+              {rec.duration}
+            </td>
+
+            <td className="border p-2">
+              ₹{rec.price}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
       {/* ✅ Use mapped appointments, not raw treatmentPlan */}
       <SimpleCalendar
         appointments={appointments}

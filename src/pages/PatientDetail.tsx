@@ -1383,51 +1383,168 @@ className="flex  overflow-x-auto w-full "
           </TabsContent>
 
           {/* Payments */}
-          <TabsContent value="payments">
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div className="border rounded p-3">
-                    <p className="font-medium">Payment Method</p>
-                    <p className="text-muted-foreground">
-                      {patient.appointment && patient.appointment.length > 0
-                        ? activeAppointment?.paymentMethod || "—"
-                        : "—"}
-                    </p>
+       {/* Payments */}
+<TabsContent value="payments">
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center justify-between">
+        Payment Details
+        <Badge variant="outline" className="text-sm">
+          {invoices.length} Invoice{invoices.length === 1 ? "" : "s"}
+        </Badge>
+      </CardTitle>
+    </CardHeader>
+
+    <CardContent className="space-y-6 text-sm">
+      {/* UPI / QR summary */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">Default Payment Method</p>
+          <p className="text-muted-foreground capitalize">
+            {patient.appointment && patient.appointment.length > 0
+              ? activeAppointment?.paymentMethod || "—"
+              : "—"}
+          </p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI Status</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.status || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI ID</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.upiId || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI Ref</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.id || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30 sm:col-span-2 lg:col-span-1">
+          <p className="font-medium">QR Payments</p>
+          <p className="text-muted-foreground truncate">
+            {patient.qrPayments ? JSON.stringify(patient.qrPayments) : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Invoice payment breakdown */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-base">Invoice Payments</h3>
+          {invoices.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Total Billed: ₹
+              {invoices
+                .reduce((s, i) => s + Number(i.finalTotal || 0), 0)
+                .toLocaleString()}{" "}
+              · Total Paid: ₹
+              {invoices
+                .reduce((s, i) => s + Number(i.amountPaid || 0), 0)
+                .toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        {invoices.length === 0 ? (
+          <p className="text-sm text-muted-foreground border rounded-lg p-4 text-center">
+            No invoice payments found.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {invoices.map((inv: any) => {
+              const total = Number(inv.finalTotal || 0);
+              const paid = Number(inv.amountPaid || 0);
+              const balance = Math.max(0, total - paid);
+              const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+
+              const statusStyle =
+                inv.status === "paid"
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                  : inv.status === "partial"
+                  ? "bg-amber-100 text-amber-800 border-amber-300"
+                  : "bg-rose-100 text-rose-800 border-rose-300";
+
+              return (
+                <div
+                  key={inv.id}
+                  className="border rounded-xl p-4 bg-card shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-semibold">
+                        Invoice #{String(inv.id).slice(0, 6).toUpperCase()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(inv.invoiceDate).toLocaleDateString()} · Due{" "}
+                        {new Date(inv.dueDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`capitalize ${statusStyle}`}
+                    >
+                      {inv.status || "unpaid"}
+                    </Badge>
                   </div>
-                  <div className="border rounded p-3">
-                    <p className="font-medium">UPI Status</p>
-                    <p className="text-muted-foreground">
-                      {patient.upiPayments?.status || "—"}
-                    </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    <div className="border rounded-lg p-2.5 bg-muted/30">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Method
+                      </p>
+                      <p className="font-medium capitalize">
+                        {inv.paymentMethod || "—"}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-2.5 bg-muted/30">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Total
+                      </p>
+                      <p className="font-medium">₹{total.toLocaleString()}</p>
+                    </div>
+                    <div className="border rounded-lg p-2.5 bg-emerald-50">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Paid
+                      </p>
+                      <p className="font-medium text-emerald-700">
+                        ₹{paid.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-2.5 bg-rose-50">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Balance
+                      </p>
+                      <p className="font-medium text-rose-700">
+                        ₹{balance.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="border rounded p-3">
-                    <p className="font-medium">UPI ID</p>
-                    <p className="text-muted-foreground">
-                      {patient.upiPayments?.upiId || "—"}
-                    </p>
+
+                  {/* Progress bar */}
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        pct === 100
+                          ? "bg-emerald-500"
+                          : pct > 0
+                          ? "bg-amber-500"
+                          : "bg-rose-500"
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
-                  <div className="border rounded p-3">
-                    <p className="font-medium">UPI Ref</p>
-                    <p className="text-muted-foreground">
-                      {patient.upiPayments?.id || "—"}
-                    </p>
-                  </div>
-                  <div className="border rounded p-3">
-                    <p className="font-medium">QR Payments</p>
-                    <p className="text-muted-foreground">
-                      {patient.qrPayments
-                        ? JSON.stringify(patient.qrPayments)
-                        : "—"}
-                    </p>
-                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {pct.toFixed(0)}% paid
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
+
 
           <TabsContent value="appointments">
             <Card>

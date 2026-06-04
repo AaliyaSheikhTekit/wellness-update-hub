@@ -12,6 +12,12 @@ import {
   getTreatmentAll,
   getTherapyList,
 } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Appointment {
   date: string;
@@ -25,6 +31,7 @@ interface Appointment {
   treatmentIds: string[];
   treatmentDuration: string;
   createdAt: string;
+  treatmentPlan?: any[];
 }
 
 const SimpleCalendar = ({
@@ -163,6 +170,8 @@ useEffect(() => {
 export const SimpleCalendarView = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const today = new Date();
 
   const [range, setRange] = useState<DateRange>({
@@ -215,6 +224,8 @@ export const SimpleCalendarView = () => {
               treatmentIds: readableNames,
               treatmentDuration: c.treatment?.recommendation?.duration || "",
               createdAt: c.createdAt,
+               treatmentPlan: c.treatmentPlan || [],
+
             };
           })
       );
@@ -281,12 +292,79 @@ export const SimpleCalendarView = () => {
         setSelectedDate={setSelectedDate}
         rangeFrom={range?.from}
         onEventClick={(apt) => {
-          toast({
-            title: `Patient: ${apt.patientName}`,
-            description: apt.treatmentIds.join(", "),
-          });
-        }}
+  setSelectedAppointment(apt);
+}}
       />
+      <Dialog
+  open={!!selectedAppointment}
+  onOpenChange={() => setSelectedAppointment(null)}
+>
+  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {selectedAppointment?.patientName}
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      {selectedAppointment?.treatmentPlan?.map((plan: any) => (
+        <div
+          key={plan.id}
+          className="border rounded-lg p-4"
+        >
+          <div className="font-semibold">
+            Date: {plan.date}
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            Time Slot: {plan.timeSlot}
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {plan.treatmentAssign?.map((assign: any) => (
+              <div
+                key={assign.id}
+                className="rounded border p-3"
+              >
+                <div className="font-medium">
+                  {assign.treatment?.title}
+                </div>
+
+                <div className="text-sm">
+                  Duration: {assign.treatment?.duration}
+                </div>
+
+                <div className="text-sm">
+                  Price: ₹{assign.treatment?.price}
+                </div>
+
+                <div className="text-sm">
+                  Therapist:{" "}
+                  {assign.therapist?.name ||
+                    "Not Assigned"}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {plan.asanas?.length > 0 && (
+            <div className="mt-3">
+              <div className="font-medium">
+                Yoga / Asanas
+              </div>
+
+              <div className="text-sm">
+                {plan.asanas
+                  .map((a: any) => a.name)
+                  .join(", ")}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   );
 };

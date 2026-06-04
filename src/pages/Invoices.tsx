@@ -1091,7 +1091,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
     const newStatus: "paid" | "unpaid" = amt >= invoiceTotal ? "paid" : "unpaid";
 
     try {
-      await updateInvoice(selectedInvoice.id, { amountPaid: amt, status: newStatus });
+      await updateInvoice(selectedInvoice.id, { amountPaid: amt, status: newStatus,paymentMethod });
       toast({
         title: "Payment recorded",
         description: `₹${toINR(amt)} — Invoice marked as ${newStatus.toUpperCase()}`,
@@ -1100,7 +1100,7 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
       setPaymentAmount("");
       setAllInvoices((prev) =>
         prev.map((i) =>
-          i.id === selectedInvoice.id ? { ...i, amountPaid: amt, status: newStatus } : i
+          i.id === selectedInvoice.id ? { ...i, amountPaid: amt, status: newStatus, paymentMethod } : i
         )
       );
       setInvoiceStatus(newStatus);

@@ -1179,156 +1179,184 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         )}
 
       {/* Add Treatment Modal */}
-      {openTreatmentModal && selectedPatient && (
-        <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
-          <DialogContent
-            className="
-    max-w-3xl 
-    w-[95%] sm:w-[85%] md:w-[75%] lg:w-[62%]
-    bg-white p-6 rounded-xl 
-       max-h-[85vh]        /* 👈 prevents modal from growing too tall */
-    overflow-y-auto     /* 👈 scroll content inside */
-    overflow-x-hidden 
-  "
-          >
-            <DialogHeader>
-              <DialogTitle>
-                🩺 Treatment Plan for {selectedPatient.name}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6 w-full overflow-x-hidden">
-              {/* Existing Treatments table (component) */}
-              <div>
-                <TreatmentPlanTable
+{openTreatmentModal && selectedPatient && (
+  <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
+    <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[92vh] p-0 overflow-hidden flex flex-col gap-0">
+      {/* Sticky Header */}
+      <DialogHeader className="px-5 sm:px-8 py-5 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-xl shrink-0">
+            🩺
+          </div>
+          <div className="min-w-0">
+            <DialogTitle className="text-base sm:text-lg font-semibold truncate">
+              Treatment Plan
+            </DialogTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+              For <span className="font-medium text-foreground">{selectedPatient.name}</span>
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-6 bg-muted/20">
+        {/* Existing Treatments */}
+        <section className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <header className="px-4 py-3 border-b bg-muted/40">
+            <h3 className="text-sm font-semibold">Existing Treatment Plan</h3>
+          </header>
+          <div className="p-4 overflow-x-auto">
+             <TreatmentPlanTable
                   value={treatmentPlanData}
                   onChange={setTreatmentPlanData}
                   includeYoga={true}
                 />
-              </div>
+          </div>
+        </section>
 
-              {/* Treatment Details */}
-              <div className="space-y-6 border-t pt-6 mt-6">
-                <h2 className="text-xl font-bold text-amber-700 flex items-center gap-2">
-                  🩺 Treatment Details
-                </h2>
+        {/* Treatment Details */}
+        <section className="rounded-xl border bg-card shadow-sm">
+          <header className="px-4 py-3 border-b bg-muted/40 flex items-center gap-2">
+            <span>🩺</span>
+            <h3 className="text-sm font-semibold">Treatment Details</h3>
+          </header>
 
-                <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <label className="font-semibold text-gray-700 block mb-2">
-                    Select Therapies
-                  </label>
-
-                  <Popover open={opentherapies} onOpenChange={setOpenTherapies}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {selectedTherapies.length > 0
-                          ? selectedTherapies
-                              .map((t) => t.treatment || t.title)
-                              .join(", ")
-                          : "Select therapies"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-
-                    <PopoverContent className="w-[300px] p-2">
-                      <Input
-                        placeholder="Search therapy..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="mb-2"
-                      />
-                      <div className="max-h-48 overflow-y-auto space-y-1">
-                        {filteredTherapies.map((therapy: any) => {
-                          const selected = selectedTherapies.some(
-                            (t) => t.id === therapy.id
-                          );
-                          return (
-                            <div
-                              key={therapy.id}
-                              onClick={() => toggleTherapy(therapy)}
-                              className={`flex items-center justify-between px-3 py-2 rounded cursor-pointer hover:bg-amber-100 ${
-                                selected ? "bg-amber-200" : ""
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                               <div className="flex flex-col">
-  <span className="text-sm font-medium">
-    {therapy.treatment || therapy.title}
-  </span>
-
-  {therapy.shortForm && (
-    <span className="text-xs text-gray-500">
-      {therapy.shortForm}
-    </span>
-  )}
-</div>
-                                {therapy.duration && (
-                                  <span className="text-xs text-muted-foreground ml-2">
-                                    ({therapy.duration} min)
-                                  </span>
-                                )}
-                              </div>
-                              {selected && (
-                                <Check className="h-4 w-4 text-amber-600" />
-                              )}
+          <div className="p-4 sm:p-5 grid gap-5 sm:grid-cols-2">
+            {/* Therapies */}
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Select Therapies
+              </Label>
+              <Popover open={opentherapies} onOpenChange={setOpenTherapies}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between h-auto min-h-10 py-2 text-left"
+                  >
+                    <span className="truncate whitespace-normal text-sm">
+                      {selectedTherapies.length > 0
+                        ? selectedTherapies.map((t) => t.treatment || t.title).join(", ")
+                        : <span className="text-muted-foreground">Select therapies…</span>}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-2 w-[--radix-popover-trigger-width] max-h-[60vh]"
+                  align="start"
+                >
+                  <Input
+                    placeholder="Search therapy…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="mb-2 h-9"
+                  />
+                  <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                    {filteredTherapies.map((therapy: any) => {
+                      const selected = selectedTherapies.some((t) => t.id === therapy.id);
+                      return (
+                        <div
+                          key={therapy.id}
+                          onClick={() => toggleTherapy(therapy)}
+                          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
+                            selected
+                              ? "bg-primary/15 text-foreground"
+                              : "hover:bg-accent"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">
+                              {therapy.treatment || therapy.title}
                             </div>
-                          );
-                        })}
-                        {filteredTherapies.length === 0 && (
-                          <div className="text-sm text-gray-500 px-2 py-2">
-                            No results
+                            <div className="text-xs text-muted-foreground flex gap-2">
+                              {therapy.shortForm && <span>{therapy.shortForm}</span>}
+                              {therapy.duration && <span>· {therapy.duration} min</span>}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Duration Calculation */}
-                  <div className="mt-4 space-y-3">
-                    <h4 className="font-semibold text-gray-800">
-                      Therapy Durations
-                    </h4>
-                    <Input
-                      placeholder="Duration (e.g. 60 min)"
-                      value={
-                        selectedTherapies.length > 0
-                          ? `${totalSelectedDuration} min`
-                          : doctorData.recommandationduration || ""
-                      }
-                      readOnly={selectedTherapies.length > 0}
-                      onChange={(e) =>
-                        setDoctorData((prev: any) => ({
-                          ...prev,
-                          recommandationduration: e.target.value,
-                        }))
-                      }
-                    />
+                          {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                        </div>
+                      );
+                    })}
+                    {filteredTherapies.length === 0 && (
+                      <p className="text-center text-sm text-muted-foreground py-6">
+                        No results
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
 
-              {/* Save */}
-              <div className="flex gap-3">
-                <Button
-                  className="flex-1 bg-amber-600 hover:bg-amber-700"
-                  onClick={handleSaveTreatment}
-                >
-                  Save Treatment
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setOpenTreatmentModal(false)}
-                >
-                  Cancel
-                </Button>
+              {/* Selected chips */}
+              {selectedTherapies.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {selectedTherapies.map((t: any) => (
+                    <Badge
+                      key={t.id}
+                      variant="secondary"
+                      className="gap-1 pl-2 pr-1 py-1"
+                    >
+                      {t.treatment || t.title}
+                      <button
+                        type="button"
+                        onClick={() => toggleTherapy(t)}
+                        className="hover:bg-background/60 rounded p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Duration */}
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Total Therapy Duration
+              </Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={
+                    selectedTherapies.length > 0
+                      ? `${totalSelectedDuration} min`
+                      : doctorData.recommandationduration || ""
+                  }
+                  readOnly={selectedTherapies.length > 0}
+                  placeholder="e.g. 45 min"
+                  onChange={(e) =>
+                    setDoctorData((prev: any) => ({
+                      ...prev,
+                      recommandationduration: e.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          </div>
+        </section>
+      </div>
+
+      {/* Sticky Footer */}
+      <div className="px-5 sm:px-8 py-4 border-t bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setOpenTreatmentModal(false)}
+          className="sm:w-32"
+        >
+          Cancel
+        </Button>
+        <Button onClick={handleSaveTreatment} className="sm:w-40">
+          Save Treatment
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
 
       {/* Add Diet Modal */}
       {openDietModal && selectedPatient && (
