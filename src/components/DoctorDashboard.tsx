@@ -1359,65 +1359,128 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
 
 
       {/* Add Diet Modal */}
-      {openDietModal && selectedPatient && (
-        <Dialog open={openDietModal} onOpenChange={setOpenDietModal}>
-          <DialogContent
-            className="
-    max-w-3xl 
-    w-[95%] sm:w-[85%] md:w-[75%] lg:w-[62%]
-    bg-white p-6 rounded-xl 
-       max-h-[85vh]        /* 👈 prevents modal from growing too tall */
-    overflow-y-auto     /* 👈 scroll content inside */
-    overflow-x-hidden 
-  "
-          >
-            <DialogHeader>
-              <DialogTitle>
-                🥗 Diet Chart for {selectedPatient.name}
-              </DialogTitle>
-            </DialogHeader>
+{openDietModal && selectedPatient && (
+  <Dialog open={openDietModal} onOpenChange={setOpenDietModal}>
+    <DialogContent
+      className="
+        p-0 gap-0 overflow-hidden rounded-2xl border border-border
+        bg-background shadow-2xl
+        w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw]
+        max-w-4xl max-h-[90vh]
+        flex flex-col
+      "
+    >
+      {/* Sticky gradient header */}
+      <DialogHeader
+        className="
+          sticky top-0 z-10 px-6 py-5
+          bg-gradient-to-r from-emerald-500/10 via-primary/5 to-transparent
+          border-b border-border
+        "
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 text-2xl">
+            🥗
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-foreground">
+              Diet Chart
+            </DialogTitle>
+            <p className="mt-0.5 text-sm text-muted-foreground truncate">
+              Personalized plan for{" "}
+              <span className="font-medium text-foreground">
+                {selectedPatient.name}
+              </span>
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
 
-            <div className="space-y-4">
-              <Input
-                placeholder="e.g. High-protein vegetarian diet"
-                value={doctorData.treatment?.dietChart?.title || ""}
-                onChange={(e) =>
-                  setDoctorData((prev: any) => ({
-                    ...prev,
-                    treatment: {
-                      ...prev.treatment,
-                      dietChart: {
-                        ...(prev.treatment?.dietChart || {}),
-                        title: e.target.value,
-                      },
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20 px-4 sm:px-6 py-5 space-y-5">
+        {/* Title card */}
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Diet Plan Title
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Input
+              placeholder="e.g. High-protein vegetarian diet"
+              className="h-10 bg-background"
+              value={doctorData.treatment?.dietChart?.title || ""}
+              onChange={(e) =>
+                setDoctorData((prev: any) => ({
+                  ...prev,
+                  treatment: {
+                    ...prev.treatment,
+                    dietChart: {
+                      ...(prev.treatment?.dietChart || {}),
+                      title: e.target.value,
                     },
-                  }))
-                }
-              />
+                  },
+                }))
+              }
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Give this diet chart a short, descriptive name.
+            </p>
+          </CardContent>
+        </Card>
 
-              {/* show existing diet table for patient */}
-              {selectedPatient && (
-                <DietTableView
+        {/* Existing diet table */}
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              Current Diet Plan
+            </CardTitle>
+            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+              Live
+            </Badge>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="rounded-lg border border-border bg-background overflow-hidden">
+              <DietTableView
                 patientId={patientId}
-  latestAppointmentId={appointmentId}
-  consultationId={consultationId}
-   patientName={selectedPatient.name}
-                />
-              )}
-
-              <div className="flex gap-3">
-            
-                <Button
-                  variant="outline"
-                  onClick={() => setOpenDietModal(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
+                latestAppointmentId={appointmentId}
+                consultationId={consultationId}
+                patientName={selectedPatient.name}
+              />
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sticky footer */}
+      <div
+        className="
+          sticky bottom-0 z-10
+          flex flex-col-reverse sm:flex-row sm:justify-end gap-2
+          border-t border-border bg-background/95 backdrop-blur
+          px-4 sm:px-6 py-3
+        "
+      >
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => setOpenDietModal(false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-600/90 text-white"
+          onClick={() => setOpenDietModal(false)}
+        >
+          Save Diet Chart
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
     {dialogOpen && patientFullData && (
   <CaseSheetView
     open={dialogOpen}

@@ -1626,7 +1626,7 @@ className="flex  overflow-x-auto w-full "
                             ) : (
                               <>
                                 <FileText className="h-4 w-4 mr-2" />
-                                Generate PDF
+                                Generate full PDF
                               </>
                             )}
                           </Button>
