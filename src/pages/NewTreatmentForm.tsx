@@ -12,6 +12,7 @@ const NewTreatmentForm = () => {
     categoryId: "",
     title: "",
     subTitle: "",
+    shortForm: "",
     treatment: "",
     packageDescription: "",
     price: "",
@@ -119,6 +120,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         categoryId: formData.categoryId,
         title: formData.title,
         subTitle: formData.subTitle,
+        shortForm: formData.shortForm,
         treatment: formData.treatment,
         packageDescription: formData.packageDescription ||"-",
         price: formData.price,
@@ -141,6 +143,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       categoryId: "",
       title: "",
       subTitle: "",
+      shortForm: "",
       treatment: "",
       packageDescription: "",
       price: "",
@@ -223,7 +226,16 @@ const handleSubmit = async (e: React.FormEvent) => {
           <Label htmlFor="subTitle">Subtitle</Label>
           <Input name="subTitle" value={formData.subTitle} onChange={handleChange} />
         </div>
-
+<div>
+  <Label htmlFor="shortForm">Short Form</Label>
+  <Input
+    name="shortForm"
+    value={formData.shortForm}
+    onChange={handleChange}
+    placeholder="e.g. HCC, SWD, SB"
+    required
+  />
+</div>
         <div>
           <Label htmlFor="treatment">Treatment Description</Label>
           <Textarea name="treatment" value={formData.treatment} onChange={handleChange} required />
