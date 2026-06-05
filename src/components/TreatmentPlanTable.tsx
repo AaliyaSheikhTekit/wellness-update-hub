@@ -55,6 +55,7 @@ export default function TreatmentPlanTable({
     { date: "", timeSlot: "", asanas: [], treatments: [], duration: "" },
   ]);
   const [treatmentOptions, setTreatmentOptions] = useState<any[]>([]);
+  const [treatmentSearch, setTreatmentSearch] = useState("");
   const [yogaCategories, setYogaCategories] = useState<any[]>([]);
   const isHydratingRef = useRef(false);
   const fetchedRef = useRef(false);
@@ -155,7 +156,14 @@ export default function TreatmentPlanTable({
     setRows(newRows);
     updateParent(newRows);
   };
+const filteredTreatments = treatmentOptions.filter((t) => {
+  const search = treatmentSearch.toLowerCase();
 
+  return (
+    t.title?.toLowerCase().includes(search) ||
+    t.shortForm?.toLowerCase().includes(search)
+  );
+});
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -398,11 +406,18 @@ export default function TreatmentPlanTable({
   align="start"
   onWheel={(e) => e.stopPropagation()}
 >
+  <div className="p-3 border-b bg-white sticky top-0 z-10">
+  <Input
+    placeholder="Search by treatment name or short form..."
+    value={treatmentSearch}
+    onChange={(e) => setTreatmentSearch(e.target.value)}
+  />
+</div>
   <div
     className="max-h-96 overflow-y-auto overscroll-contain"
     onWheel={(e) => e.stopPropagation()}
   >
-                              {treatmentOptions.map((opt) => {
+                              {filteredTreatments.map((opt) => {
                                 const checked = row.treatments.includes(opt.id);
                                 return (
                                   <div

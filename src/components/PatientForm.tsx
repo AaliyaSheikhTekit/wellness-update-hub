@@ -1469,29 +1469,32 @@ otherWaterIntake:
                       )}
 
                       {config.wakeTime && (
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            placeholder="Wake up time"
-                            value={lifestyle[`wakeTime`]}
-                            onChange={(e) =>
-                              setLifestyle({
-                                ...lifestyle,
-                                wakeTime: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            placeholder="Sleeping time"
-                            value={lifestyle[`sleepTime`]}
-                            onChange={(e) =>
-                              setLifestyle({
-                                ...lifestyle,
-                                sleepTime: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
+  <div className="flex gap-2 mb-2">
+    <Input
+      type="time"
+      placeholder="Wake up time"
+      value={lifestyle.wakeTime || ""}
+      onChange={(e) =>
+        setLifestyle({
+          ...lifestyle,
+          wakeTime: e.target.value,
+        })
+      }
+    />
+
+    <Input
+      type="time"
+      placeholder="Sleeping time"
+      value={lifestyle.sleepTime || ""}
+      onChange={(e) =>
+        setLifestyle({
+          ...lifestyle,
+          sleepTime: e.target.value,
+        })
+      }
+    />
+  </div>
+)}
                       {key === "waterIntake" && (
                         <>
                           <Input
