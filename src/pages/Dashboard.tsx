@@ -94,7 +94,7 @@ useEffect(() => {
     userRole === "superAdmin"
       ? [
           { key: "overview", name: "Overview", icon: Users },
-          { key: "add-patient", name: "Add Patient", icon: Plus },
+          // { key: "add-patient", name: "Add Patient", icon: Plus },
           { key: "appointments", name: "Appointments", icon: Calendar },
           // { key: "prescriptions", name: "Prescriptions", icon: Pill },
           { key: "add-new-diet", name: "Add New Diet", icon: ChartArea },
