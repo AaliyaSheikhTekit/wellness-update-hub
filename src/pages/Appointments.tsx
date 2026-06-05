@@ -57,6 +57,7 @@ type TabKey =
   | "all"
   | "today"
   | "upcoming"
+  | "past"
   | "calendar"
   | "pending"
   | "confirmed"
@@ -471,7 +472,17 @@ if (!ignore) setDoctors(res?.data ?? []);
 const todayISO = useMemo(() => {
   return new Date().toISOString().split("T")[0];
 }, []);
+const pastAppointments = useMemo(() => {
+  return appointmentsAll.filter((a) => {
+    const aptDate = new Date(a.date);
+    const today = new Date(todayISO);
 
+    aptDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    return aptDate < today;
+  });
+}, [appointmentsAll, todayISO]);
 const tomorrowISO = useMemo(() => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -481,10 +492,17 @@ const tomorrowISO = useMemo(() => {
     () => appointmentsAll.filter((a) => a.date === todayISO),
     [appointmentsAll, todayISO]
   );
-  const upcomingAppointments = useMemo(
-    () => appointmentsAll.filter((a) => new Date(a.date) >= new Date(todayISO)),
-    [appointmentsAll, todayISO]
-  );
+  const upcomingAppointments = useMemo(() => {
+  return appointmentsAll.filter((a) => {
+    const aptDate = new Date(a.date);
+    const today = new Date(todayISO);
+
+    aptDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    return aptDate > today;
+  });
+}, [appointmentsAll, todayISO]);
   // Status buckets
   const pendingAppointments = useMemo(
     () => appointmentsAll.filter((a) => a.status === "pending"),
@@ -549,16 +567,6 @@ const validateAppointment = () => {
  // ✅ Date: required + only future dates allowed
 if (!date) {
   newErrors.date = "Date is required.";
-} else {
-  const today = new Date();
-const selected = new Date(date);
-
-today.setHours(0, 0, 0, 0);
-selected.setHours(0, 0, 0, 0);
-
-if (selected < today) {
-  newErrors.date = "Past dates are not allowed.";
-}
 }
 
   // ✅ Time: required
@@ -902,7 +910,6 @@ if (res?.data?.id) {
                   <Input
                     id="appointmentDate"
                     type="date"
-                    min={todayISO}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
@@ -1064,6 +1071,7 @@ if (res?.data?.id) {
             <TabsTrigger value="all" className="font-[12px]">All</TabsTrigger>
             <TabsTrigger value="today" className="font-[12px]">Today</TabsTrigger>
             <TabsTrigger value="upcoming" className="font-[12px]">Upcoming</TabsTrigger>
+            <TabsTrigger value="past" className="font-[12px]">Past</TabsTrigger>
             <TabsTrigger value="calendar" className="font-[12px]">Calendar</TabsTrigger>
             <TabsTrigger value="pending" className="font-[12px]">Pending</TabsTrigger>
             <TabsTrigger value="confirmed" className="font-[12px]">Confirmed</TabsTrigger>
@@ -1247,7 +1255,11 @@ if (res?.data?.id) {
             "upcoming",
             "Upcoming Appointments"
           )}
-
+{renderAppointmentList(
+  pastAppointments,
+  "past",
+  "Past Appointments"
+)}
           {/* CALENDAR */}
           <TabsContent value="calendar" className="space-y-4">
             <div className="flex items-center justify-between">
