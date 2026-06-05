@@ -22,6 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 // Validation helper functions
 const validators = {
   required: (value: any) => {
@@ -224,6 +238,7 @@ const PatientRegistrationForm = () => {
   const [cashAmount, setCashAmount] = useState<string>("");
   const [treatmentList, setTreatmentList] = useState<any[]>([]);
   const [selectedTreatmentId, setSelectedTreatmentId] = useState("");
+  const [treatmentOpen, setTreatmentOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -1609,37 +1624,83 @@ otherWaterIntake:
                       Select Treatment *
                     </label>
 
-                    <Select
-  value={selectedTreatmentId}
-  onValueChange={(value) => {
-    setSelectedTreatmentId(value);
-
-    const treatment = treatmentList.find(
-      (t) => t.id === value
-    );
-
-    if (treatment) {
-      setCashAmount(
-        String(treatment.price || 0)
-      );
-    }
-  }}
+                  <Popover
+  open={treatmentOpen}
+  onOpenChange={setTreatmentOpen}
 >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Treatment" />
-                      </SelectTrigger>
+  <PopoverTrigger asChild>
+    <Button
+      variant="outline"
+      role="combobox"
+      className="w-full justify-between"
+    >
+      {selectedTreatmentId
+        ? (() => {
+            const t = treatmentList.find(
+              (x) => x.id === selectedTreatmentId
+            );
 
-                      <SelectContent>
-                        {treatmentList.map((t) => (
-                          <SelectItem
-                            key={t.id}
-                            value={t.id}
-                          >
-                            {t.title || t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            return t
+              ? `${t.title} ${
+                  t.shortForm
+                    ? `(${t.shortForm})`
+                    : ""
+                }`
+              : "Select Treatment";
+          })()
+        : "Select Treatment"}
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  </PopoverTrigger>
+
+  <PopoverContent className="w-full p-0">
+    <Command>
+      <CommandInput placeholder="Search by name or short form..." />
+
+      <CommandEmpty>
+        No treatment found.
+      </CommandEmpty>
+
+      <CommandGroup className="max-h-72 overflow-auto">
+        {treatmentList.map((t) => (
+          <CommandItem
+            key={t.id}
+            value={`${t.title} ${t.shortForm || ""}`}
+            onSelect={() => {
+              setSelectedTreatmentId(t.id);
+
+              setCashAmount(
+                String(t.price || 0)
+              );
+
+              setTreatmentOpen(false);
+            }}
+          >
+            <Check
+              className={`mr-2 h-4 w-4 ${
+                selectedTreatmentId === t.id
+                  ? "opacity-100"
+                  : "opacity-0"
+              }`}
+            />
+
+            <div className="flex flex-col">
+              <span>
+                {t.title}
+              </span>
+
+              {t.shortForm && (
+                <span className="text-xs text-muted-foreground">
+                  {t.shortForm}
+                </span>
+              )}
+            </div>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </Command>
+  </PopoverContent>
+</Popover>
                   </div>
                   {/* UPI/QR Payment Option */}
                   <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-amber-400 transition-all">
