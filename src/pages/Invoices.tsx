@@ -121,6 +121,8 @@ type ApiInvoice = {
   finalTotal?: number;
   amountPaid: number;
   status: "paid" | "partially_paid" | "pending" | "overdue" | "draft" | "unpaid";
+   updatedAt?: string;       // ← add this
+  paymentMethod?: string;
 };
 
 /* ---------------- Helpers ---------------- */
@@ -394,6 +396,91 @@ const ViewInvoice = ({
                 <span className="font-medium text-red-500">₹{toINR(balance)}</span>
               </div>
             )}
+
+            {/* Payment Timeline */}
+            <div className="mt-4 border rounded-lg overflow-hidden print:hidden">
+              <div className="px-3 py-2 bg-muted/40 border-b">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Payment Timeline
+                </p>
+              </div>
+              <div className="divide-y">
+
+                {/* Invoice created */}
+                <div className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground">Invoice created</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(inv.date).toLocaleDateString("en-IN", {
+                        day: "2-digit", month: "short", year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <p className="text-xs font-semibold text-foreground flex-shrink-0">
+                    ₹{toINR(invTotal)}
+                  </p>
+                </div>
+
+                {/* Payment received — only if amountPaid > 0 */}
+                {inv.amountPaid > 0 && (
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-emerald-50/50">
+                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-emerald-800">Payment received</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {new Date((inv as any).updatedAt || inv.date).toLocaleDateString("en-IN", {
+                          day: "2-digit", month: "short", year: "numeric",
+                        })}
+                        {(inv as any).paymentMethod ? ` · ${(inv as any).paymentMethod}` : ""}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-emerald-700 flex-shrink-0">
+                      +₹{toINR(inv.amountPaid)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Pending — only if balance > 0 */}
+                {balance > 0 && (
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/50">
+                    <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-rose-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-rose-800">Pending payment</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Due by{" "}
+                        {inv.dueDate
+                          ? new Date(inv.dueDate).toLocaleDateString("en-IN", {
+                              day: "2-digit", month: "short", year: "numeric",
+                            })
+                          : "—"}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-rose-600 flex-shrink-0">
+                      ₹{toINR(balance)} due
+                    </p>
+                  </div>
+                )}
+
+                {/* Fully settled */}
+                {balance <= 0 && inv.amountPaid > 0 && (
+                  <div className="flex items-center gap-3 px-3 py-2 bg-emerald-50/30">
+                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-emerald-600 text-xs font-bold">✓</span>
+                    </div>
+                    <p className="text-xs font-medium text-emerald-700">Fully settled</p>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
 
             {/* Stamp */}
             <div className="mt-10 border-t pt-6">
@@ -1437,6 +1524,8 @@ function mapApiInvoice(inv: any): ApiInvoice {
     total: Number(inv.finalTotal ?? inv.total ?? 0),
     amountPaid: Number(inv.amountPaid ?? 0),
     status: inv.status ?? "draft",
+    updatedAt: inv.updatedAt ?? "",
+paymentMethod: inv.paymentMethod ?? "",
   };
 }
 
