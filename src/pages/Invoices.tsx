@@ -214,7 +214,9 @@ const ViewInvoice = ({
     inv.finalTotal ?? inv.total ?? Math.max(0, invSubtotal - invDiscountVal);
 
   const balance = invTotal - (inv.amountPaid || 0);
-
+    const canConsult = ["Naturopathy Doctor", "superAdmin"].includes(
+      localStorage.getItem("userName") || ""
+    );
   return (
     <Card className="shadow-natural">
       <CardHeader className="border-b border-border">
@@ -228,13 +230,14 @@ const ViewInvoice = ({
           <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(inv.id)}>
             <Download className="h-4 w-4 mr-2" /> PDF
           </Button>
-          <Button
+          {canConsult &&  <Button
             variant="destructive"
             size="sm"
             onClick={() => handleDeleteInvoice(inv.id)}
           >
             <Trash2 className="h-4 w-4 mr-2" /> Delete
-          </Button>
+          </Button>}
+         
         </div>
       </CardHeader>
 
@@ -1080,36 +1083,48 @@ const Invoices = ({ invoicePayload }: { invoicePayload?: any }) => {
   }, [lines, lockPatient, isConsultancyFlow, invoicePayload?.patientId]);
 
   /* ---------------- Record Payment ---------------- */
-  const handleRecordPayment = async () => {
-    if (!selectedInvoice) return;
-    const amt = parseFloat(paymentAmount) || 0;
-    if (amt <= 0) {
-      toast({ title: "Invalid amount", description: "Enter a valid payment amount." });
-      return;
-    }
-    const invoiceTotal = Number(selectedInvoice.finalTotal ?? selectedInvoice.total ?? 0);
-    const newStatus: "paid" | "unpaid" = amt >= invoiceTotal ? "paid" : "unpaid";
+ const handleRecordPayment = async () => {
+  if (!selectedInvoice) return;
+  const amt = parseFloat(paymentAmount) || 0;
+  if (amt <= 0) {
+    toast({ title: "Invalid amount", description: "Enter a valid payment amount." });
+    return;
+  }
 
-    try {
-      await updateInvoice(selectedInvoice.id, { amountPaid: amt, status: newStatus,paymentMethod });
-      toast({
-        title: "Payment recorded",
-        description: `₹${toINR(amt)} — Invoice marked as ${newStatus.toUpperCase()}`,
-      });
-      setRecordDialogOpen(false);
-      setPaymentAmount("");
-      setAllInvoices((prev) =>
-        prev.map((i) =>
-          i.id === selectedInvoice.id ? { ...i, amountPaid: amt, status: newStatus, paymentMethod } : i
-        )
-      );
-      setInvoiceStatus(newStatus);
-      await refreshInvoices();
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Failed to record payment", description: e?.message || "Please try again." });
-    }
-  };
+  const invoiceTotal = Number(selectedInvoice.finalTotal ?? selectedInvoice.total ?? 0);
+  
+  // ✅ Accumulate: add new payment on top of what was already paid
+  const previouslyPaid = Number(selectedInvoice.amountPaid || 0);
+  const newTotalPaid = previouslyPaid + amt;
+  
+  const newStatus: "paid" | "unpaid" = newTotalPaid >= invoiceTotal ? "paid" : "unpaid";
+
+  try {
+    await updateInvoice(selectedInvoice.id, { 
+      amountPaid: newTotalPaid,  // ✅ cumulative, not just this payment
+      status: newStatus, 
+      paymentMethod 
+    });
+    toast({
+      title: "Payment recorded",
+      description: `₹${toINR(amt)} received — Total paid: ₹${toINR(newTotalPaid)} — Invoice ${newStatus.toUpperCase()}`,
+    });
+    setRecordDialogOpen(false);
+    setPaymentAmount("");
+    setAllInvoices((prev) =>
+      prev.map((i) =>
+        i.id === selectedInvoice.id 
+          ? { ...i, amountPaid: newTotalPaid, status: newStatus } // ✅ update local state too
+          : i
+      )
+    );
+    setInvoiceStatus(newStatus);
+    await refreshInvoices();
+  } catch (e: any) {
+    console.error(e);
+    toast({ title: "Failed to record payment", description: e?.message || "Please try again." });
+  }
+};
 
   /* ---------------- Print ---------------- */
   const handlePrint = async (invoiceId: string) => {
