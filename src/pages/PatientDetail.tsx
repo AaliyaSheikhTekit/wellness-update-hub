@@ -1395,6 +1395,35 @@ className="flex  overflow-x-auto w-full "
     </CardHeader>
 
     <CardContent className="space-y-6 text-sm">
+        {/* UPI / QR summary */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">Default Payment Method</p>
+          <p className="text-muted-foreground capitalize">
+            {patient.appointment && patient.appointment.length > 0
+              ? activeAppointment?.paymentMethod || "—"
+              : "—"}
+          </p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI Status</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.status || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI ID</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.upiId || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <p className="font-medium">UPI Ref</p>
+          <p className="text-muted-foreground">{patient.upiPayments?.id || "—"}</p>
+        </div>
+        <div className="border rounded-lg p-3 bg-muted/30 sm:col-span-2 lg:col-span-1">
+          <p className="font-medium">QR Payments</p>
+          <p className="text-muted-foreground truncate">
+            {patient.qrPayments ? JSON.stringify(patient.qrPayments) : "—"}
+          </p>
+        </div>
+      </div>
       {/* Summary strip */}
       <div className="grid sm:grid-cols-3 gap-3">
         <div className="border rounded-lg p-3 bg-muted/30">
