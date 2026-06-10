@@ -1383,8 +1383,7 @@ className="flex  overflow-x-auto w-full "
           </TabsContent>
 
           {/* Payments */}
-       {/* Payments */}
-<TabsContent value="payments">
+       <TabsContent value="payments">
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center justify-between">
@@ -1396,151 +1395,222 @@ className="flex  overflow-x-auto w-full "
     </CardHeader>
 
     <CardContent className="space-y-6 text-sm">
-      {/* UPI / QR summary */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Summary strip */}
+      <div className="grid sm:grid-cols-3 gap-3">
         <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">Default Payment Method</p>
-          <p className="text-muted-foreground capitalize">
-            {patient.appointment && patient.appointment.length > 0
-              ? activeAppointment?.paymentMethod || "—"
-              : "—"}
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Billed</p>
+          <p className="font-semibold text-base">
+            ₹{invoices.reduce((s, i: any) => s + Number(i.finalTotal || 0), 0).toLocaleString("en-IN")}
           </p>
         </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI Status</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.status || "—"}</p>
+        <div className="border rounded-lg p-3 bg-emerald-50">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Paid</p>
+          <p className="font-semibold text-base text-emerald-700">
+            ₹{invoices.reduce((s, i: any) => s + Number(i.amountPaid || 0), 0).toLocaleString("en-IN")}
+          </p>
         </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI ID</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.upiId || "—"}</p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI Ref</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.id || "—"}</p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30 sm:col-span-2 lg:col-span-1">
-          <p className="font-medium">QR Payments</p>
-          <p className="text-muted-foreground truncate">
-            {patient.qrPayments ? JSON.stringify(patient.qrPayments) : "—"}
+        <div className="border rounded-lg p-3 bg-rose-50">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Pending</p>
+          <p className="font-semibold text-base text-rose-700">
+            ₹{invoices
+              .reduce((s, i: any) => s + Math.max(0, Number(i.finalTotal || 0) - Number(i.amountPaid || 0)), 0)
+              .toLocaleString("en-IN")}
           </p>
         </div>
       </div>
 
-      {/* Invoice payment breakdown */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-base">Invoice Payments</h3>
-          {invoices.length > 0 && (
-            <div className="text-xs text-muted-foreground">
-              Total Billed: ₹
-              {invoices
-                .reduce((s, i) => s + Number(i.finalTotal || 0), 0)
-                .toLocaleString()}{" "}
-              · Total Paid: ₹
-              {invoices
-                .reduce((s, i) => s + Number(i.amountPaid || 0), 0)
-                .toLocaleString()}
-            </div>
-          )}
-        </div>
+      {/* Per-invoice breakdown */}
+      {invoices.length === 0 ? (
+        <p className="text-sm text-muted-foreground border rounded-lg p-4 text-center">
+          No invoice payments found.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {invoices.map((inv: any) => {
+            const total   = Number(inv.finalTotal || 0);
+            const paid    = Number(inv.amountPaid || 0);
+            const balance = Math.max(0, total - paid);
+            const pct     = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
 
-        {invoices.length === 0 ? (
-          <p className="text-sm text-muted-foreground border rounded-lg p-4 text-center">
-            No invoice payments found.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {invoices.map((inv: any) => {
-              const total = Number(inv.finalTotal || 0);
-              const paid = Number(inv.amountPaid || 0);
-              const balance = Math.max(0, total - paid);
-              const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+            const statusStyle =
+              inv.status === "paid"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : paid > 0
+                ? "bg-amber-100 text-amber-800 border-amber-300"
+                : "bg-rose-100 text-rose-800 border-rose-300";
 
-              const statusStyle =
-                inv.status === "paid"
-                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                  : inv.status === "partial"
-                  ? "bg-amber-100 text-amber-800 border-amber-300"
-                  : "bg-rose-100 text-rose-800 border-rose-300";
+            return (
+              <div key={inv.id} className="border rounded-xl overflow-hidden shadow-sm">
 
-              return (
-                <div
-                  key={inv.id}
-                  className="border rounded-xl p-4 bg-card shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <div>
-                      <p className="font-semibold">
-                        Invoice #{String(inv.id).slice(0, 6).toUpperCase()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(inv.invoiceDate).toLocaleDateString()} · Due{" "}
-                        {new Date(inv.dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`capitalize ${statusStyle}`}
-                    >
-                      {inv.status || "unpaid"}
-                    </Badge>
+                {/* Invoice header */}
+                <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-3 bg-muted/30 border-b">
+                  <div>
+                    <p className="font-semibold">
+                      Invoice #{String(inv.id).slice(0, 6).toUpperCase()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Issued: {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      {" · "}
+                      Due: {new Date(inv.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    </p>
                   </div>
+                  <Badge variant="outline" className={`capitalize text-xs ${statusStyle}`}>
+                    {inv.status || "unpaid"}
+                  </Badge>
+                </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-                    <div className="border rounded-lg p-2.5 bg-muted/30">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Method
-                      </p>
-                      <p className="font-medium capitalize">
-                        {inv.paymentMethod || "—"}
-                      </p>
+                <div className="px-4 py-3 space-y-4">
+                  {/* Amount grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="border rounded-lg p-2.5 bg-muted/30 text-center">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
+                      <p className="font-semibold mt-0.5">₹{total.toLocaleString("en-IN")}</p>
                     </div>
-                    <div className="border rounded-lg p-2.5 bg-muted/30">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Total
-                      </p>
-                      <p className="font-medium">₹{total.toLocaleString()}</p>
+                    <div className="border rounded-lg p-2.5 bg-emerald-50 text-center">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Paid</p>
+                      <p className="font-semibold text-emerald-700 mt-0.5">₹{paid.toLocaleString("en-IN")}</p>
                     </div>
-                    <div className="border rounded-lg p-2.5 bg-emerald-50">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Paid
-                      </p>
-                      <p className="font-medium text-emerald-700">
-                        ₹{paid.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="border rounded-lg p-2.5 bg-rose-50">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Balance
-                      </p>
-                      <p className="font-medium text-rose-700">
-                        ₹{balance.toLocaleString()}
-                      </p>
+                    <div className="border rounded-lg p-2.5 bg-rose-50 text-center">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pending</p>
+                      <p className="font-semibold text-rose-700 mt-0.5">₹{balance.toLocaleString("en-IN")}</p>
                     </div>
                   </div>
 
                   {/* Progress bar */}
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${
-                        pct === 100
-                          ? "bg-emerald-500"
-                          : pct > 0
-                          ? "bg-amber-500"
-                          : "bg-rose-500"
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          pct === 100 ? "bg-emerald-500" : pct > 0 ? "bg-amber-500" : "bg-rose-400"
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">{pct.toFixed(0)}% paid</p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {pct.toFixed(0)}% paid
-                  </p>
+
+                  {/* ✅ Payment timeline */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-muted/40 border-b">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Payment Timeline
+                      </p>
+                    </div>
+                    <div className="divide-y">
+
+                      {/* Invoice creation row */}
+                      <div className="flex items-center gap-3 px-3 py-2.5">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground">Invoice created</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {new Date(inv.invoiceDate).toLocaleDateString("en-IN", {
+                              day: "2-digit", month: "short", year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <p className="text-xs font-semibold text-foreground flex-shrink-0">
+                          ₹{total.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      {/* Payment received row — only if something was paid */}
+                      {paid > 0 && (
+                        <div className="flex items-center gap-3 px-3 py-2.5 bg-emerald-50/50">
+                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-emerald-800">Payment received</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {new Date(inv.updatedAt || inv.invoiceDate).toLocaleDateString("en-IN", {
+                                day: "2-digit", month: "short", year: "numeric",
+                              })}
+                              {inv.paymentMethod ? ` · ${inv.paymentMethod}` : ""}
+                            </p>
+                          </div>
+                          <p className="text-xs font-semibold text-emerald-700 flex-shrink-0">
+                            +₹{paid.toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Pending row — only if balance remains */}
+                      {balance > 0 && (
+                        <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/50">
+                          <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                            <div className="w-2 h-2 rounded-full bg-rose-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-rose-800">Pending payment</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Due by{" "}
+                              {new Date(inv.dueDate).toLocaleDateString("en-IN", {
+                                day: "2-digit", month: "short", year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          <p className="text-xs font-semibold text-rose-600 flex-shrink-0">
+                            ₹{balance.toLocaleString("en-IN")} due
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Fully paid row */}
+                      {balance === 0 && paid > 0 && (
+                        <div className="flex items-center gap-3 px-3 py-2 bg-emerald-50/30">
+                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-emerald-600 text-xs font-bold">✓</span>
+                          </div>
+                          <p className="text-xs font-medium text-emerald-700">Fully settled</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Items breakdown */}
+                  {inv.items?.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-muted/40 border-b">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Items</p>
+                      </div>
+                      <div className="divide-y">
+                        {inv.items.map((item: any) => (
+                          <div key={item.id} className="flex justify-between items-center px-3 py-2 text-xs">
+                            <span className="text-foreground">{item.name}</span>
+                            <span className="text-muted-foreground">
+                              ₹{Number(item.rate).toLocaleString("en-IN")} × {item.qty}
+                              {" = "}
+                              <span className="font-semibold text-foreground">
+                                ₹{Number(item.amount).toLocaleString("en-IN")}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                        {Number(inv.discount) > 0 && (
+                          <div className="flex justify-between items-center px-3 py-2 text-xs text-emerald-700 bg-emerald-50/50">
+                            <span>Discount ({inv.discountType === "percentage" ? `${inv.discount}%` : "fixed"})</span>
+                            <span className="font-semibold">
+                              - ₹{
+                                inv.discountType === "percentage"
+                                  ? ((Number(inv.subTotal) * Number(inv.discount)) / 100).toLocaleString("en-IN")
+                                  : Number(inv.discount).toLocaleString("en-IN")
+                              }
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </CardContent>
   </Card>
 </TabsContent>
