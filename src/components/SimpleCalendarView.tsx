@@ -32,6 +32,8 @@ interface Appointment {
   treatmentDuration: string;
   createdAt: string;
   treatmentPlan?: any[];
+    source?: string;
+  consultation?: any;
 }
 
 const SimpleCalendar = ({
@@ -174,10 +176,16 @@ export const SimpleCalendarView = () => {
     useState<Appointment | null>(null);
   const today = new Date();
 
-  const [range, setRange] = useState<DateRange>({
-    from: today,
-    to: today,
-  });
+const tomorrow = new Date();
+tomorrow.setDate(today.getDate() + 1);
+
+const [range, setRange] = useState<DateRange>({
+  from: today,
+  to: tomorrow,
+});
+const [calendarType, setCalendarType] =
+  useState<"treatment" | "consultation">("treatment");
+
   const toYMD = (d: Date) => format(d, "yyyy-MM-dd");
 
   const fetchAppointments = async (r: DateRange = range) => {
@@ -199,11 +207,19 @@ export const SimpleCalendarView = () => {
         (therapyRes?.data || []).map((t: any) => [t.id, t.title || t.treatment])
       );
 
-      const data = calendarRes?.data?.data || {};
+     const consultationData =
+  calendarRes?.data?.data?.consultationCalendar || {};
 
-      const formatted = Object.entries(data).flatMap(
-        ([date, consultations]: any) =>
-          consultations.map((c: any) => {
+const treatmentData =
+  calendarRes?.data?.data?.treatmentCalendar || {};
+const source =
+  calendarType === "consultation"
+    ? consultationData
+    : treatmentData;
+
+const formatted = Object.entries(source).flatMap(
+  ([date, consultations]: any) =>
+    consultations.map((c: any) => {
             const recIds = Array.isArray(c.treatment?.recommendation?.title)
               ? c.treatment?.recommendation?.title
               : [c.treatment?.recommendation?.title].filter(Boolean);
@@ -221,10 +237,16 @@ export const SimpleCalendarView = () => {
               includeYoga: c.includeYoga || false,
               dietChart: c.treatment?.dietChart?.title || "",
               yogaChart: c.treatment?.yogaChart?.title || "",
+               consultation: c,
+  source: calendarType,
               treatmentIds: readableNames,
               treatmentDuration: c.treatment?.recommendation?.duration || "",
               createdAt: c.createdAt,
-               treatmentPlan: c.treatmentPlan || [],
+         treatmentPlan: c.treatmentPlan
+  ? Array.isArray(c.treatmentPlan)
+    ? c.treatmentPlan
+    : [c.treatmentPlan]
+  : [],
 
             };
           })
@@ -241,10 +263,12 @@ export const SimpleCalendarView = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAppointments({ from: today, to: today });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+useEffect(() => {
+  fetchAppointments({
+    from: today,
+    to: tomorrow,
+  });
+}, []);
 
   return (
     <div>
@@ -266,6 +290,21 @@ export const SimpleCalendarView = () => {
             </PopoverTrigger>
 
             <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex gap-2">
+  <Button
+    variant={calendarType === "treatment" ? "default" : "outline"}
+    onClick={() => setCalendarType("treatment")}
+  >
+    Treatment Calendar
+  </Button>
+
+  <Button
+    variant={calendarType === "consultation" ? "default" : "outline"}
+    onClick={() => setCalendarType("consultation")}
+  >
+    Consultation Calendar
+  </Button>
+</div>
               <Calendar
                 mode="range"
                 selected={range}
@@ -301,11 +340,38 @@ export const SimpleCalendarView = () => {
 >
   <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
     <DialogHeader>
-      <DialogTitle>
-        {selectedAppointment?.patientName}
-      </DialogTitle>
+  <DialogTitle>
+  {selectedAppointment?.patientName}
+  <div className="text-sm font-normal text-gray-500">
+    {selectedAppointment?.source === "consultation"
+      ? "Consultation Details"
+      : "Treatment Details"}
+  </div>
+</DialogTitle>
     </DialogHeader>
+{selectedAppointment?.source === "consultation" && (
+  <div className="border rounded p-4">
+    <div>
+      <strong>Doctor:</strong>{" "}
+      {selectedAppointment.doctorName}
+    </div>
 
+    <div>
+      <strong>Created At:</strong>{" "}
+      {selectedAppointment.createdAt}
+    </div>
+
+    <div>
+      <strong>Recommendations:</strong>{" "}
+      {selectedAppointment.treatmentIds?.join(", ")}
+    </div>
+
+    <div>
+      <strong>Duration:</strong>{" "}
+      {selectedAppointment.treatmentDuration}
+    </div>
+  </div>
+)}
     <div className="space-y-4">
       {selectedAppointment?.treatmentPlan?.map((plan: any) => (
         <div

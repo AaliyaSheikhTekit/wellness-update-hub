@@ -89,6 +89,7 @@ const [activeTab, setActiveTab] = useState<
   const [selectedPranayama, setSelectedPranayama] = useState<string[]>([]);
   const [language, setLanguage] = useState("en");
   const [therapyList, setTherapyList] = useState<any[]>([]);
+  const [showConsent, setShowConsent] = useState(false);
 const doctorSigRef = useRef(null);
 
 const patientSigRef = useRef(null);
@@ -1763,7 +1764,33 @@ signature:
               )}
               {/* Step 7: Doctor's Signature */}
               {step === 7 && (
+                <> <div>
+    <p className="font-semibold text-amber-800 text-sm">Informed Consent</p>
+    <p className="text-xs text-amber-600 mt-0.5">
+      {showConsent ? "Consent form is included for this patient" : "Not included for this patient"}
+    </p>
+  </div>
+  <button
+    type="button"
+    onClick={() => {
+      setShowConsent((prev) => {
+        if (prev) {
+          setConsentGiven(false); // reset on hide
+        }
+        return !prev;
+      });
+    }}
+    className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+      showConsent
+        ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
+        : "bg-amber-600 text-white border-amber-700 hover:bg-amber-700"
+    }`}
+  >
+    {showConsent ? "Hide Consent" : "Show Consent — Treatment Package Taken"}
+  </button>
+{showConsent && (
                 <div className="space-y-4">
+                  
                   <h3 className="font-bold text-xl text-amber-700 border-b-2 border-amber-200 pb-2">
                     Final Review & Signature
                   </h3>
@@ -2099,7 +2126,7 @@ signature:
   Save Doctor Signature
 </Button>
                   </div>
-                </div>
+                </div>)}</>
               )}
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-8 pt-6 border-t-2 border-amber-200">
