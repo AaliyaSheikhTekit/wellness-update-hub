@@ -42,6 +42,8 @@ interface TreatmentRow {
   outTime: string;
   remark: string;
   totalDuration?: string;
+  source: "consultation" | "treatmentPlan"; // NEW
+  date?: string;                             // NEW
 }
 
 interface Therapist {
@@ -128,41 +130,32 @@ function AssignTherapistModal({
     if (!row) return;
     setSaving(true);
     try {
-      // 1. update recommendation fields
-      await updatePatientTreatmentTable(row.id, {
-        recommendation: {
-          inTime,
-          outTime,
-          therapist: therapistId,
-          timeSlot: `${inTime} - ${outTime}`,
-          remark,
-          duration: `${durationMin} min`,
-        },
-      });
+     // Only consultation rows have consultation IDs
+if (row.source === "consultation") {
+  await updatePatientTreatmentTable(row.id, {
+    recommendation: {
+      inTime,
+      outTime,
+      therapist: therapistId,
+      timeSlot: `${inTime} - ${outTime}`,
+      remark,
+      duration: `${durationMin} min`,
+    },
+  });
+}
 
       // 2. find correct treatmentPlanId + treatmentAssignId then assign therapist
-      if (therapistId) {
-        const patientRes = await getPatientById(row.patientId);
-        const patient = patientRes.data;
-
-        let treatmentPlanId = "";
-        let treatmentAssignId = "";
-
-        for (const plan of patient.treatmentPlan || []) {
-          const assign = (plan.treatmentAssign || []).find((a: any) =>
-            row.treatmentIds?.includes(a.treatment?.id)
-          );
-          if (assign) {
-            treatmentPlanId = plan.id;
-            treatmentAssignId = assign.id;
-            break;
-          }
-        }
-
-        if (treatmentPlanId && treatmentAssignId) {
-          await assignTherapist(therapistId, treatmentPlanId, treatmentAssignId);
-        }
-      }
+    if (
+  therapistId &&
+  row.source === "treatmentPlan" &&
+  row.treatmentPlanId
+) {
+  await assignTherapist(
+    therapistId,
+    row.treatmentPlanId,
+    row.treatmentIds[0]
+  );
+}
 
       const th = therapists.find((t) => t.id === therapistId);
       toast({
@@ -442,42 +435,70 @@ useEffect(() => {
     try {
       const res = await getTreatmentTable();
       const patients = res.data || [];
-
+console.log("Raw Treatment Data:", patients);
       const formatted = patients.flatMap((patient: any) => {
-        const patientName = patient.fullName;
-        return patient.appointment.flatMap((appt: any) =>
-          appt.consultation.map((c: any) => {
-            const recommendation = c.treatment?.recommendation || {};
-            const ids = Array.isArray(recommendation.title)
-              ? recommendation.title
-              : [recommendation.title].filter(Boolean);
-            const therapistId = recommendation.therapist || "";
-            const therapistName =
-              therapists.find((th) => th.id === therapistId)?.name || "";
-            const inTime = recommendation.inTime || "";
-            const outTime = recommendation.outTime || "";
-            const matched = masterTreatments.find((m) => ids.includes(m._id));
+  const patientName = patient.fullName;
 
-            return {
-              id: c.id,
-              patientId: patient.id,
-              treatmentPlanId: appt.id,
-              treatmentAssignId: c.id,
-              patientName,
-              treatmentIds: ids,
-              treatmentName: getTreatmentDetails(ids) || "Treatment Not Assigned",
-              therapistId,
-              therapistName,
-              inTime,
-              outTime,
-              timeSlot: recommendation.timeSlot || "",
-              remark: recommendation.remark || "",
-              totalDuration: matched?.duration || recommendation.duration || "",
-            };
-          })
-        );
-      });
+  // Consultation Recommendations
+  const consultationRows =
+    patient.appointment?.flatMap((appt: any) =>
+      (appt.consultation || []).map((c: any) => {
+        const recommendation = c.treatment?.recommendation || {};
 
+        const ids = Array.isArray(recommendation.title)
+          ? recommendation.title
+          : [recommendation.title].filter(Boolean);
+
+        return {
+          id: c.id,
+          patientId: patient.id,
+          patientName,
+          treatmentIds: ids,
+          treatmentName: getTreatmentDetails(ids),
+          source: "consultation",
+          therapistId: recommendation.therapist || "",
+          therapistName:
+            therapists.find(
+              (t) => t.id === recommendation.therapist
+            )?.name || "",
+          inTime: recommendation.inTime || "",
+          outTime: recommendation.outTime || "",
+          timeSlot: recommendation.timeSlot || "",
+          remark: recommendation.remark || "",
+          totalDuration: recommendation.duration || "",
+        };
+      })
+    ) || [];
+
+  // Treatment Plan Rows
+  const treatmentPlanRows =
+    patient.treatmentPlan?.flatMap((plan: any) =>
+      (plan.treatmentAssign || []).map((assign: any) => {
+        const treatmentId = assign.treatment?.id;
+
+       return {
+  id: assign.id,
+  patientId: patient.id,
+  patientName,
+  treatmentPlanId: plan.id,
+  treatmentAssignId: assign.id,
+  treatmentIds: [treatmentId],
+  treatmentName: assign.treatment?.title || "",
+  source: "treatmentPlan",
+  therapistId: assign.therapist?.id || "",
+  therapistName: assign.therapist?.name || "",
+  inTime: assign.inTime || "",
+  outTime: assign.outTime || "",
+  timeSlot: plan.timeSlot || "",
+  remark: assign.remark || "",
+  totalDuration: assign.duration || "",
+};
+      })
+    ) || [];
+
+  return [...consultationRows, ...treatmentPlanRows];
+});
+console.log("Formatted Rows:", formatted);
       setTreatments(formatted);
     } catch (err) {
       console.error(err);
@@ -627,12 +648,24 @@ useEffect(() => {
 
                     {/* Treatment */}
                     <td className="px-6 py-4">
-                      <p className="text-sm text-foreground/80 max-w-xs line-clamp-2">
-                        {t.treatmentName || "—"}
-                      </p>
-                    </td>
+  <div className="flex flex-col">
+    <span>{t.treatmentName}</span>
 
-                    {/* Therapist */}
+    <Badge
+      variant={
+        t.source === "consultation"
+          ? "secondary"
+          : "default"
+      }
+      className="w-fit mt-1"
+    >
+      {t.source === "consultation"
+        ? "Consultation"
+        : "Treatment Plan"}
+    </Badge>
+  </div>
+
+            </td>        {/* Therapist */}
                     <td className="px-6 py-4">
                       {t.therapistName ? (
                         <Badge variant="secondary" className="font-normal">
