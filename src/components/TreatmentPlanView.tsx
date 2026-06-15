@@ -976,16 +976,15 @@ export function TreatmentPlanView({ patient }) {
   };
 
   // 🧩 Group all plans by date (for single-row-per-date)
-  const groupedPlans = useMemo(() => {
-    const groups = {};
-    (localPatient.treatmentPlan || []).forEach((plan) => {
-      const date = plan.date;
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(plan);
-    });
-    return groups;
-  }, [localPatient.treatmentPlan]);
-
+const groupedPlans = useMemo(() => {
+  const groups: Record<string, TreatmentPlanEntry[]> = {};
+  (localPatient.treatmentPlan || []).forEach((plan) => {
+    const date = plan.date?.split("T")[0] ?? plan.date; // ✅ normalize to YYYY-MM-DD
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(plan);
+  });
+  return groups;
+}, [localPatient.treatmentPlan]);
   return (
     <div className="bg-white p-4 shadow rounded-xl border">
       <div className="flex items-center justify-between pb-4 border-b">
@@ -1067,7 +1066,7 @@ export function TreatmentPlanView({ patient }) {
   </tr>
 </thead>
          <tbody>
-  {Object.entries(groupedPlans).map(([date, plansRaw]) => {
+  {Object.entries(groupedPlans).sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime()).map(([date, plansRaw]) => {
     const plans = plansRaw as TreatmentPlanEntry[];
 
     const allTimeSlots =
