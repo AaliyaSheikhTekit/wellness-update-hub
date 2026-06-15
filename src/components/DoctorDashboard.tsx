@@ -693,23 +693,30 @@ console.log("Diet/Treatment IDs", {
   appointmentId,
   consultationId,
 });
-console.log(patient, patientFullData, selectedPatient,'------------------');
 const handleOpenCaseSheet = async (apt: Appointment) => {
+  // ✅ Open immediately with whatever we already have from the patients list
+  const quickPatient = patients.find((p) => p.id === apt.patientId) || {
+    id: apt.patientId,
+    fullName: apt.patient_name,
+    contactNumber: apt.patient_phone,
+    appointment: [],
+    treatmentPlan: [],
+  };
+  setPatient(quickPatient);
+  setPatientFullData(quickPatient);
+  setDialogOpen(true); // ✅ opens instantly
+
+  // 🔄 Fetch full data in background and update dialog
   try {
     const resp = await getPatient(apt.patientId || "");
-
-    const pd = Array.isArray(resp?.data)
-      ? resp.data[0]
-      : resp?.data || resp;
-
+    const pd = Array.isArray(resp?.data) ? resp.data[0] : resp?.data || resp;
     setPatient(pd);
-    setDialogOpen(true);
+    setPatientFullData(pd);
   } catch (err) {
     console.error(err);
-
     toast({
       title: "Error",
-      description: "Unable to load patient details",
+      description: "Unable to load full patient details",
       variant: "destructive",
     });
   }

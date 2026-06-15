@@ -69,7 +69,7 @@ console.log("CaseSheetDialog patient:", patient);
   // Get the latest appointment with consultation data
   const latestAppointment = patient.appointment?.[0];
   const latestConsultation = latestAppointment?.consultation?.find((c: any) => c.systemic && c.investigationsOrDiagnosis);
-
+const isLoading = !patient?.age && !patient?.primaryHealthConcern;
   // Format physical examination data
   const formatPhysicalExam = () => {
     if (!patient.physical) return "NAD";
@@ -108,7 +108,15 @@ console.log("CaseSheetDialog patient:", patient);
         <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto bg-white text-black p-0">
       
             <DialogTitle>Patient Case Sheet - {patient.fullName}</DialogTitle>
-     
+     {isLoading && (
+  <div className="space-y-3 animate-pulse">
+    <div className="h-6 bg-gray-200 rounded w-1/2" />
+    <div className="h-4 bg-gray-200 rounded w-3/4" />
+    <div className="h-4 bg-gray-200 rounded w-2/3" />
+    <div className="h-32 bg-gray-200 rounded" />
+    <div className="h-32 bg-gray-200 rounded" />
+  </div>
+)}
           <div className="p-8 space-y-6">
             {/* HEADER */}
          {/* HEADER */}
