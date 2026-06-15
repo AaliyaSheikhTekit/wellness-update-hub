@@ -63,6 +63,9 @@ import {
 } from "@/components/ui/popover";
 import { updatePatientConsult, uploadConsultationReport } from "./DoctoreForm";
 import DietTableView from "./Dietician/DietTableView";
+import { SimpleCalendarView } from "./SimpleCalendarView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarDays, ClipboardList } from "lucide-react";
 /* ----------------------------- Types ----------------------------- */
 
 type AppointmentStatus =
@@ -748,8 +751,18 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
           />
         </div>
       </div>
+<Tabs defaultValue="appointments" className="w-full">
+  <TabsList className="bg-white border rounded-lg shadow-sm mb-4 flex">
+    <TabsTrigger value="appointments" className="flex-1 flex items-center justify-center gap-2">
+      <CalendarIcon className="h-4 w-4" /> Appointments & Patients
+    </TabsTrigger>
+    <TabsTrigger value="calendar" className="flex-1 flex items-center justify-center gap-2">
+      <CalendarDays size={16} /> Calendar
+    </TabsTrigger>
+  </TabsList>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+  <TabsContent value="appointments">
+        <div className="flex flex-col lg:flex-row gap-6">
         {/* Appointments Column */}
         <Card className="shadow-card w-full lg:w-1/2">
           <CardHeader className="border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1107,6 +1120,13 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
           </Card>
         </motion.div>
       </div>
+  </TabsContent>
+
+  <TabsContent value="calendar">
+    <SimpleCalendarView />
+  </TabsContent>
+</Tabs>
+  
 
       {/* Notifications Panel */}
       {showNotifications &&
