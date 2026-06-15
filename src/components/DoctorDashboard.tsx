@@ -66,6 +66,7 @@ import DietTableView from "./Dietician/DietTableView";
 import { SimpleCalendarView } from "./SimpleCalendarView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, ClipboardList } from "lucide-react";
+import PrescriptionDialog from "@/pages/Prescriptions";
 /* ----------------------------- Types ----------------------------- */
 
 type AppointmentStatus =
@@ -161,6 +162,9 @@ const DoctorDashboard: React.FC = () => {
   const [opentherapies, setOpenTherapies] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedTherapies, setSelectedTherapies] = useState<any[]>([]);
+  const [openPrescriptionModal, setOpenPrescriptionModal] = useState(false);
+const [selectedPrescriptionPatient, setSelectedPrescriptionPatient] =
+  useState<any>(null);
  const filteredTherapies = useMemo(() => {
   const searchText = search.toLowerCase().trim();
 
@@ -480,7 +484,25 @@ setPatient(pd);
       });
     }
   };
+const handleOpenAddPrescription = async (apt: Appointment) => {
+  try {
+    const resp = await getPatient(apt.patientId || "");
 
+    const pd = Array.isArray(resp?.data)
+      ? resp.data[0]
+      : resp?.data || resp;
+
+    setSelectedPrescriptionPatient(pd);
+    setOpenPrescriptionModal(true);
+  } catch (err) {
+    console.error(err);
+
+    toast({
+      title: "Error loading patient",
+      variant: "destructive",
+    });
+  }
+};
   /* ------------------------ Save Treatment (calls update API) ------------------------ */
 const handleSaveTreatment = async () => {
   if (!selectedPatient?.id) {
@@ -858,6 +880,15 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleOpenAddDiet(apt)}>
                 Add Diet
+              </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  if (!apt.patientId) {
+                    toast({ title: "Missing patient ID", variant: "destructive" });
+                    return;
+                  }
+                  handleOpenAddPrescription(apt);
+                }}>
+                Add Prescription/Consultation
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -1513,6 +1544,31 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
     open={dialogOpen}
     onOpenChange={setDialogOpen}
     patient={patientFullData}
+  />
+)}
+{openPrescriptionModal && selectedPrescriptionPatient && (
+  <PrescriptionDialog
+    open={openPrescriptionModal}
+    onClose={() => setOpenPrescriptionModal(false)}
+    patient={selectedPrescriptionPatient}
+    onPrescriptionCreated={async () => {
+      await fetchAppointments();
+
+      if (selectedPrescriptionPatient?.id) {
+        const refreshed = await getPatientById(
+          selectedPrescriptionPatient.id
+        );
+
+        const patientData = Array.isArray(
+          refreshed?.data
+        )
+          ? refreshed.data[0]
+          : refreshed?.data;
+
+        setPatient(patientData);
+        setPatientFullData(patientData);
+      }
+    }}
   />
 )}
       
