@@ -428,10 +428,8 @@ const payload = {
         .otherChronicIllness || "",
   },
 };
-
       const result = await createPatientConsult(payload);
 
-      console.log("Consultation created successfully:", result);
 
       // Store the consultation ID for subsequent updates
       const createdId = result?.data?.id || result?.id;
@@ -918,13 +916,13 @@ signature:
                       </label>
                       <Textarea
                         placeholder="Enter surgeries or injuries..."
-                        value={doctorData.pastMedicalHistory.surgeries}
+                        value={doctorData.pastMedicalHistory.surgeriesOrInjuries}
                         onChange={(e) =>
                           setDoctorData({
                             ...doctorData,
                             pastMedicalHistory: {
                               ...doctorData.pastMedicalHistory,
-                              surgeries: e.target.value,
+                              surgeriesOrInjuries: e.target.value,
                             },
                           })
                         }
