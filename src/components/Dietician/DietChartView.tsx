@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Calendar } from "lucide-react";
 import IkshaLogo from "../../assets/iksha_logo.png";
-import { generateDietPDF } from "@/lib/api";
+import { generateDietPDF, getDiet } from "@/lib/api";
 import {
   Select,
   SelectTrigger,
@@ -17,7 +17,26 @@ export default function DietChartView({ patient }: { patient: any }) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [consultations, setConsultations] = useState<any[]>([]);
   const [selectedConsultationId, setSelectedConsultationId] = useState<string | undefined>();
-
+  const [dietCategoryMap, setDietCategoryMap] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const loadDietItems = async () => {
+      try {
+        const response = await getDiet({ limit: 1000 });
+        const map: Record<string, string> = {};
+        (response.data || []).forEach((cat: any) => {
+          (cat.subCategories || []).forEach((sub: any) => {
+            (sub.items || []).forEach((item: any) => {
+              map[item.id] = cat.name;
+            });
+          });
+        });
+        setDietCategoryMap(map);
+      } catch (error) {
+        console.error("Error loading diet items:", error);
+      }
+    };
+    loadDietItems();
+  }, []);
   // ✅ Extract consultations from patient.appointment
   useEffect(() => {
     if (!appointments.length) return;
@@ -44,18 +63,18 @@ export default function DietChartView({ patient }: { patient: any }) {
   // ✅ Filter appointments based on selected consultation
   const filteredAppointments = selectedConsultationId
     ? appointments.filter((apt: any) =>
-        apt.consultation?.some((c: any) => c.id === selectedConsultationId)
-      )
+      apt.consultation?.some((c: any) => c.id === selectedConsultationId)
+    )
     : appointments;
-const DEFAULT_MEAL_TIMINGS = [
-  { time: "04:30AM-05:00AM", label: "Early Morning" },
-  { time: "08:00AM-09:00AM", label: "Breakfast" },
-  { time: "11:00AM-01:00PM", label: "Mid-Morning" },
-  { time: "01:30PM-02:30PM", label: "Lunch" },
-  { time: "05:00PM-06:00PM", label: "Evening" },
-  { time: "07:30PM-08:30PM", label: "Dinner" },
-  { time: "08:30PM", label: "Before Sleep" },
-];
+  const DEFAULT_MEAL_TIMINGS = [
+    { time: "04:30AM-05:00AM", label: "Early Morning" },
+    { time: "08:00AM-09:00AM", label: "Breakfast" },
+    { time: "11:00AM-01:00PM", label: "Mid-Morning" },
+    { time: "01:30PM-02:30PM", label: "Lunch" },
+    { time: "05:00PM-06:00PM", label: "Evening" },
+    { time: "07:30PM-08:30PM", label: "Dinner" },
+    { time: "08:30PM", label: "Before Sleep" },
+  ];
   const downloadPDF = async (appointmentId: string) => {
     try {
       setDownloadingId(appointmentId);
@@ -85,11 +104,11 @@ const DEFAULT_MEAL_TIMINGS = [
     if (time === "05:00PM-06:00PM") return "";
     return "";
   };
-const getMealLabel = (time: string) => {
-  return (
-    DEFAULT_MEAL_TIMINGS.find((x) => x.time === time)?.label || ""
-  );
-};
+  const getMealLabel = (time: string) => {
+    return (
+      DEFAULT_MEAL_TIMINGS.find((x) => x.time === time)?.label || ""
+    );
+  };
   const parseIndianDate = (dateStr: string) => {
     const [day, month, year] = dateStr.split(/[-/]/).map(Number);
     return new Date(year, month - 1, day);
@@ -179,7 +198,7 @@ const getMealLabel = (time: string) => {
               dal: apt.dietPlan.flatMap((p: any) => p.dal || []),
               patientDietPlan: apt.dietPlan.flatMap((p: any) => p.patientDietPlan || []),
             };
-console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
+            console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
             const allTimeSlotsSet = new Set<string>();
             mergedPlan.patientDietPlan.forEach((pdp: any) => {
               pdp.dietPlanItem.forEach((item: any) => {
@@ -245,137 +264,138 @@ console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
 
 
                 <div className="overflow-x-auto">
-  <table className="w-full border-2 border-gray-800 text-sm">
-    <thead>
-      <tr>
-        <th className="border-2 border-gray-800 bg-amber-500 text-white p-3 text-center font-bold w-[150px]">
-          Date
-        </th>
+                  <table className="w-full border-2 border-gray-800 text-sm">
+                    <thead>
+                      <tr>
+                        <th className="border-2 border-gray-800 bg-amber-500 text-white p-3 text-center font-bold w-[150px]">
+                          Date
+                        </th>
 
-        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold w-[220px]">
-          Time Slot
-        </th>
+                        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold w-[220px]">
+                          Time Slot
+                        </th>
 
-        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold">
-          Diet Plan
-        </th>
-      </tr>
-    </thead>
+                        <th className="border-2 border-gray-800 bg-amber-100 p-3 text-center font-bold">
+                          Diet Plan
+                        </th>
+                      </tr>
+                    </thead>
 
-    <tbody>
-      {sortedDates.map((date) => {
-        const pdpsForDate = dateMap.get(date)!;
+                    <tbody>
+                      {sortedDates.map((date) => {
+                        const pdpsForDate = dateMap.get(date)!;
 
-        const rows: {
-          timeSlot: string;
-          dietItems: any[];
-        }[] = [];
+                        const rows: {
+                          timeSlot: string;
+                          dietItems: any[];
+                        }[] = [];
 
-        allTimeSlots.forEach((timeSlot) => {
-          const allDietItems: any[] = [];
+                        allTimeSlots.forEach((timeSlot) => {
+                          const allDietItems: any[] = [];
 
-          pdpsForDate.forEach((pdp: any) => {
-            const dietItem = pdp.dietPlanItem.find(
-              (item: any) => item.time === timeSlot
-            );
+                          pdpsForDate.forEach((pdp: any) => {
+                            const dietItem = pdp.dietPlanItem.find(
+                              (item: any) => item.time === timeSlot
+                            );
 
-            if (
-              dietItem &&
-              dietItem.dietItem &&
-              dietItem.dietItem.length > 0
-            ) {
-              allDietItems.push(...dietItem.dietItem);
-            }
-          });
+                            if (
+                              dietItem &&
+                              dietItem.dietItem &&
+                              dietItem.dietItem.length > 0
+                            ) {
+                              allDietItems.push(...dietItem.dietItem);
+                            }
+                          });
 
-          rows.push({
-            timeSlot,
-            dietItems: allDietItems,
-          });
-        });
+                          rows.push({
+                            timeSlot,
+                            dietItems: allDietItems,
+                          });
+                        });
 
-        return rows.map((row, index) => (
-          <tr key={`${date}-${row.timeSlot}`}>
-            {index === 0 && (
-              <td
-                rowSpan={rows.length}
-                className="border-2 border-gray-800 p-3 font-bold bg-gray-50 text-center align-top"
-              >
-                {new Date(date).toLocaleDateString(
-                  "en-IN",
-                  {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  }
-                )}
-              </td>
-            )}
+                        return rows.map((row, index) => (
+                          <tr key={`${date}-${row.timeSlot}`}>
+                            {index === 0 && (
+                              <td
+                                rowSpan={rows.length}
+                                className="border-2 border-gray-800 p-3 font-bold bg-gray-50 text-center align-top"
+                              >
+                                {new Date(date).toLocaleDateString(
+                                  "en-IN",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </td>
+                            )}
 
-   <td className="border-2 border-gray-800 p-3 bg-amber-50 align-top">
-  <div className="font-bold text-gray-900">
-    {getMealLabel(row.timeSlot)}
-  </div>
+                            <td className="border-2 border-gray-800 p-3 bg-amber-50 align-top">
+                              <div className="font-bold text-gray-900">
+                                {getMealLabel(row.timeSlot)}
+                              </div>
 
-  <div className="text-sm text-gray-600">
-    {row.timeSlot}
-  </div>
+                              <div className="text-sm text-gray-600">
+                                {row.timeSlot}
+                              </div>
 
-  {getLocationLabel(row.timeSlot) && (
-    <div className="text-xs text-gray-500 mt-1">
-      {getLocationLabel(row.timeSlot)}
-    </div>
-  )}
-</td>
+                              {getLocationLabel(row.timeSlot) && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {getLocationLabel(row.timeSlot)}
+                                </div>
+                              )}
+                            </td>
 
-            <td className="border-2 border-gray-800 p-3 align-top">
-              {row.dietItems.length > 0 ? (
-                <div className="space-y-3">
-              {(() => {
-  const groups = row.dietItems.reduce((acc: any, item: any) => {
-    const category = item.category?.name || "Other";
+                            <td className="border-2 border-gray-800 p-3 align-top">
+                              {row.dietItems.length > 0 ? (
+                                <div className="space-y-3">
+                                  {(() => {
+                                    const groups = row.dietItems.reduce((acc: any, item: any) => {
+                                      const category =
+                                        dietCategoryMap[item.id] || item.category?.name || "Other";
 
-    if (!acc[category]) {
-      acc[category] = [];
-    }
+                                      if (!acc[category]) {
+                                        acc[category] = [];
+                                      }
 
-    acc[category].push(item);
+                                      acc[category].push(item);
 
-    return acc;
-  }, {});
+                                      return acc;
+                                    }, {});
 
-  return (
-    <div className="text-sm leading-7">
-      {Object.entries(groups).map(([category, foods]: any, index, arr) => (
-        <span key={category}>
-          <span className="font-bold text-amber-700">{category}: </span>
-          (
-          {foods
-            .map((food: any) => food.subForm || food.name)
-            .join(" / ")}
-          )
-          {index !== arr.length - 1 && (
-            <span className="font-bold text-gray-500"> + </span>
-          )}
-        </span>
-      ))}
-    </div>
-  );
-})()}
+                                    return (
+                                      <div className="text-sm leading-7">
+                                        {Object.entries(groups).map(([category, foods]: any, index, arr) => (
+                                          <span key={category}>
+                                            <span className="font-bold text-amber-700">{category}: </span>
+                                            (
+                                            {foods
+                                              .map((food: any) => food.subForm || food.name)
+                                              .join(" / ")}
+                                            )
+                                            {index !== arr.length - 1 && (
+                                              <span className="font-bold text-gray-500"> + </span>
+                                            )}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <div className="text-gray-400 italic">
+                                  No Diet Assigned
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ));
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="text-gray-400 italic">
-                  No Diet Assigned
-                </div>
-              )}
-            </td>
-          </tr>
-        ));
-      })}
-    </tbody>
-  </table>
-</div>
-                
+
                 {mergedPlan.restrictions && (
                   <div className="mb-4 mt-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-3 text-sm font-semibold">
                     <strong>Restrictions:</strong> {mergedPlan.restrictions}
@@ -404,7 +424,7 @@ console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
                     <strong className="font-semibold">Dal:</strong>{" "}
                     {mergedPlan.dal.join(", ")}
                   </div>
-                )}  
+                )}
               </div>
             );
           })}

@@ -49,7 +49,7 @@ interface MealPlan {
     [mealTime: string]: {
       text: string;
       itemIds: string[];
-      // removed per-cell restrictions from UI (now global)
+      itemQty?: Record<string, string>;
       restrictions?: string;
     };
   };
@@ -218,37 +218,59 @@ const weekDays = Array.from(
 );
   const getDateKey = (date: Date) => format(date, "yyyy-MM-dd");
 
-  // ✅ Include Yoga items also in the lookup map
-  const dietItemMap = useMemo(() => {
-    const map: Record<string, string> = {};
+const dietItemMap = useMemo(() => {
+    const map: Record<string, { label: string; category: string }> = {};
 
-    // 🥗 Regular diet items
     dietItems.forEach((cat) => {
       cat.subCategories.forEach((sub) => {
         sub.items.forEach((item) => {
-          map[item.id] = item.subForm || item.name || "";
+          map[item.id] = {
+            label: item.subForm || item.name || "",
+            category: cat.name,
+          };
         });
       });
     });
 
-    // 🧘 Yoga items
     yogaCategories.forEach((cat: any) => {
       cat.subCategories?.forEach((sub: any) => {
         sub.items?.forEach((item: any) => {
-          map[item.id] = item.name || "";
+          map[item.id] = {
+            label: item.name || "",
+            category: "Yoga",
+          };
         });
       });
     });
 
     return map;
   }, [dietItems, yogaCategories]);
+const getDisplayForIds = (
+    ids: string[],
+    plain = false,
+    qtyMap: Record<string, string> = {}
+  ) => {
+    const order: string[] = [];
+    const groups: Record<string, string[]> = {};
 
-  const getDisplayForIds = (ids: string[]) =>
-    ids
-      .map((id) => dietItemMap[id] || "")
-      .filter(Boolean)
-      .join(", ");
+    ids.forEach((id) => {
+      const entry = dietItemMap[id];
+      if (!entry) return;
+      const qty = qtyMap[id];
+      const label = qty ? `${qty} ${entry.label}` : entry.label;
+      if (!groups[entry.category]) {
+        groups[entry.category] = [];
+        order.push(entry.category);
+      }
+      groups[entry.category].push(label);
+    });
 
+    return order
+      .map((cat) =>
+        plain ? `(${groups[cat].join(" / ")})` : `${cat}: (${groups[cat].join(" / ")})`
+      )
+      .join(" + ");
+  };
   const isAllowedForTiming = (timingLabel: string, categoryName: string) => {
     const allowed = CATEGORY_RULES[timingLabel] ?? [];
     if (allowed.length === 0) return false;
@@ -297,8 +319,12 @@ const weekDays = Array.from(
       },
     }));
   };
-
-  const addDietItemToMeal = (date: Date, mealTime: string, itemId: string) => {
+const addDietItemToMeal = (
+    date: Date,
+    mealTime: string,
+    itemId: string,
+    qty?: string
+  ) => {
     const dateKey = getDateKey(date);
     setMealPlans((prev) => {
       const current = prev[dateKey]?.[mealTime];
@@ -306,7 +332,12 @@ const weekDays = Array.from(
       if (ids.includes(itemId)) return prev;
 
       const newIds = [...ids, itemId];
-      const newText = getDisplayForIds(newIds);
+      const newQtyMap = { ...(current?.itemQty || {}) };
+      if (qty) newQtyMap[itemId] = qty;
+
+      const timing = mealTimingsState.find((m) => m.time === mealTime);
+      const isPlain = timing?.label === "Lunch" || timing?.label === "Dinner";
+      const newText = getDisplayForIds(newIds, isPlain, newQtyMap);
 
       return {
         ...prev,
@@ -315,13 +346,13 @@ const weekDays = Array.from(
           [mealTime]: {
             text: newText,
             itemIds: newIds,
+            itemQty: newQtyMap,
           },
         },
       };
     });
   };
-
-  const removeDietItemFromMeal = (
+const removeDietItemFromMeal = (
     date: Date,
     mealTime: string,
     itemId: string
@@ -331,7 +362,13 @@ const weekDays = Array.from(
       const current = prev[dateKey]?.[mealTime];
       if (!current) return prev;
       const newIds = current.itemIds.filter((id) => id !== itemId);
-      const newText = getDisplayForIds(newIds);
+      const newQtyMap = { ...(current.itemQty || {}) };
+      delete newQtyMap[itemId];
+
+      const timing = mealTimingsState.find((m) => m.time === mealTime);
+      const isPlain = timing?.label === "Lunch" || timing?.label === "Dinner";
+      const newText = getDisplayForIds(newIds, isPlain, newQtyMap);
+
       return {
         ...prev,
         [dateKey]: {
@@ -339,12 +376,12 @@ const weekDays = Array.from(
           [mealTime]: {
             text: newText,
             itemIds: newIds,
+            itemQty: newQtyMap,
           },
         },
       };
     });
   };
-
   const copyDayPlan = (date: Date) => {
     const dateKey = getDateKey(date);
     setCopiedDay(dateKey);
@@ -602,7 +639,7 @@ const weekDays = Array.from(
     const [open, setOpen] = useState(false);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
-
+const [qtyById, setQtyById] = useState<Record<string, string>>({});
     // 🔹 Build all diet items
     const allItems: (DietItem & {
       categoryName: string;
@@ -678,13 +715,15 @@ const weekDays = Array.from(
       );
     };
 
-    const addSelectedItems = () => {
-      selectedItems.forEach((itemId) => addDietItemToMeal(date, time, itemId));
+  const addSelectedItems = () => {
+      selectedItems.forEach((itemId) =>
+        addDietItemToMeal(date, time, itemId, qtyById[itemId])
+      );
       setSelectedItems([]);
       setSearchQuery("");
+      setQtyById({});
       setOpen(false);
     };
-
     const grouped: Record<
       string,
       Record<string, typeof gated>
@@ -797,6 +836,17 @@ const weekDays = Array.from(
                                     {item.subForm}
                                   </div>
                                 )}
+                                {checked && (
+  <Input
+    placeholder="Qty e.g. 3-4"
+    value={qtyById[item.id] || ""}
+    onChange={(e) =>
+      setQtyById((prev) => ({ ...prev, [item.id]: e.target.value }))
+    }
+    onClick={(e) => e.stopPropagation()}
+    className="h-6 text-[10px] mt-1"
+  />
+)}
                               </div>
                             </div>
                           );
@@ -1005,7 +1055,8 @@ const weekDays = Array.from(
                               key={id}
                               className="inline-flex items-center gap-1 bg-blue-50 text-blue-900 border border-blue-200 px-1.5 py-0.5 rounded text-[10px]"
                             >
-                              {dietItemMap[id] || id}
+                          {cell?.itemQty?.[id] ? `${cell.itemQty[id]} ` : ""}
+{dietItemMap[id]?.label || id}
                               <button
                                 type="button"
                                 className="ml-1 p-0.5 hover:bg-blue-100 rounded"
@@ -1024,7 +1075,7 @@ const weekDays = Array.from(
                           onChange={(e) =>
                             updateMealPlanText(date, mt.time, e.target.value)
                           }
-                          placeholder={mt.placeholder}
+                          placeholder='Enter text or use "Add items" button'
                           className="min-h-[50px] text-[11px] resize-none"
                         />
 

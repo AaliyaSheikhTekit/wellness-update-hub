@@ -1528,9 +1528,10 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         >
           Cancel
         </Button>
-        <Button
+      <Button
           className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-600/90 text-white"
           onClick={() => setOpenDietModal(false)}
+          disabled={!doctorData.treatment?.dietChart?.title?.trim()}
         >
           Save Diet Chart
         </Button>
