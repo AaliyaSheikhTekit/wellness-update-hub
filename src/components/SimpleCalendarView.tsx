@@ -399,11 +399,6 @@ useEffect(() => {
                 <div className="text-sm">
                   Duration: {assign.treatment?.duration}
                 </div>
-
-                <div className="text-sm">
-                  Price: ₹{assign.treatment?.price}
-                </div>
-
                 <div className="text-sm">
                   Therapist:{" "}
                   {assign.therapist?.name ||

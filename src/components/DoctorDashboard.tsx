@@ -893,7 +893,7 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() =>
-                  navigate(`/patient/${apt.patientId}?tab=treatmentplan`)
+                 navigate(`/patient/${apt.patientId}?tab=treatmentplan`)
                 }
               >
                 View Treatment

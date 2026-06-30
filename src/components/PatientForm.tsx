@@ -512,17 +512,61 @@ useEffect(() => {
     }
   };
 
-  const handleVitalsChange = (field: string, value: any) => {
-    setVitals({ ...vitals, [field]: value });
+ const handleVitalsChange = (field: string, value: any) => {
+  if (field === "Height") {
+    value = convertHeightToCm(value);
+  }
 
-    // Clear error on change
-    if (errors[field]) {
-      const newErrors = { ...errors };
-      delete newErrors[field];
-      setErrors(newErrors);
-    }
-  };
+  setVitals({
+    ...vitals,
+    [field]: value,
+  });
 
+  if (errors[field]) {
+    const newErrors = { ...errors };
+    delete newErrors[field];
+    setErrors(newErrors);
+  }
+};
+const convertHeightToCm = (value: string): string => {
+  if (!value) return "";
+
+  const input = value.trim().toLowerCase();
+
+  // 160 or 160 cm
+  const cm = input.match(/^(\d+(?:\.\d+)?)\s*cm?$/);
+  if (cm) {
+    return cm[1];
+  }
+
+  // 5'7 or 5'7"
+  const feetInches = input.match(/^(\d+)['′](\d{1,2})"?$/);
+  if (feetInches) {
+    const feet = Number(feetInches[1]);
+    const inches = Number(feetInches[2]);
+
+    return Math.round((feet * 30.48) + (inches * 2.54)).toString();
+  }
+
+  // 5 ft 7 in
+  const ftIn = input.match(/^(\d+)\s*ft\s*(\d+)\s*in$/);
+  if (ftIn) {
+    const feet = Number(ftIn[1]);
+    const inches = Number(ftIn[2]);
+
+    return Math.round((feet * 30.48) + (inches * 2.54)).toString();
+  }
+
+  return value;
+};
+
+const cmToFeetInches = (cm: number) => {
+  const totalInches = cm / 2.54;
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+
+  return `${feet}'${inches}"`;
+};
 
 
   const toISODate = (d: string) =>
@@ -1600,8 +1644,13 @@ otherWaterIntake:
                               }
                               onBlur={() => handleBlur(v.label)}
                               disabled={v.auto}
-                              placeholder={v.auto ? "Auto-calculated" : "Enter value"}
-                            />
+placeholder={
+  v.label === "Height"
+    ? "160 cm or 5'7"
+    : v.auto
+    ? "Auto-calculated"
+    : "Enter value"
+}                            />
                           )}
                           {errors[v.label] &&
                             !["BMI", "Temperature", "Weight", "Height"].includes(v.label) && (

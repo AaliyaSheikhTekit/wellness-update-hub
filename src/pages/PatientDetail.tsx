@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate,useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +182,9 @@ const fmtDate = (d?: string | null) =>
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+const initialTab = searchParams.get("tab") || "appointments";
   // --- Hooks must come first ---
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -197,7 +200,13 @@ console.log("User Name from localStorage:", userName);
   const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<
     string | null
   >(null);
-const [activeTab, setActiveTab] = useState("appointments");
+const [activeTab, setActiveTab] = useState(initialTab);
+useEffect(() => {
+  const tab = searchParams.get("tab");
+  if (tab) {
+    setActiveTab(tab);
+  }
+}, [searchParams]);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -752,7 +761,11 @@ const activeConsultation = useMemo(() => {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="appointments" className="space-y-6">
+        <Tabs
+  value={activeTab}
+  onValueChange={setActiveTab}
+  className="space-y-6"
+>
            <TabsList
       ref={tabsRef}
 className="flex  overflow-x-auto w-full "
@@ -773,7 +786,7 @@ className="flex  overflow-x-auto w-full "
         <TabsTrigger
           key={tab.value}
           value={tab.value}
-          onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
+          // onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
           className="
             text-sm sm:text-base font-medium px-3 py-1.5 rounded-md
             data-[state=active]:border-b-2 data-[state=active]:border-black-500

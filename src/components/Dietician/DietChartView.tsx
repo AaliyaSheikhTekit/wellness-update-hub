@@ -47,7 +47,15 @@ export default function DietChartView({ patient }: { patient: any }) {
         apt.consultation?.some((c: any) => c.id === selectedConsultationId)
       )
     : appointments;
-
+const DEFAULT_MEAL_TIMINGS = [
+  { time: "04:30AM-05:00AM", label: "Early Morning" },
+  { time: "08:00AM-09:00AM", label: "Breakfast" },
+  { time: "11:00AM-01:00PM", label: "Mid-Morning" },
+  { time: "01:30PM-02:30PM", label: "Lunch" },
+  { time: "05:00PM-06:00PM", label: "Evening" },
+  { time: "07:30PM-08:30PM", label: "Dinner" },
+  { time: "08:30PM", label: "Before Sleep" },
+];
   const downloadPDF = async (appointmentId: string) => {
     try {
       setDownloadingId(appointmentId);
@@ -77,7 +85,11 @@ export default function DietChartView({ patient }: { patient: any }) {
     if (time === "05:00PM-06:00PM") return "";
     return "";
   };
-
+const getMealLabel = (time: string) => {
+  return (
+    DEFAULT_MEAL_TIMINGS.find((x) => x.time === time)?.label || ""
+  );
+};
   const parseIndianDate = (dateStr: string) => {
     const [day, month, year] = dateStr.split(/[-/]/).map(Number);
     return new Date(year, month - 1, day);
@@ -300,37 +312,56 @@ console.log("Merged Diet Plan for Appointment ID", apt.id, mergedPlan);
               </td>
             )}
 
-            <td className="border-2 border-gray-800 p-3 font-semibold bg-amber-50 align-top">
-              <div>{row.timeSlot}</div>
+   <td className="border-2 border-gray-800 p-3 bg-amber-50 align-top">
+  <div className="font-bold text-gray-900">
+    {getMealLabel(row.timeSlot)}
+  </div>
 
-              {getLocationLabel(row.timeSlot) && (
-                <div className="text-[11px] text-gray-500 mt-1">
-                  {getLocationLabel(row.timeSlot)}
-                </div>
-              )}
-            </td>
+  <div className="text-sm text-gray-600">
+    {row.timeSlot}
+  </div>
+
+  {getLocationLabel(row.timeSlot) && (
+    <div className="text-xs text-gray-500 mt-1">
+      {getLocationLabel(row.timeSlot)}
+    </div>
+  )}
+</td>
 
             <td className="border-2 border-gray-800 p-3 align-top">
               {row.dietItems.length > 0 ? (
                 <div className="space-y-3">
-                  {row.dietItems.map(
-                    (food: any, idx: number) => (
-                      <div
-                        key={food.id || idx}
-                        className="border-b border-gray-100 pb-2 last:border-0"
-                      >
-                        <div className="font-semibold text-gray-800">
-                          {food.name}
-                        </div>
+              {(() => {
+  const groups = row.dietItems.reduce((acc: any, item: any) => {
+    const category = item.category?.name || "Other";
 
-                        {food.subForm && (
-                          <div className="text-xs text-gray-500">
-                            {food.subForm}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  )}
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+
+    acc[category].push(item);
+
+    return acc;
+  }, {});
+
+  return (
+    <div className="text-sm leading-7">
+      {Object.entries(groups).map(([category, foods]: any, index, arr) => (
+        <span key={category}>
+          <span className="font-bold text-amber-700">{category}: </span>
+          (
+          {foods
+            .map((food: any) => food.subForm || food.name)
+            .join(" / ")}
+          )
+          {index !== arr.length - 1 && (
+            <span className="font-bold text-gray-500"> + </span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+})()}
                 </div>
               ) : (
                 <div className="text-gray-400 italic">

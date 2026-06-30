@@ -60,8 +60,7 @@ export default function DoctorForm() {
   const navigate = useNavigate();
   console.log("Patient ID from params:", id);
   const [step, setStep] = useState(1);
-const [signature, setSignature] =
-  useState("");
+
 
 const [
   signaturePatient,
@@ -90,8 +89,8 @@ const [activeTab, setActiveTab] = useState<
   const [language, setLanguage] = useState("en");
   const [therapyList, setTherapyList] = useState<any[]>([]);
   const [showConsent, setShowConsent] = useState(false);
-const doctorSigRef = useRef(null);
-
+// const doctorSigRef = useRef(null);
+const DOCTOR_SIGNATURE_URL = "/signature/doctor-signature.png";
 const patientSigRef = useRef(null);
   useEffect(() => {
     (async () => {
@@ -162,16 +161,7 @@ const filtered = therapyList.filter((t: any) => {
   // const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [uploadingSignature, setUploadingSignature] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
-  const saveDoctorSignature = () => {
-  if (!doctorSigRef.current?.isEmpty()) {
-    const sig =
-  doctorSigRef.current
-    .getCanvas()
-    .toDataURL("image/png");
 
-    setSignature(sig);
-  }
-};
 
 const savePatientSignature = () => {
   if (!patientSigRef.current?.isEmpty()) {
@@ -586,13 +576,7 @@ patientSignature:
         .toDataURL("image/png")
     : "",
 
-signature:
-  doctorSigRef.current &&
-  !doctorSigRef.current.isEmpty()
-    ? doctorSigRef.current
-        .getCanvas()
-        .toDataURL("image/png")
-    : "",
+signature: DOCTOR_SIGNATURE_URL,
 
   includeYoga: includeYoga,
 
@@ -2067,63 +2051,17 @@ signature:
                       }
                     />
                   </div>
-                  <div>
-                    <label className="font-semibold text-gray-700 block mb-2">
-                      Doctor's Signature
-                    </label>
-                   
+                 <div>
+  <label className="font-semibold text-gray-700 block mb-2">
+    Doctor's Signature
+  </label>
 
-{signature &&
-  typeof signature === "string" && (
-    <div className="mt-3">
-      <p className="text-xs text-green-700">
-        Doctor signature uploaded.
-      </p>
-
-      <img
-        src={signature}
-        alt="Doctor Signature"
-        className="border border-gray-300 h-20 mt-1 rounded-md"
-      />
-    </div>
-)}
-
-                    <div className="border-2 border-amber-300 rounded-lg p-4 bg-white min-h-[150px] flex items-center justify-center">
-                      <div className="border-2 border-amber-300 rounded-lg p-4 bg-white">
-                      <SignatureCanvas
-  ref={doctorSigRef}
-  penColor="black"
-  canvasProps={{
-    width: 320,
-    height: 120,
-    className:
-      "border border-gray-300 rounded-md bg-white",
-  }}
-/>
-
-                        {signature && (
-                          <div className="mt-4 p-3 bg-green-50 border-2 border-green-300 rounded-lg">
-                            <p className="text-sm text-green-700 font-semibold mb-2">
-                              ✓ Signature Saved
-                            </p>
-                            <img
-                              src={signature}
-                              alt="Doctor's signature"
-                              className="border border-gray-300 rounded max-w-full h-auto"
-                            />
-                          </div>
-                        )}
-                                      
-                      </div>
-                    </div>
-                          <Button
-                          className="mt-4"
-  type="button"
-  onClick={saveDoctorSignature}
->
-  Save Doctor Signature
-</Button>
-                  </div>
+  <img
+    src={DOCTOR_SIGNATURE_URL}
+    alt="Doctor Signature"
+    className="border border-gray-300 h-20 mt-1 rounded-md bg-white"
+  />
+</div>
                 </div>)}</>
               )}
               {/* Navigation Buttons */}

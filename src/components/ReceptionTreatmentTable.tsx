@@ -69,6 +69,7 @@ interface AssignModalProps {
   therapists: Therapist[];
   setTherapists: React.Dispatch<React.SetStateAction<Therapist[]>>;
   masterTreatments: MasterTreatment[];
+  treatments: TreatmentRow[];
 }
 
 function AssignTherapistModal({
@@ -79,6 +80,7 @@ function AssignTherapistModal({
   therapists,
   setTherapists,
   masterTreatments,
+   treatments,
 }: AssignModalProps) {
   const { toast } = useToast();
 
@@ -145,16 +147,23 @@ if (row.source === "consultation") {
 }
 
       // 2. find correct treatmentPlanId + treatmentAssignId then assign therapist
-    if (
+   if (
   therapistId &&
-  row.source === "treatmentPlan" &&
-  row.treatmentPlanId
+  row.source === "treatmentPlan"
 ) {
-  await assignTherapist(
-    therapistId,
-    row.treatmentPlanId,
-    row.treatmentIds[0]
+  const patientRows = treatments.filter(
+    (x) =>
+      x.patientId === row.patientId &&
+      x.source === "treatmentPlan"
   );
+
+  for (const item of patientRows) {
+    await assignTherapist(
+      therapistId,
+      item.treatmentPlanId,
+      item.treatmentIds[0]
+    );
+  }
 }
 
       const th = therapists.find((t) => t.id === therapistId);
@@ -377,7 +386,15 @@ export default function ReceptionTreatmentTable() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [activeRow, setActiveRow] = useState<TreatmentRow | null>(null);
+const [expandedPatients, setExpandedPatients] = useState<string[]>([]);
 
+const togglePatient = (id: string) => {
+  setExpandedPatients((prev) =>
+    prev.includes(id)
+      ? prev.filter((x) => x !== id)
+      : [...prev, id]
+  );
+};
 useEffect(() => { 
   const load = async () => {
     await fetchMasterTreatments();
@@ -491,7 +508,10 @@ console.log("Raw Treatment Data:", patients);
   outTime: assign.outTime || "",
   timeSlot: plan.timeSlot || "",
   remark: assign.remark || "",
-  totalDuration: assign.duration || "",
+  totalDuration:
+  assign.duration ||
+  assign.treatment?.duration ||
+  "",
 };
       })
     ) || [];
@@ -552,7 +572,16 @@ console.log("Formatted Rows:", formatted);
         }),
     [treatments, filter, sortKey, sortAsc, masterTreatments]
   );
+const groupedPatients = useMemo(() => {
+  const map: Record<string, TreatmentRow[]> = {};
 
+  filteredData.forEach((row) => {
+    if (!map[row.patientId]) map[row.patientId] = [];
+    map[row.patientId].push(row);
+  });
+
+  return Object.entries(map);
+}, [filteredData]);
   const columns = [
     { key: "patientName", label: "Patient", icon: User },
     { key: "treatmentName", label: "Treatment", icon: Stethoscope },
@@ -627,111 +656,127 @@ console.log("Formatted Rows:", formatted);
               </thead>
 
               <tbody className="divide-y divide-border/50">
-                {filteredData.map((t, i) => (
-                  <tr
-                    key={t.id}
-                    className={`transition-all duration-200 hover:bg-table-hover ${
-                      i % 2 === 0 ? "bg-background" : "bg-table-stripe"
-                    }`}
-                  >
-                    {/* Patient */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                          {t.patientName.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-medium text-foreground">
-                          {t.patientName}
-                        </span>
-                      </div>
-                    </td>
+             {groupedPatients.map(([patientId, rows]) => {
+  const first = rows[0];
 
-                    {/* Treatment */}
-                    <td className="px-6 py-4">
-  <div className="flex flex-col">
-    <span>{t.treatmentName}</span>
-
-    <Badge
-      variant={
-        t.source === "consultation"
-          ? "secondary"
-          : "default"
-      }
-      className="w-fit mt-1"
+  return (
+    <React.Fragment key={patientId}>
+    <tr className="bg-slate-100 hover:bg-slate-200 border-b">
+  {/* Patient */}
+  <td className="px-6 py-4 font-semibold">
+    <button
+      onClick={() => togglePatient(patientId)}
+      className="flex items-center gap-2"
     >
-      {t.source === "consultation"
-        ? "Consultation"
-        : "Treatment Plan"}
+      <span className="text-xs">
+        {expandedPatients.includes(patientId) ? "▼" : "▶"}
+      </span>
+
+      <div className="flex flex-col items-start">
+        <span>{first.patientName}</span>
+        <span className="text-xs text-gray-500">
+          {rows.length} Treatment{rows.length > 1 ? "s" : ""}
+        </span>
+      </div>
+    </button>
+  </td>
+
+  {/* Treatment */}
+  <td className="text-gray-500 italic">
+    {expandedPatients.includes(patientId)
+      ? "Hide Treatments"
+      : "Show Treatments"}
+  </td>
+
+  {/* Therapist */}
+  <td>
+    <Badge variant="secondary">
+      {first.therapistName || "Not Assigned"}
     </Badge>
-  </div>
+  </td>
 
-            </td>        {/* Therapist */}
-                    <td className="px-6 py-4">
-                      {t.therapistName ? (
-                        <Badge variant="secondary" className="font-normal">
-                          {t.therapistName}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </td>
+  {/* Slot */}
+  <td>{first.timeSlot || "-"}</td>
 
-                    {/* Time Slot */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-foreground/80">
-                        {t.timeSlot || "—"}
-                      </span>
-                    </td>
+  {/* In */}
+  <td>{first.inTime || "-"}</td>
 
-                    {/* Check In */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-foreground/80">
-                        {t.inTime || "—"}
-                      </span>
-                    </td>
+  {/* Out */}
+  <td>{first.outTime || "-"}</td>
 
-                    {/* Check Out */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-foreground/80">
-                        {t.outTime || "—"}
-                      </span>
-                    </td>
+  {/* Duration */}
+  <td>{first.totalDuration || "-"}</td>
 
-                    {/* Duration */}
-                    <td className="px-6 py-4">
-                      {calculateDuration(t.inTime, t.outTime) ? (
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {calculateDuration(t.inTime, t.outTime)}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </td>
+  {/* Notes */}
+  <td>{first.remark || "-"}</td>
 
-                    {/* Notes */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-foreground/70">
-                        {t.remark || "—"}
-                      </span>
-                    </td>
+  {/* Action */}
+  <td>
+    <Button
+      size="sm"
+      className="bg-amber-500 hover:bg-amber-600"
+      onClick={() => {
+        setActiveRow(first);
+        setModalOpen(true);
+      }}
+    >
+      Assign All
+    </Button>
+  </td>
+</tr>
 
-                    {/* Actions — single Assign button opens modal */}
-                    <td className="px-6 py-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setActiveRow(t);
-                          setModalOpen(true);
-                        }}
-                        className="hover:bg-primary/10 hover:text-primary hover:border-primary transition-all"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 mr-1" />
-                        {t.therapistName ? "Edit" : "Assign"}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+      {expandedPatients.includes(patientId) &&
+        rows.map((t) => (
+          <tr
+  key={t.id}
+  className="bg-white hover:bg-amber-50 transition-colors"
+>
+            <td className="pl-14 text-gray-400">
+  └─
+</td>
+
+            <td className="font-medium">
+  {t.treatmentName}
+</td>
+
+            <td>
+  <Badge variant="outline">
+    {t.therapistName || "Pending"}
+  </Badge>
+</td>
+
+            <td>{t.timeSlot}</td>
+
+            <td>{t.inTime}</td>
+
+            <td>{t.outTime}</td>
+
+           <td>
+  {t.totalDuration ||
+    calculateDuration(t.inTime, t.outTime) ||
+    "-"}
+</td>
+
+            <td>{t.remark}</td>
+
+            <td>
+              <Button
+                size="sm"
+                variant="outline"
+                 className="bg-slate-700 hover:bg-slate-800 text-white"
+                onClick={() => {
+                  setActiveRow(t);
+                  setModalOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            </td>
+          </tr>
+        ))}
+    </React.Fragment>
+  );
+})}
               </tbody>
             </table>
 
@@ -770,6 +815,7 @@ console.log("Formatted Rows:", formatted);
         therapists={therapists}
         setTherapists={setTherapists}
         masterTreatments={masterTreatments}
+        treatments={treatments}
       />
     </div>
   );
