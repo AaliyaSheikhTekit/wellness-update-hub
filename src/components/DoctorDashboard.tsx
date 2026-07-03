@@ -763,6 +763,12 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mt-4 gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Doctor Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
+            Use the search inside each panel below — one for appointments, one for patient records.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           {appointments.filter((a) => !a.is_read).length > 0 && (
             <Badge
@@ -773,17 +779,6 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               {appointments.filter((a) => !a.is_read).length} New
             </Badge>
           )}
-        </div>
-
-        {/* Search patients */}
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search patients…"
-            className="pl-9 h-10"
-          />
         </div>
       </div>
 <Tabs defaultValue="appointments" className="w-full">
