@@ -1037,11 +1037,34 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         {/* Patients Column (keeps same look) */}
         <motion.div className="space-y-4 w-full lg:w-1/2">
           <Card className="shadow-lg">
-            <CardHeader className="border-b flex justify-between items-center">
-              <CardTitle className="text-lg">Patients</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Page {patPage} • {patTotal} total
-              </p>
+            <CardHeader className="border-b space-y-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-4 w-4 text-indigo-500" />
+                  Patients
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Page {patPage} • {patTotal} total
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search patient records by name or phone…"
+                  className="pl-9 h-10 bg-indigo-50/40 border-indigo-200/60 focus-visible:ring-indigo-400/40"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </CardHeader>
 
             <CardContent className="p-4 space-y-3">
