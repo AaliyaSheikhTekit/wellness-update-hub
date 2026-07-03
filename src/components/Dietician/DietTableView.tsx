@@ -40,7 +40,6 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { c } from "node_modules/framer-motion/dist/types.d-Cjd591yU";
 import { Checkbox } from "../ui/checkbox";
 import { fruits } from "@/data/dietData";
 
