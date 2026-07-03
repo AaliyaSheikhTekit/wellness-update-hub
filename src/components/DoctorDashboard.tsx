@@ -795,14 +795,37 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         <div className="flex flex-col lg:flex-row gap-6">
         {/* Appointments Column */}
         <Card className="shadow-card w-full lg:w-1/2">
-          <CardHeader className="border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle>Appointments</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {loadingAppointments
-                  ? "Loading…"
-                  : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
-              </p>
+          <CardHeader className="border-b space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  Appointments
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {loadingAppointments
+                    ? "Loading…"
+                    : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
+                </p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                value={appointmentSearch}
+                onChange={(e) => setAppointmentSearch(e.target.value)}
+                placeholder="Search appointments by patient name, phone, date or status…"
+                className="pl-9 h-10 bg-primary/5 border-primary/20 focus-visible:ring-primary/40"
+              />
+              {appointmentSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAppointmentSearch("")}
+                  className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </CardHeader>
 
@@ -814,14 +837,16 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               </div>
             )}
 
-            {!loadingAppointments && appointments.length === 0 && (
+            {!loadingAppointments && filteredAppointments.length === 0 && (
               <p className="text-center text-muted-foreground">
-                No appointments found
+                {appointmentSearch
+                  ? `No appointments match "${appointmentSearch}"`
+                  : "No appointments found"}
               </p>
             )}
 
            {!loadingAppointments &&
-  appointments.map((apt) => (
+  filteredAppointments.map((apt) => (
     <Card
       key={apt.id}
       className={`group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
