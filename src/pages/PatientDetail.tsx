@@ -427,13 +427,6 @@ const activeConsultation = useMemo(() => {
     }
   }, [patient]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleSubmit = async () => {
-    const updated = await updatePatient(patient.id, { ...patient, ...form });
-    setOpen(false);
-  };
 
   if (loading) {
     return (
@@ -1003,43 +996,57 @@ className="flex  overflow-x-auto w-full "
                         </DialogClose>
                         <Button
                           onClick={async () => {
-                            const updatedVitals = {
-                              bloodPressure: (
-                                document.getElementById(
-                                  "bloodPressure"
-                                ) as HTMLInputElement
-                              ).value,
-                              pulse: (
-                                document.getElementById(
-                                  "pulse"
-                                ) as HTMLInputElement
-                              ).value,
-                              temperatureF: (
-                                document.getElementById(
-                                  "temperatureF"
-                                ) as HTMLInputElement
-                              ).value,
-                              weightKg: (
-                                document.getElementById(
-                                  "weightKg"
-                                ) as HTMLInputElement
-                              ).value,
-                              heightCm: (
-                                document.getElementById(
-                                  "heightCm"
-                                ) as HTMLInputElement
-                              ).value,
-                              bmi: (
-                                document.getElementById(
-                                  "bmi"
-                                ) as HTMLInputElement
-                              ).value,
-                            };
-                            await updatePatient(patient.id, {
-                              ...patient,
-                              ...updatedVitals,
-                            });
-                            window.location.reload(); // quick refresh to show updated data
+                        const updatedVitals = {
+  bloodPressure: (
+    document.getElementById("bloodPressure") as HTMLInputElement
+  ).value,
+
+  pulse: Number(
+    (document.getElementById("pulse") as HTMLInputElement).value || 0
+  ),
+
+  temperatureF: Number(
+    (document.getElementById("temperatureF") as HTMLInputElement).value || 0
+  ),
+
+  weightKg: Number(
+    (document.getElementById("weightKg") as HTMLInputElement).value || 0
+  ),
+
+  heightCm: Number(
+    (document.getElementById("heightCm") as HTMLInputElement).value || 0
+  ),
+
+  bmi: Number(
+    (document.getElementById("bmi") as HTMLInputElement).value || 0
+  ),
+};
+
+try {
+  await updatePatient(patient.id, updatedVitals);
+
+  setPatient((prev) =>
+    prev
+      ? {
+          ...prev,
+          ...updatedVitals,
+        }
+      : prev
+  );
+
+  toast({
+    title: "Success",
+    description: "Vitals updated successfully.",
+  });
+} catch (error) {
+  console.error(error);
+
+  toast({
+    variant: "destructive",
+    title: "Failed",
+    description: "Unable to update vitals.",
+  });
+}
                           }}
                         >
                           Save Changes

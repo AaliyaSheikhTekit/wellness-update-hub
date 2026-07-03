@@ -10,6 +10,7 @@ import {
   createTherapist,
 } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 // -------------------- TYPES -------------------- //
 type TreatmentOption = {
@@ -622,7 +623,7 @@ export const SessionEditor: React.FC<SessionEditorProps> = ({
   onSave,
   patient,
 }) => {
-  console.log("SessionEditor initial:", initial, patient);
+const navigate = useNavigate();
   const [date, setDate] = useState(
     initial.date || new Date().toISOString().slice(0, 10)
   );
@@ -864,7 +865,10 @@ const [newTherapistName, setNewTherapistName] = useState("");
   initial.treatmentPlanId!,
   treatmentId
 );
-
+navigate(`/patient/${initial.patientId}?tab=treatmentplan`, {
+  replace: true,
+});
+window.location.reload();
                 // ✅ Update local patient structure
                 const updatedTreatmentPlan = patient.treatmentPlan.map((plan) =>
                   plan.id === initial.treatmentPlanId
