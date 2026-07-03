@@ -136,6 +136,7 @@ const DoctorDashboard: React.FC = () => {
   const [aptTotalPages, setAptTotalPages] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [appointmentSearch, setAppointmentSearch] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
@@ -372,6 +373,18 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
   const patPage = 1;
   const patLimit = 10;
   const pagedPatients = useMemo(() => patients.slice(0, patLimit), [patients]);
+  const filteredAppointments = useMemo(() => {
+    const q = appointmentSearch.toLowerCase().trim();
+    if (!q) return appointments;
+    return appointments.filter((a) => {
+      return (
+        (a.patient_name || "").toLowerCase().includes(q) ||
+        (a.patient_phone || "").toLowerCase().includes(q) ||
+        (a.appointment_date || "").toLowerCase().includes(q) ||
+        (a.status || "").toLowerCase().includes(q)
+      );
+    });
+  }, [appointments, appointmentSearch]);
 
   /* ------------------------ Selection helpers ------------------------ */
   const toggleTherapy = (therapy: any) => {
