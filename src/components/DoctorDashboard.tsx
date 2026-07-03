@@ -136,6 +136,7 @@ const DoctorDashboard: React.FC = () => {
   const [aptTotalPages, setAptTotalPages] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [appointmentSearch, setAppointmentSearch] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
@@ -372,6 +373,18 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
   const patPage = 1;
   const patLimit = 10;
   const pagedPatients = useMemo(() => patients.slice(0, patLimit), [patients]);
+  const filteredAppointments = useMemo(() => {
+    const q = appointmentSearch.toLowerCase().trim();
+    if (!q) return appointments;
+    return appointments.filter((a) => {
+      return (
+        (a.patient_name || "").toLowerCase().includes(q) ||
+        (a.patient_phone || "").toLowerCase().includes(q) ||
+        (a.appointment_date || "").toLowerCase().includes(q) ||
+        (a.status || "").toLowerCase().includes(q)
+      );
+    });
+  }, [appointments, appointmentSearch]);
 
   /* ------------------------ Selection helpers ------------------------ */
   const toggleTherapy = (therapy: any) => {
@@ -750,6 +763,12 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mt-4 gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Doctor Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
+            Use the search inside each panel below — one for appointments, one for patient records.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           {appointments.filter((a) => !a.is_read).length > 0 && (
             <Badge
@@ -760,17 +779,6 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               {appointments.filter((a) => !a.is_read).length} New
             </Badge>
           )}
-        </div>
-
-        {/* Search patients */}
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search patients…"
-            className="pl-9 h-10"
-          />
         </div>
       </div>
 <Tabs defaultValue="appointments" className="w-full">
@@ -787,14 +795,37 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         <div className="flex flex-col lg:flex-row gap-6">
         {/* Appointments Column */}
         <Card className="shadow-card w-full lg:w-1/2">
-          <CardHeader className="border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle>Appointments</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {loadingAppointments
-                  ? "Loading…"
-                  : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
-              </p>
+          <CardHeader className="border-b space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  Appointments
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {loadingAppointments
+                    ? "Loading…"
+                    : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
+                </p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                value={appointmentSearch}
+                onChange={(e) => setAppointmentSearch(e.target.value)}
+                placeholder="Search appointments by patient name, phone, date or status…"
+                className="pl-9 h-10 bg-primary/5 border-primary/20 focus-visible:ring-primary/40"
+              />
+              {appointmentSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAppointmentSearch("")}
+                  className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </CardHeader>
 
@@ -806,14 +837,16 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
               </div>
             )}
 
-            {!loadingAppointments && appointments.length === 0 && (
+            {!loadingAppointments && filteredAppointments.length === 0 && (
               <p className="text-center text-muted-foreground">
-                No appointments found
+                {appointmentSearch
+                  ? `No appointments match "${appointmentSearch}"`
+                  : "No appointments found"}
               </p>
             )}
 
            {!loadingAppointments &&
-  appointments.map((apt) => (
+  filteredAppointments.map((apt) => (
     <Card
       key={apt.id}
       className={`group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
@@ -1004,11 +1037,34 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         {/* Patients Column (keeps same look) */}
         <motion.div className="space-y-4 w-full lg:w-1/2">
           <Card className="shadow-lg">
-            <CardHeader className="border-b flex justify-between items-center">
-              <CardTitle className="text-lg">Patients</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Page {patPage} • {patTotal} total
-              </p>
+            <CardHeader className="border-b space-y-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-4 w-4 text-indigo-500" />
+                  Patients
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Page {patPage} • {patTotal} total
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search patient records by name or phone…"
+                  className="pl-9 h-10 bg-indigo-50/40 border-indigo-200/60 focus-visible:ring-indigo-400/40"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </CardHeader>
 
             <CardContent className="p-4 space-y-3">
