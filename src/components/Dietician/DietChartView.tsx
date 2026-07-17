@@ -185,7 +185,7 @@ export default function DietChartView({ patient }: { patient: any }) {
             <div className="text-right text-xs space-y-1">
               <p>📞 +91 9343922950</p>
               <p>📧 admin@ikshanaturopathy.com</p>
-              <p>📍 Bhopal, Madhya Pradesh</p>
+              <p>📍 Indore, Madhya Pradesh</p>
             </div>
           </div>
 

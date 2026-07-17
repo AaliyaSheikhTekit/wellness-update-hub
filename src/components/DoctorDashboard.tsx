@@ -147,7 +147,7 @@ const DoctorDashboard: React.FC = () => {
   const [patientFullData, setPatientFullData] = useState<any | null>(null); // fetched patient details
   const [patient, setPatient] = useState<any | null>(null);
   console.log("DoctorDashboard selectedPatient:", selectedPatient);
-  const [dialogOpen, setDialogOpen] = useState(false);      
+  const [dialogOpen, setDialogOpen] = useState(false);
   // doctor form data (keeps minimal fields used here)
   const [doctorData, setDoctorData] = useState<any>({
     treatment: {
@@ -164,27 +164,27 @@ const DoctorDashboard: React.FC = () => {
   const [search, setSearch] = useState("");
   const [selectedTherapies, setSelectedTherapies] = useState<any[]>([]);
   const [openPrescriptionModal, setOpenPrescriptionModal] = useState(false);
-const [selectedPrescriptionPatient, setSelectedPrescriptionPatient] =
-  useState<any>(null);
- const filteredTherapies = useMemo(() => {
-  const searchText = search.toLowerCase().trim();
+  const [selectedPrescriptionPatient, setSelectedPrescriptionPatient] =
+    useState<any>(null);
+  const filteredTherapies = useMemo(() => {
+    const searchText = search.toLowerCase().trim();
 
-  return therapyList.filter((t: any) => {
-    const treatment = (t.treatment || t.title || "")
-      .toString()
-      .toLowerCase();
+    return therapyList.filter((t: any) => {
+      const treatment = (t.treatment || t.title || "")
+        .toString()
+        .toLowerCase();
 
-    const shortForm = (t.shortForm || "")
-      .toString()
-      .toLowerCase();
+      const shortForm = (t.shortForm || "")
+        .toString()
+        .toLowerCase();
 
-    return (
-      treatment.includes(searchText) ||
-      shortForm.includes(searchText)
-    );
-  });
-}, [therapyList, search]);
-console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList);
+      return (
+        treatment.includes(searchText) ||
+        shortForm.includes(searchText)
+      );
+    });
+  }, [therapyList, search]);
+  console.log("DoctorDashboard selectedTherapies:", filteredTherapies, therapyList);
   // treatment plan rows
   const [treatmentPlanData, setTreatmentPlanData] = useState<any[]>([]);
 
@@ -208,9 +208,9 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
         const iso = a.date || "";
         const time = iso
           ? new Date(iso).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            hour: "2-digit",
+            minute: "2-digit",
+          })
           : "";
         return {
           id: a.id,
@@ -349,9 +349,9 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
         appointment_date: iso.split("T")[0] || "",
         appointment_time: iso
           ? new Date(iso).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            hour: "2-digit",
+            minute: "2-digit",
+          })
           : "",
         status: (data.status || "pending") as AppointmentStatus,
         notes: data.note || null,
@@ -361,7 +361,7 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
       setShowNotifications(true);
     });
 
-    socket.on("disconnect", () => {});
+    socket.on("disconnect", () => { });
     return () => {
       socket.disconnect();
     };
@@ -416,16 +416,16 @@ console.log("DoctorDashboard selectedTherapies:", filteredTherapies,therapyList)
         toast({ title: "Missing patient id", variant: "destructive" });
         return;
       }
-     const resp = await getPatient(pId);
+      const resp = await getPatient(pId);
 
-const pd = Array.isArray(resp?.data)
-  ? resp.data[0]
-  : resp?.data || resp;
+      const pd = Array.isArray(resp?.data)
+        ? resp.data[0]
+        : resp?.data || resp;
 
-console.log("Fetched patient response:", pd);
+      console.log("Fetched patient response:", pd);
 
-setPatientFullData(pd);
-setPatient(pd);
+      setPatientFullData(pd);
+      setPatient(pd);
 
       // try to extract existing treatmentPlan and treatment rows
       const existingTreatmentPlan =
@@ -476,7 +476,7 @@ setPatient(pd);
       // pre-select therapies if there are existing ones
       const existingTherapyIds =
         (pd?.treatment?.recommendation?.title &&
-        Array.isArray(pd.treatment.recommendation.title)
+          Array.isArray(pd.treatment.recommendation.title)
           ? pd.treatment.recommendation.title
           : []) || [];
       const preSelected = therapyList.filter(
@@ -497,132 +497,132 @@ setPatient(pd);
       });
     }
   };
-const handleOpenAddPrescription = async (apt: Appointment) => {
-  try {
-    const resp = await getPatient(apt.patientId || "");
+  const handleOpenAddPrescription = async (apt: Appointment) => {
+    try {
+      const resp = await getPatient(apt.patientId || "");
 
-    const pd = Array.isArray(resp?.data)
-      ? resp.data[0]
-      : resp?.data || resp;
+      const pd = Array.isArray(resp?.data)
+        ? resp.data[0]
+        : resp?.data || resp;
 
-    setSelectedPrescriptionPatient(pd);
-    setOpenPrescriptionModal(true);
-  } catch (err) {
-    console.error(err);
+      setSelectedPrescriptionPatient(pd);
+      setOpenPrescriptionModal(true);
+    } catch (err) {
+      console.error(err);
 
-    toast({
-      title: "Error loading patient",
-      variant: "destructive",
-    });
-  }
-};
+      toast({
+        title: "Error loading patient",
+        variant: "destructive",
+      });
+    }
+  };
   /* ------------------------ Save Treatment (calls update API) ------------------------ */
-const handleSaveTreatment = async () => {
-  if (!selectedPatient?.id) {
-    toast({
-      title: "No patient selected",
-      variant: "destructive",
-    });
-    return;
-  }
+  const handleSaveTreatment = async () => {
+    if (!selectedPatient?.id) {
+      toast({
+        title: "No patient selected",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  try {
-    const latestAppointment =
-      patientFullData?.appointment?.length > 0
-        ? patientFullData.appointment.reduce(
+    try {
+      const latestAppointment =
+        patientFullData?.appointment?.length > 0
+          ? patientFullData.appointment.reduce(
             (latest: any, current: any) =>
               new Date(current.date) >
-              new Date(latest.date)
+                new Date(latest.date)
                 ? current
                 : latest
           )
-        : null;
+          : null;
 
-    const consultationId =
-      latestAppointment?.consultation?.length > 0
-        ? latestAppointment.consultation[
+      const consultationId =
+        latestAppointment?.consultation?.length > 0
+          ? latestAppointment.consultation[
             latestAppointment.consultation.length - 1
           ]?.id
-        : null;
+          : null;
 
-    const appointmentId =
-      latestAppointment?.id ||
-      selectedPatient?.aptId;
+      const appointmentId =
+        latestAppointment?.id ||
+        selectedPatient?.aptId;
 
-    const recommendation = {
-      title: selectedTherapies.map(
-        (t: any) =>
-          t.id ||
-          t._id ||
-          t.treatment ||
-          t.title
-      ),
-      duration: totalSelectedDuration
-        ? `${totalSelectedDuration} min`
-        : "",
-    };
+      const recommendation = {
+        title: selectedTherapies.map(
+          (t: any) =>
+            t.id ||
+            t._id ||
+            t.treatment ||
+            t.title
+        ),
+        duration: totalSelectedDuration
+          ? `${totalSelectedDuration} min`
+          : "",
+      };
 
-    const payload = {
-       patientId: selectedPatient?.id,
-  appointmentId: latestAppointment?.id,
+      const payload = {
+        patientId: selectedPatient?.id,
+        appointmentId: latestAppointment?.id,
 
-      treatment: {
-        recommendation,
-      },
+        treatment: {
+          recommendation,
+        },
 
-      treatmentPlan:
-        treatmentPlanData?.length > 0
-          ? treatmentPlanData
-          : [],
-    };
+        treatmentPlan:
+          treatmentPlanData?.length > 0
+            ? treatmentPlanData
+            : [],
+      };
 
-    console.log(
-      "Saving treatment",
-      consultationId,
-      payload
-    );
-
-    await updatePatientConsult(
-      consultationId || "",
-      payload
-    );
-
-    toast({
-      title: "Treatment saved successfully",
-    });
-
-    setOpenTreatmentModal(false);
-
-    await fetchAppointments();
-
-    const refreshed =
-      await getPatientById(
-        selectedPatient.id
+      console.log(
+        "Saving treatment",
+        consultationId,
+        payload
       );
 
-    const patientData = Array.isArray(
-      refreshed?.data
-    )
-      ? refreshed.data[0]
-      : refreshed?.data;
+      await updatePatientConsult(
+        consultationId || "",
+        payload
+      );
 
-    setPatient(patientData);
-    setPatientFullData(patientData);
-  } catch (err: any) {
-    console.error(
-      "Error saving treatment",
-      err
-    );
+      toast({
+        title: "Treatment saved successfully",
+      });
 
-    toast({
-      title: "Failed to save treatment",
-      description:
-        err?.message ||
-        "Please try again",
-      variant: "destructive",
-    });
-  }
-};
+      setOpenTreatmentModal(false);
+
+      await fetchAppointments();
+
+      const refreshed =
+        await getPatientById(
+          selectedPatient.id
+        );
+
+      const patientData = Array.isArray(
+        refreshed?.data
+      )
+        ? refreshed.data[0]
+        : refreshed?.data;
+
+      setPatient(patientData);
+      setPatientFullData(patientData);
+    } catch (err: any) {
+      console.error(
+        "Error saving treatment",
+        err
+      );
+
+      toast({
+        title: "Failed to save treatment",
+        description:
+          err?.message ||
+          "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
 
   /* ------------------------ Save Diet ------------------------ */
   const handleOpenAddDiet = async (apt: Appointment) => {
@@ -634,14 +634,14 @@ const handleSaveTreatment = async () => {
     try {
       const resp = await getPatient(apt.patientId || "");
 
-const pd = Array.isArray(resp?.data)
-  ? resp.data[0]
-  : resp?.data || resp;
+      const pd = Array.isArray(resp?.data)
+        ? resp.data[0]
+        : resp?.data || resp;
 
-console.log("Fetched patient response:", pd);
+      console.log("Fetched patient response:", pd);
 
-setPatientFullData(pd);
-setPatient(pd);
+      setPatientFullData(pd);
+      setPatient(pd);
       // populate doctorData dietChart if existing
       setDoctorData((prev: any) => ({
         ...prev,
@@ -670,25 +670,25 @@ setPatient(pd);
           dietChart: doctorData.treatment?.dietChart,
         },
       };
-     const latestAppointment =
-  patientFullData?.appointment?.length
-    ? patientFullData.appointment.reduce(
-        (latest: any, current: any) =>
-          new Date(current.date) >
-          new Date(latest.date)
-            ? current
-            : latest
-      )
-    : null;
+      const latestAppointment =
+        patientFullData?.appointment?.length
+          ? patientFullData.appointment.reduce(
+            (latest: any, current: any) =>
+              new Date(current.date) >
+                new Date(latest.date)
+                ? current
+                : latest
+          )
+          : null;
 
-const consultationId =
-  latestAppointment?.consultation?.length > 0
-    ? latestAppointment.consultation[
-        latestAppointment.consultation.length - 1
-      ]?.id
-    : null;
+      const consultationId =
+        latestAppointment?.consultation?.length > 0
+          ? latestAppointment.consultation[
+            latestAppointment.consultation.length - 1
+          ]?.id
+          : null;
 
-console.log("Consultation Id:", consultationId);
+      console.log("Consultation Id:", consultationId);
       if (consultationId) {
         await updatePatientConsult(consultationId, payload);
       }
@@ -701,64 +701,64 @@ console.log("Consultation Id:", consultationId);
   };
 
 
-const patientId = patient?.id || selectedPatient?.id || null;
+  const patientId = patient?.id || selectedPatient?.id || null;
 
 
 
-const latestAppointment =
-  patientFullData?.appointment?.length
-    ? patientFullData.appointment.reduce(
+  const latestAppointment =
+    patientFullData?.appointment?.length
+      ? patientFullData.appointment.reduce(
         (latest: any, current: any) =>
           new Date(current.date) >
-          new Date(latest.date)
+            new Date(latest.date)
             ? current
             : latest
       )
-    : null;
-const appointmentId =
-  latestAppointment?.id ||
-  selectedPatient?.aptId ||
-  null;
-const consultationId =
-  latestAppointment?.consultation?.length > 0
-    ? latestAppointment.consultation[
+      : null;
+  const appointmentId =
+    latestAppointment?.id ||
+    selectedPatient?.aptId ||
+    null;
+  const consultationId =
+    latestAppointment?.consultation?.length > 0
+      ? latestAppointment.consultation[
         latestAppointment.consultation.length - 1
       ]?.id
-    : null;
+      : null;
 
-console.log("Diet/Treatment IDs", {
-  patientId,
-  appointmentId,
-  consultationId,
-});
-const handleOpenCaseSheet = async (apt: Appointment) => {
-  // ✅ Open immediately with whatever we already have from the patients list
-  const quickPatient = patients.find((p) => p.id === apt.patientId) || {
-    id: apt.patientId,
-    fullName: apt.patient_name,
-    contactNumber: apt.patient_phone,
-    appointment: [],
-    treatmentPlan: [],
+  console.log("Diet/Treatment IDs", {
+    patientId,
+    appointmentId,
+    consultationId,
+  });
+  const handleOpenCaseSheet = async (apt: Appointment) => {
+    // ✅ Open immediately with whatever we already have from the patients list
+    const quickPatient = patients.find((p) => p.id === apt.patientId) || {
+      id: apt.patientId,
+      fullName: apt.patient_name,
+      contactNumber: apt.patient_phone,
+      appointment: [],
+      treatmentPlan: [],
+    };
+    setPatient(quickPatient);
+    setPatientFullData(quickPatient);
+    setDialogOpen(true); // ✅ opens instantly
+
+    // 🔄 Fetch full data in background and update dialog
+    try {
+      const resp = await getPatient(apt.patientId || "");
+      const pd = Array.isArray(resp?.data) ? resp.data[0] : resp?.data || resp;
+      setPatient(pd);
+      setPatientFullData(pd);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Unable to load full patient details",
+        variant: "destructive",
+      });
+    }
   };
-  setPatient(quickPatient);
-  setPatientFullData(quickPatient);
-  setDialogOpen(true); // ✅ opens instantly
-
-  // 🔄 Fetch full data in background and update dialog
-  try {
-    const resp = await getPatient(apt.patientId || "");
-    const pd = Array.isArray(resp?.data) ? resp.data[0] : resp?.data || resp;
-    setPatient(pd);
-    setPatientFullData(pd);
-  } catch (err) {
-    console.error(err);
-    toast({
-      title: "Error",
-      description: "Unable to load full patient details",
-      variant: "destructive",
-    });
-  }
-};
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -781,439 +781,437 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
           )}
         </div>
       </div>
-<Tabs defaultValue="appointments" className="w-full">
-  <TabsList className="bg-white border rounded-lg shadow-sm mb-4 flex">
-    <TabsTrigger value="appointments" className="flex-1 flex items-center justify-center gap-2">
-      <CalendarIcon className="h-4 w-4" /> Appointments & Patients
-    </TabsTrigger>
-    <TabsTrigger value="calendar" className="flex-1 flex items-center justify-center gap-2">
-      <CalendarDays size={16} /> Calendar
-    </TabsTrigger>
-  </TabsList>
+      <Tabs defaultValue="appointments" className="w-full">
+        <TabsList className="bg-white border rounded-lg shadow-sm mb-4 flex">
+          <TabsTrigger value="appointments" className="flex-1 flex items-center justify-center gap-2">
+            <CalendarIcon className="h-4 w-4" /> Appointments & Patients
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex-1 flex items-center justify-center gap-2">
+            <CalendarDays size={16} /> Calendar
+          </TabsTrigger>
+        </TabsList>
 
-  <TabsContent value="appointments">
-        <div className="flex flex-col lg:flex-row gap-6">
-        {/* Appointments Column */}
-        <Card className="shadow-card w-full lg:w-1/2">
-          <CardHeader className="border-b space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4 text-primary" />
-                  Appointments
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {loadingAppointments
-                    ? "Loading…"
-                    : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
-                </p>
-              </div>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                value={appointmentSearch}
-                onChange={(e) => setAppointmentSearch(e.target.value)}
-                placeholder="Search appointments by patient name, phone, date or status…"
-                className="pl-9 h-10 bg-primary/5 border-primary/20 focus-visible:ring-primary/40"
-              />
-              {appointmentSearch && (
-                <button
-                  type="button"
-                  onClick={() => setAppointmentSearch("")}
-                  className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 space-y-4">
-            {loadingAppointments && (
-              <div className="space-y-2 animate-pulse">
-                <div className="h-20 rounded-lg bg-muted" />
-                <div className="h-20 rounded-lg bg-muted" />
-              </div>
-            )}
-
-            {!loadingAppointments && filteredAppointments.length === 0 && (
-              <p className="text-center text-muted-foreground">
-                {appointmentSearch
-                  ? `No appointments match "${appointmentSearch}"`
-                  : "No appointments found"}
-              </p>
-            )}
-
-           {!loadingAppointments &&
-  filteredAppointments.map((apt) => (
-    <Card
-      key={apt.id}
-      className={`group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
-        !apt.is_read
-          ? "border-primary/40 shadow-md shadow-primary/5"
-          : "border-border/60 shadow-sm"
-      }`}
-    >
-      {/* Accent bar */}
-      <div
-        className={`absolute left-0 top-0 h-full w-1 ${
-          !apt.is_read ? "bg-primary" : "bg-muted"
-        }`}
-      />
-
-      {/* "New" ribbon */}
-      {apt.status === "pending" && (
-        <div className="absolute left-3 top-3 z-10">
-          <Badge className="bg-primary text-primary-foreground shadow-sm">
-            New
-          </Badge>
-        </div>
-      )}
-
-      <CardHeader className="pb-3 pl-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/5">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-semibold leading-tight text-foreground">
-                {apt.patient_name}
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {apt.patient_phone}
-              </p>
-              <Badge
-                variant="outline"
-                className="mt-2 rounded-full border-border/70 px-2 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-              >
-                {apt.status}
-              </Badge>
-            </div>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 shrink-0 rounded-full hover:bg-muted"
-              >
-                <MoreVertical className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => handleOpenCaseSheet(apt)}>
-                View Case Sheet
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleOpenAddTreatment(apt)}>
-                Add Treatment
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenAddDiet(apt)}>
-                Add Diet
-              </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  if (!apt.patientId) {
-                    toast({ title: "Missing patient ID", variant: "destructive" });
-                    return;
-                  }
-                  handleOpenAddPrescription(apt);
-                }}>
-                Add Prescription/Consultation
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() =>
-                 navigate(`/patient/${apt.patientId}?tab=treatmentplan`)
-                }
-              >
-                View Treatment
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  navigate(`/patient/${apt.patientId}?tab=prescription`)
-                }
-              >
-                View Prescription
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4 pl-6">
-        {/* Date / Time pills */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2.5">
-            <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Date
-              </p>
-              <p className="truncate text-sm font-semibold text-foreground">
-                {apt.appointment_date}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2.5">
-            <Clock className="h-4 w-4 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Time
-              </p>
-              <p className="truncate text-sm font-semibold text-foreground">
-                {apt.appointment_time}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {apt.notes && (
-          <div className="rounded-xl border-l-2 border-primary/40 bg-primary/5 px-3 py-2.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-primary/80">
-              Notes
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-foreground/90">
-              {apt.notes}
-            </p>
-          </div>
-        )}
-
-        {/* Status updater */}
-        <div className="border-t border-border/50 pt-3">
-          <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Update Status
-          </Label>
-          <Select
-            value={apt.status}
-            onValueChange={(val) =>
-              handleStatusChange(apt, val as AppointmentStatus)
-            }
-            disabled={updatingStatusId === apt.id}
-          >
-            <SelectTrigger className="mt-1.5 h-10 rounded-lg">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
-  ))}
-
-
-            {/* Pagination UI simplified */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-muted-foreground">{`Total: ${aptTotal}`}</div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAptPage(Math.max(1, aptPage - 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" /> Prev
-                </Button>
-                <div className="text-sm">Page {aptPage}</div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAptPage(aptPage + 1)}
-                >
-                  Next <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Patients Column (keeps same look) */}
-        <motion.div className="space-y-4 w-full lg:w-1/2">
-          <Card className="shadow-lg">
-            <CardHeader className="border-b space-y-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-4 w-4 text-indigo-500" />
-                  Patients
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Page {patPage} • {patTotal} total
-                </p>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search patient records by name or phone…"
-                  className="pl-9 h-10 bg-indigo-50/40 border-indigo-200/60 focus-visible:ring-indigo-400/40"
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </CardHeader>
-
-            <CardContent className="p-4 space-y-3">
-              {patientLoading && (
-                <div className="space-y-2">
-                  <div className="h-16 rounded-lg bg-muted animate-pulse" />
-                  <div className="h-16 rounded-lg bg-muted animate-pulse" />
-                </div>
-              )}
-
-              {!patientLoading && pagedPatients.length === 0 && (
-                <p className="text-center text-muted-foreground">
-                  No patients found.
-                </p>
-              )}
-
-             {!patientLoading &&
-  pagedPatients.map((p) => {
-    const id = p.id || p._id;
-    const name = p.fullName || p.name || "—";
-    const initials = (p.fullName || p.name || "?")
-      .split(" ")
-      .map((s: string) => s[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-    const canConsult = ["Naturopathy Doctor", "superAdmin"].includes(
-      localStorage.getItem("userName") || ""
-    );
-
-    return (
-      <Card
-        key={id}
-        onClick={() => navigate(`/patient/${id}`)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) =>
-          (e.key === "Enter" || e.key === " ") && navigate(`/patient/${id}`)
-        }
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-      >
-        {/* Gradient accent bar */}
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-80" />
-
-        {/* Decorative blob */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60" />
-
-        <CardContent className="relative p-5 sm:p-6">
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-200 ring-4 ring-white">
-                <span className="text-base font-bold tracking-wide">
-                  {initials}
-                </span>
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
-            </div>
-
-            {/* Main */}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-semibold text-slate-900">
-                    {name}
-                  </h3>
-                  <p className="mt-0.5 text-xs font-medium text-slate-500">
-                    Patient ID · {p.reference || "N/A"}
-                  </p>
-                </div>
-
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Active
-                </span>
-              </div>
-
-              {/* Info grid */}
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                  <Phone className="h-3.5 w-3.5 text-indigo-500" />
-                  <span className="truncate font-medium">
-                    {p.contactNumber || "—"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                  <Cake className="h-3.5 w-3.5 text-pink-500" />
-                  <span className="truncate font-medium">
-                    {p.dateOfBirth
-                      ? new Date(p.dateOfBirth).toLocaleDateString()
-                      : "—"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
-                {canConsult && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/patient-form/${id}`);
-                    }}
-                    className="h-8 border-indigo-200 bg-indigo-50/50 text-xs font-medium text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800"
-                  >
-                    Give Consultancy
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/patient/${id}`);
-                  }}
-                  className="h-8 bg-slate-900 text-xs font-medium text-white hover:bg-slate-800"
-                >
-                  View Patient
-                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  })}
-
-
-              {/* Patients Pagination */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    Total: {patTotal}
+        <TabsContent value="appointments">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Appointments Column */}
+            <Card className="shadow-card w-full lg:w-1/2">
+              <CardHeader className="border-b space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-primary" />
+                      Appointments
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {loadingAppointments
+                        ? "Loading…"
+                        : `Page ${aptPage} of ${aptTotalPages} • ${aptTotal} total`}
+                    </p>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-  </TabsContent>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    value={appointmentSearch}
+                    onChange={(e) => setAppointmentSearch(e.target.value)}
+                    placeholder="Search appointments by patient name, phone, date or status…"
+                    className="pl-9 h-10 bg-primary/5 border-primary/20 focus-visible:ring-primary/40"
+                  />
+                  {appointmentSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setAppointmentSearch("")}
+                      className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </CardHeader>
 
-  <TabsContent value="calendar">
-    <SimpleCalendarView />
-  </TabsContent>
-</Tabs>
-  
+              <CardContent className="p-4 space-y-4">
+                {loadingAppointments && (
+                  <div className="space-y-2 animate-pulse">
+                    <div className="h-20 rounded-lg bg-muted" />
+                    <div className="h-20 rounded-lg bg-muted" />
+                  </div>
+                )}
+
+                {!loadingAppointments && filteredAppointments.length === 0 && (
+                  <p className="text-center text-muted-foreground">
+                    {appointmentSearch
+                      ? `No appointments match "${appointmentSearch}"`
+                      : "No appointments found"}
+                  </p>
+                )}
+
+                {!loadingAppointments &&
+                  filteredAppointments.map((apt) => (
+                    <Card
+                      key={apt.id}
+                      className={`group relative overflow-hidden rounded-2xl border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${!apt.is_read
+                          ? "border-primary/40 shadow-md shadow-primary/5"
+                          : "border-border/60 shadow-sm"
+                        }`}
+                    >
+                      {/* Accent bar */}
+                      <div
+                        className={`absolute left-0 top-0 h-full w-1 ${!apt.is_read ? "bg-primary" : "bg-muted"
+                          }`}
+                      />
+
+                      {/* "New" ribbon */}
+                      {apt.status === "pending" && (
+                        <div className="absolute left-3 top-3 z-10">
+                          <Badge className="bg-primary text-primary-foreground shadow-sm">
+                            New
+                          </Badge>
+                        </div>
+                      )}
+
+                      <CardHeader className="pb-3 pl-6">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/5">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="truncate text-base font-semibold leading-tight text-foreground">
+                                {apt.patient_name}
+                              </h3>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {apt.patient_phone}
+                              </p>
+                              <Badge
+                                variant="outline"
+                                className="mt-2 rounded-full border-border/70 px-2 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                              >
+                                {apt.status}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 shrink-0 rounded-full hover:bg-muted"
+                              >
+                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem onClick={() => handleOpenCaseSheet(apt)}>
+                                View Case Sheet
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleOpenAddTreatment(apt)}>
+                                Add Treatment
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenAddDiet(apt)}>
+                                Add Diet
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                if (!apt.patientId) {
+                                  toast({ title: "Missing patient ID", variant: "destructive" });
+                                  return;
+                                }
+                                handleOpenAddPrescription(apt);
+                              }}>
+                                Add Prescription/Consultation
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/patient/${apt.patientId}?tab=treatmentplan`)
+                                }
+                              >
+                                View Treatment
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/patient/${apt.patientId}?tab=prescription`)
+                                }
+                              >
+                                View Prescription
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4 pl-6">
+                        {/* Date / Time pills */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2.5">
+                            <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                Date
+                              </p>
+                              <p className="truncate text-sm font-semibold text-foreground">
+                                {apt.appointment_date}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2.5">
+                            <Clock className="h-4 w-4 shrink-0 text-primary" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                Time
+                              </p>
+                              <p className="truncate text-sm font-semibold text-foreground">
+                                {apt.appointment_time}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {apt.notes && (
+                          <div className="rounded-xl border-l-2 border-primary/40 bg-primary/5 px-3 py-2.5">
+                            <p className="text-xs font-medium uppercase tracking-wide text-primary/80">
+                              Notes
+                            </p>
+                            <p className="mt-1 text-sm leading-relaxed text-foreground/90">
+                              {apt.notes}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Status updater */}
+                        <div className="border-t border-border/50 pt-3">
+                          <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Update Status
+                          </Label>
+                          <Select
+                            value={apt.status}
+                            onValueChange={(val) =>
+                              handleStatusChange(apt, val as AppointmentStatus)
+                            }
+                            disabled={updatingStatusId === apt.id}
+                          >
+                            <SelectTrigger className="mt-1.5 h-10 rounded-lg">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+
+                {/* Pagination UI simplified */}
+                <div className="flex items-center justify-between pt-2">
+                  <div className="text-xs text-muted-foreground">{`Total: ${aptTotal}`}</div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAptPage(Math.max(1, aptPage - 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Prev
+                    </Button>
+                    <div className="text-sm">Page {aptPage}</div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAptPage(aptPage + 1)}
+                    >
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Patients Column (keeps same look) */}
+            <motion.div className="space-y-4 w-full lg:w-1/2">
+              <Card className="shadow-lg">
+                <CardHeader className="border-b space-y-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-4 w-4 text-indigo-500" />
+                      Patients
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Page {patPage} • {patTotal} total
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search patient records by name or phone…"
+                      className="pl-9 h-10 bg-indigo-50/40 border-indigo-200/60 focus-visible:ring-indigo-400/40"
+                    />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-4 space-y-3">
+                  {patientLoading && (
+                    <div className="space-y-2">
+                      <div className="h-16 rounded-lg bg-muted animate-pulse" />
+                      <div className="h-16 rounded-lg bg-muted animate-pulse" />
+                    </div>
+                  )}
+
+                  {!patientLoading && pagedPatients.length === 0 && (
+                    <p className="text-center text-muted-foreground">
+                      No patients found.
+                    </p>
+                  )}
+
+                  {!patientLoading &&
+                    pagedPatients.map((p) => {
+                      const id = p.id || p._id;
+                      const name = p.fullName || p.name || "—";
+                      const initials = (p.fullName || p.name || "?")
+                        .split(" ")
+                        .map((s: string) => s[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase();
+                      const canConsult = ["Naturopathy Doctor", "superAdmin"].includes(
+                        localStorage.getItem("userName") || ""
+                      );
+
+                      return (
+                        <Card
+                          key={id}
+                          onClick={() => navigate(`/patient/${id}`)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) =>
+                            (e.key === "Enter" || e.key === " ") && navigate(`/patient/${id}`)
+                          }
+                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                        >
+                          {/* Gradient accent bar */}
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-80" />
+
+                          {/* Decorative blob */}
+                          <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60" />
+
+                          <CardContent className="relative p-5 sm:p-6">
+                            <div className="flex items-start gap-4">
+                              {/* Avatar */}
+                              <div className="relative shrink-0">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-200 ring-4 ring-white">
+                                  <span className="text-base font-bold tracking-wide">
+                                    {initials}
+                                  </span>
+                                </div>
+                                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+                              </div>
+
+                              {/* Main */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h3 className="truncate text-base font-semibold text-slate-900">
+                                      {name}
+                                    </h3>
+                                    <p className="mt-0.5 text-xs font-medium text-slate-500">
+                                      Patient ID · {p.reference || "N/A"}
+                                    </p>
+                                  </div>
+
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Active
+                                  </span>
+                                </div>
+
+                                {/* Info grid */}
+                                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                    <Phone className="h-3.5 w-3.5 text-indigo-500" />
+                                    <span className="truncate font-medium">
+                                      {p.contactNumber || "—"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                                    <Cake className="h-3.5 w-3.5 text-pink-500" />
+                                    <span className="truncate font-medium">
+                                      {p.dateOfBirth
+                                        ? new Date(p.dateOfBirth).toLocaleDateString()
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                                  {canConsult && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/patient-form/${id}`);
+                                      }}
+                                      className="h-8 border-indigo-200 bg-indigo-50/50 text-xs font-medium text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800"
+                                    >
+                                      Give Consultancy
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/patient/${id}`);
+                                    }}
+                                    className="h-8 bg-slate-900 text-xs font-medium text-white hover:bg-slate-800"
+                                  >
+                                    View Patient
+                                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+
+
+                  {/* Patients Pagination */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        Total: {patTotal}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <SimpleCalendarView />
+        </TabsContent>
+      </Tabs>
+
 
       {/* Notifications Panel */}
       {showNotifications &&
@@ -1293,342 +1291,341 @@ const handleOpenCaseSheet = async (apt: Appointment) => {
         )}
 
       {/* Add Treatment Modal */}
-{openTreatmentModal && selectedPatient && (
-  <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
-    <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[92vh] p-0 overflow-hidden flex flex-col gap-0">
-      {/* Sticky Header */}
-      <DialogHeader className="px-5 sm:px-8 py-5 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-xl shrink-0">
-            🩺
-          </div>
-          <div className="min-w-0">
-            <DialogTitle className="text-base sm:text-lg font-semibold truncate">
-              Treatment Plan
-            </DialogTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-              For <span className="font-medium text-foreground">{selectedPatient.name}</span>
-            </p>
-          </div>
-        </div>
-      </DialogHeader>
+      {openTreatmentModal && selectedPatient && (
+        <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
+          <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[92vh] p-0 overflow-hidden flex flex-col gap-0">
+            {/* Sticky Header */}
+            <DialogHeader className="px-5 sm:px-8 py-5 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-xl shrink-0">
+                  🩺
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base sm:text-lg font-semibold truncate">
+                    Treatment Plan
+                  </DialogTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    For <span className="font-medium text-foreground">{selectedPatient.name}</span>
+                  </p>
+                </div>
+              </div>
+            </DialogHeader>
 
-      {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-6 bg-muted/20">
-        {/* Existing Treatments */}
-        <section className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <header className="px-4 py-3 border-b bg-muted/40">
-            <h3 className="text-sm font-semibold">Existing Treatment Plan</h3>
-          </header>
-          <div className="p-4 overflow-x-auto">
-             <TreatmentPlanTable
-                  value={treatmentPlanData}
-                  onChange={setTreatmentPlanData}
-                  includeYoga={true}
-                />
-          </div>
-        </section>
-
-        {/* Treatment Details */}
-        <section className="rounded-xl border bg-card shadow-sm">
-          <header className="px-4 py-3 border-b bg-muted/40 flex items-center gap-2">
-            <span>🩺</span>
-            <h3 className="text-sm font-semibold">Treatment Details</h3>
-          </header>
-
-          <div className="p-4 sm:p-5 grid gap-5 sm:grid-cols-2">
-            {/* Therapies */}
-            <div className="space-y-2 sm:col-span-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Select Therapies
-              </Label>
-              <Popover open={opentherapies} onOpenChange={setOpenTherapies}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between h-auto min-h-10 py-2 text-left"
-                  >
-                    <span className="truncate whitespace-normal text-sm">
-                      {selectedTherapies.length > 0
-                        ? selectedTherapies.map((t) => t.treatment || t.title).join(", ")
-                        : <span className="text-muted-foreground">Select therapies…</span>}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-2 w-[--radix-popover-trigger-width] max-h-[60vh]"
-                  align="start"
-                >
-                  <Input
-                    placeholder="Search therapy…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="mb-2 h-9"
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-6 bg-muted/20">
+              {/* Existing Treatments */}
+              <section className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <header className="px-4 py-3 border-b bg-muted/40">
+                  <h3 className="text-sm font-semibold">Existing Treatment Plan</h3>
+                </header>
+                <div className="p-4 overflow-x-auto">
+                  <TreatmentPlanTable
+                    value={treatmentPlanData}
+                    onChange={setTreatmentPlanData}
+                    includeYoga={true}
                   />
-                  <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
-                    {filteredTherapies.map((therapy: any) => {
-                      const selected = selectedTherapies.some((t) => t.id === therapy.id);
-                      return (
-                        <div
-                          key={therapy.id}
-                          onClick={() => toggleTherapy(therapy)}
-                          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
-                            selected
-                              ? "bg-primary/15 text-foreground"
-                              : "hover:bg-accent"
-                          }`}
+                </div>
+              </section>
+
+              {/* Treatment Details */}
+              <section className="rounded-xl border bg-card shadow-sm">
+                <header className="px-4 py-3 border-b bg-muted/40 flex items-center gap-2">
+                  <span>🩺</span>
+                  <h3 className="text-sm font-semibold">Treatment Details</h3>
+                </header>
+
+                <div className="p-4 sm:p-5 grid gap-5 sm:grid-cols-2">
+                  {/* Therapies */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Select Therapies
+                    </Label>
+                    <Popover open={opentherapies} onOpenChange={setOpenTherapies}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between h-auto min-h-10 py-2 text-left"
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">
-                              {therapy.treatment || therapy.title}
-                            </div>
-                            <div className="text-xs text-muted-foreground flex gap-2">
-                              {therapy.shortForm && <span>{therapy.shortForm}</span>}
-                              {therapy.duration && <span>· {therapy.duration} min</span>}
-                            </div>
-                          </div>
-                          {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                          <span className="truncate whitespace-normal text-sm">
+                            {selectedTherapies.length > 0
+                              ? selectedTherapies.map((t) => t.treatment || t.title).join(", ")
+                              : <span className="text-muted-foreground">Select therapies…</span>}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="p-2 w-[--radix-popover-trigger-width] max-h-[60vh]"
+                        align="start"
+                      >
+                        <Input
+                          placeholder="Search therapy…"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="mb-2 h-9"
+                        />
+                        <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                          {filteredTherapies.map((therapy: any) => {
+                            const selected = selectedTherapies.some((t) => t.id === therapy.id);
+                            return (
+                              <div
+                                key={therapy.id}
+                                onClick={() => toggleTherapy(therapy)}
+                                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${selected
+                                    ? "bg-primary/15 text-foreground"
+                                    : "hover:bg-accent"
+                                  }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium truncate">
+                                    {therapy.treatment || therapy.title}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground flex gap-2">
+                                    {therapy.shortForm && <span>{therapy.shortForm}</span>}
+                                    {therapy.duration && <span>· {therapy.duration} min</span>}
+                                  </div>
+                                </div>
+                                {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                              </div>
+                            );
+                          })}
+                          {filteredTherapies.length === 0 && (
+                            <p className="text-center text-sm text-muted-foreground py-6">
+                              No results
+                            </p>
+                          )}
                         </div>
-                      );
-                    })}
-                    {filteredTherapies.length === 0 && (
-                      <p className="text-center text-sm text-muted-foreground py-6">
-                        No results
-                      </p>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Selected chips */}
+                    {selectedTherapies.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {selectedTherapies.map((t: any) => (
+                          <Badge
+                            key={t.id}
+                            variant="secondary"
+                            className="gap-1 pl-2 pr-1 py-1"
+                          >
+                            {t.treatment || t.title}
+                            <button
+                              type="button"
+                              onClick={() => toggleTherapy(t)}
+                              className="hover:bg-background/60 rounded p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </PopoverContent>
-              </Popover>
 
-              {/* Selected chips */}
-              {selectedTherapies.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {selectedTherapies.map((t: any) => (
-                    <Badge
-                      key={t.id}
-                      variant="secondary"
-                      className="gap-1 pl-2 pr-1 py-1"
-                    >
-                      {t.treatment || t.title}
-                      <button
-                        type="button"
-                        onClick={() => toggleTherapy(t)}
-                        className="hover:bg-background/60 rounded p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                  {/* Duration */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Total Therapy Duration
+                    </Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-9"
+                        value={
+                          selectedTherapies.length > 0
+                            ? `${totalSelectedDuration} min`
+                            : doctorData.recommandationduration || ""
+                        }
+                        readOnly={selectedTherapies.length > 0}
+                        placeholder="e.g. 45 min"
+                        onChange={(e) =>
+                          setDoctorData((prev: any) => ({
+                            ...prev,
+                            recommandationduration: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
+              </section>
             </div>
 
-            {/* Duration */}
-            <div className="space-y-2 sm:col-span-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Total Therapy Duration
-              </Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  value={
-                    selectedTherapies.length > 0
-                      ? `${totalSelectedDuration} min`
-                      : doctorData.recommandationduration || ""
-                  }
-                  readOnly={selectedTherapies.length > 0}
-                  placeholder="e.g. 45 min"
-                  onChange={(e) =>
-                    setDoctorData((prev: any) => ({
-                      ...prev,
-                      recommandationduration: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+            {/* Sticky Footer */}
+            <div className="px-5 sm:px-8 py-4 border-t bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setOpenTreatmentModal(false)}
+                className="sm:w-32"
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveTreatment} className="sm:w-40">
+                Save Treatment
+              </Button>
             </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Sticky Footer */}
-      <div className="px-5 sm:px-8 py-4 border-t bg-background flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={() => setOpenTreatmentModal(false)}
-          className="sm:w-32"
-        >
-          Cancel
-        </Button>
-        <Button onClick={handleSaveTreatment} className="sm:w-40">
-          Save Treatment
-        </Button>
-      </div>
-    </DialogContent>
-  </Dialog>
-)}
+          </DialogContent>
+        </Dialog>
+      )}
 
 
       {/* Add Diet Modal */}
-{openDietModal && selectedPatient && (
-  <Dialog open={openDietModal} onOpenChange={setOpenDietModal}>
-    <DialogContent
-      className="
+      {openDietModal && selectedPatient && (
+        <Dialog open={openDietModal} onOpenChange={setOpenDietModal}>
+          <DialogContent
+            className="
         p-0 gap-0 overflow-hidden rounded-2xl border border-border
         bg-background shadow-2xl
         w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw]
         max-w-4xl max-h-[90vh]
         flex flex-col
       "
-    >
-      {/* Sticky gradient header */}
-      <DialogHeader
-        className="
+          >
+            {/* Sticky gradient header */}
+            <DialogHeader
+              className="
           sticky top-0 z-10 px-6 py-5
           bg-gradient-to-r from-emerald-500/10 via-primary/5 to-transparent
           border-b border-border
         "
-      >
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 text-2xl">
-            🥗
-          </div>
-          <div className="min-w-0 flex-1">
-            <DialogTitle className="text-lg sm:text-xl font-semibold text-foreground">
-              Diet Chart
-            </DialogTitle>
-            <p className="mt-0.5 text-sm text-muted-foreground truncate">
-              Personalized plan for{" "}
-              <span className="font-medium text-foreground">
-                {selectedPatient.name}
-              </span>
-            </p>
-          </div>
-        </div>
-      </DialogHeader>
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 text-2xl">
+                  🥗
+                </div>
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-lg sm:text-xl font-semibold text-foreground">
+                    Diet Chart
+                  </DialogTitle>
+                  <p className="mt-0.5 text-sm text-muted-foreground truncate">
+                    Personalized plan for{" "}
+                    <span className="font-medium text-foreground">
+                      {selectedPatient.name}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </DialogHeader>
 
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20 px-4 sm:px-6 py-5 space-y-5">
-        {/* Title card */}
-        <Card className="border border-border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Diet Plan Title
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Input
-              placeholder="e.g. High-protein vegetarian diet"
-              className="h-10 bg-background"
-              value={doctorData.treatment?.dietChart?.title || ""}
-              onChange={(e) =>
-                setDoctorData((prev: any) => ({
-                  ...prev,
-                  treatment: {
-                    ...prev.treatment,
-                    dietChart: {
-                      ...(prev.treatment?.dietChart || {}),
-                      title: e.target.value,
-                    },
-                  },
-                }))
-              }
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              Give this diet chart a short, descriptive name.
-            </p>
-          </CardContent>
-        </Card>
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20 px-4 sm:px-6 py-5 space-y-5">
+              {/* Title card */}
+              <Card className="border border-border shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Diet Plan Title
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Input
+                    placeholder="e.g. High-protein vegetarian diet"
+                    className="h-10 bg-background"
+                    value={doctorData.treatment?.dietChart?.title || ""}
+                    onChange={(e) =>
+                      setDoctorData((prev: any) => ({
+                        ...prev,
+                        treatment: {
+                          ...prev.treatment,
+                          dietChart: {
+                            ...(prev.treatment?.dietChart || {}),
+                            title: e.target.value,
+                          },
+                        },
+                      }))
+                    }
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Give this diet chart a short, descriptive name.
+                  </p>
+                </CardContent>
+              </Card>
 
-        {/* Existing diet table */}
-        <Card className="border border-border shadow-sm">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Current Diet Plan
-            </CardTitle>
-            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-              Live
-            </Badge>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="rounded-lg border border-border bg-background overflow-hidden">
-              <DietTableView
-                patientId={patientId}
-                latestAppointmentId={appointmentId}
-                consultationId={consultationId}
-                patientName={selectedPatient.name}
-              />
+              {/* Existing diet table */}
+              <Card className="border border-border shadow-sm">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Current Diet Plan
+                  </CardTitle>
+                  <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                    Live
+                  </Badge>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="rounded-lg border border-border bg-background overflow-hidden">
+                    <DietTableView
+                      patientId={patientId}
+                      latestAppointmentId={appointmentId}
+                      consultationId={consultationId}
+                      patientName={selectedPatient.name}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Sticky footer */}
-      <div
-        className="
+            {/* Sticky footer */}
+            <div
+              className="
           sticky bottom-0 z-10
           flex flex-col-reverse sm:flex-row sm:justify-end gap-2
           border-t border-border bg-background/95 backdrop-blur
           px-4 sm:px-6 py-3
         "
-      >
-        <Button
-          variant="outline"
-          className="w-full sm:w-auto"
-          onClick={() => setOpenDietModal(false)}
-        >
-          Cancel
-        </Button>
-      <Button
-          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-600/90 text-white"
-          onClick={() => setOpenDietModal(false)}
-          disabled={!doctorData.treatment?.dietChart?.title?.trim()}
-        >
-          Save Diet Chart
-        </Button>
-      </div>
-    </DialogContent>
-  </Dialog>
-)}
+            >
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => setOpenDietModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-600/90 text-white"
+                onClick={() => setOpenDietModal(false)}
+                disabled={!doctorData.treatment?.dietChart?.title?.trim()}
+              >
+                Save Diet Chart
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-    {dialogOpen && patientFullData && (
-  <CaseSheetView
-    open={dialogOpen}
-    onOpenChange={setDialogOpen}
-    patient={patientFullData}
-  />
-)}
-{openPrescriptionModal && selectedPrescriptionPatient && (
-  <PrescriptionDialog
-    open={openPrescriptionModal}
-    onClose={() => setOpenPrescriptionModal(false)}
-    patient={selectedPrescriptionPatient}
-    onPrescriptionCreated={async () => {
-      await fetchAppointments();
+      {dialogOpen && patientFullData && (
+        <CaseSheetView
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          patient={patientFullData}
+        />
+      )}
+      {openPrescriptionModal && selectedPrescriptionPatient && (
+        <PrescriptionDialog
+          open={openPrescriptionModal}
+          onClose={() => setOpenPrescriptionModal(false)}
+          patient={selectedPrescriptionPatient}
+          onPrescriptionCreated={async () => {
+            await fetchAppointments();
 
-      if (selectedPrescriptionPatient?.id) {
-        const refreshed = await getPatientById(
-          selectedPrescriptionPatient.id
-        );
+            if (selectedPrescriptionPatient?.id) {
+              const refreshed = await getPatientById(
+                selectedPrescriptionPatient.id
+              );
 
-        const patientData = Array.isArray(
-          refreshed?.data
-        )
-          ? refreshed.data[0]
-          : refreshed?.data;
+              const patientData = Array.isArray(
+                refreshed?.data
+              )
+                ? refreshed.data[0]
+                : refreshed?.data;
 
-        setPatient(patientData);
-        setPatientFullData(patientData);
-      }
-    }}
-  />
-)}
-      
+              setPatient(patientData);
+              setPatientFullData(patientData);
+            }
+          }}
+        />
+      )}
+
     </div>
   );
 };
