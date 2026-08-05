@@ -17,7 +17,7 @@ import SignatureCanvas from "react-signature-canvas";
 import SignatureStep from "./ConsentStep";
 import { Checkbox } from "./ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Trash2 } from "lucide-react";
 const API_BASE_URL = "https://api.ikshanaturopathy.com/v1";
 
 export const updatePatientConsult = async (consultationId: string, payload: any) => {
@@ -180,6 +180,8 @@ const savePatientSignature = () => {
       allergies: "",
       familyHistory: "",
       chiefComplaints: "",
+      chiefComplaintsV2: [""],
+      knowCaseV2: [""],
       knowCase: {
         diabetes: false,
         hypertension: false,
@@ -234,6 +236,74 @@ const savePatientSignature = () => {
     doctorName: "",
     signature: "",
   });
+
+  const addChiefComplaint = () => {
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        chiefComplaintsV2: [...(prev.pastMedicalHistory.chiefComplaintsV2 || []), ""],
+      },
+    }));
+  };
+
+  const handleChiefComplaintChange = (index: number, value: string) => {
+    const list = [...(doctorData.pastMedicalHistory.chiefComplaintsV2 || [])];
+    list[index] = value;
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        chiefComplaintsV2: list,
+        chiefComplaints: list.filter(Boolean).join(", "),
+      },
+    }));
+  };
+
+  const removeChiefComplaint = (index: number) => {
+    const list = (doctorData.pastMedicalHistory.chiefComplaintsV2 || []).filter((_: any, i: number) => i !== index);
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        chiefComplaintsV2: list.length > 0 ? list : [""],
+        chiefComplaints: list.filter(Boolean).join(", "),
+      },
+    }));
+  };
+
+  const addKnowCase = () => {
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        knowCaseV2: [...(prev.pastMedicalHistory.knowCaseV2 || []), ""],
+      },
+    }));
+  };
+
+  const handleKnowCaseChange = (index: number, value: string) => {
+    const list = [...(doctorData.pastMedicalHistory.knowCaseV2 || [])];
+    list[index] = value;
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        knowCaseV2: list,
+      },
+    }));
+  };
+
+  const removeKnowCase = (index: number) => {
+    const list = (doctorData.pastMedicalHistory.knowCaseV2 || []).filter((_: any, i: number) => i !== index);
+    setDoctorData((prev: any) => ({
+      ...prev,
+      pastMedicalHistory: {
+        ...prev.pastMedicalHistory,
+        knowCaseV2: list.length > 0 ? list : [""],
+      },
+    }));
+  };
 
   const [medicineChart, setMedicineChart] = useState([
     { medicineName: "", dosage: "", frequency: "", remarks: "" },
@@ -399,6 +469,12 @@ const payload = {
   cheifCompaints:
     doctorData.pastMedicalHistory.chiefComplaints || "",
 
+  cheifComplaintsV2:
+    doctorData.pastMedicalHistory.chiefComplaintsV2 || [],
+
+  knowCaseV2:
+    doctorData.pastMedicalHistory.knowCaseV2 || [],
+
   knowCase: {
     diabetes: selectedIllnesses.includes("Diabetes"),
 
@@ -512,6 +588,12 @@ const payload = {
   appointmentId: latestAppointment?.id,
   cheifCompaints:
     doctorData.pastMedicalHistory.chiefComplaints || "",
+
+  cheifComplaintsV2:
+    doctorData.pastMedicalHistory.chiefComplaintsV2 || [],
+
+  knowCaseV2:
+    doctorData.pastMedicalHistory.knowCaseV2 || [],
 
   surgeriesOrInjuries:
     doctorData.pastMedicalHistory.surgeriesOrInjuries || "",
@@ -804,95 +886,83 @@ signature: DOCTOR_SIGNATURE_URL,
                   <div className="space-y-4">
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
-                        Chief Complaints
+                        C/O (Chief Complaints)
                       </label>
-                      <Textarea
-                        placeholder="Enter Chief Complaints..."
-                        value={
-                          doctorData.pastMedicalHistory.chiefComplaints || ""
-                        }
-                        onChange={(e) =>
-                          setDoctorData({
-                            ...doctorData,
-                            pastMedicalHistory: {
-                              ...doctorData.pastMedicalHistory,
-                              chiefComplaints: e.target.value,
-                            },
-                          })
-                        }
-                        rows={3}
-                      />
+                      <div className="space-y-3 mb-3 max-w-4xl">
+                        {(doctorData.pastMedicalHistory.chiefComplaintsV2 || []).map((complaint, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <span className="text-gray-400 font-bold text-sm min-w-[20px] text-right">
+                              {index + 1}.
+                            </span>
+                            <Input
+                              placeholder="e.g., Left ankle pain on exertion..."
+                              value={complaint}
+                              onChange={(e) => handleChiefComplaintChange(index, e.target.value)}
+                              className="flex-1 bg-amber-50/20 border-amber-100 focus:border-amber-500 focus:ring-amber-500"
+                            />
+                            {(doctorData.pastMedicalHistory.chiefComplaintsV2 || []).length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeChiefComplaint(index)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addChiefComplaint}
+                        className="text-amber-700 border-amber-600 hover:bg-amber-50"
+                      >
+                        + Add Complaint
+                      </Button>
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">
-                        Known Case
+                        K/C/O (Known Case Of)
                       </label>
-                      {/* Checkboxes */}
-                      <div className="flex flex-wrap gap-4 mb-3">
-                        {[
-                          "Diabetes",
-                          "Hypertension",
-                          "CAD",
-                          "Asthma",
-                          "Others",
-                        ].map((illness) => (
-                          <label
-                            key={illness}
-                            className="flex items-center gap-2 text-sm text-gray-800"
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600"
-                              checked={doctorData.pastMedicalHistory.chronicIllnesses?.includes(
-                                illness
-                              )}
-                              onChange={(e) => {
-                                const selected =
-                                  doctorData.pastMedicalHistory
-                                    .chronicIllnesses || [];
-                                const newIllnesses = e.target.checked
-                                  ? [...selected, illness]
-                                  : Array.isArray(selected)
-                                  ? selected.filter((i: any) => i !== illness)
-                                  : [];
-
-                                setDoctorData({
-                                  ...doctorData,
-                                  pastMedicalHistory: {
-                                    ...doctorData.pastMedicalHistory,
-                                    chronicIllnesses: newIllnesses,
-                                  },
-                                });
-                              }}
+                      <div className="space-y-3 mb-3 max-w-4xl">
+                        {(doctorData.pastMedicalHistory.knowCaseV2 || []).map((item, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <span className="text-gray-400 font-bold text-sm min-w-[20px] text-right">
+                              {index + 1}.
+                            </span>
+                            <Input
+                              placeholder="e.g., Seizure disorder..."
+                              value={item}
+                              onChange={(e) => handleKnowCaseChange(index, e.target.value)}
+                              className="flex-1 bg-amber-50/20 border-amber-100 focus:border-amber-500 focus:ring-amber-500"
                             />
-                            {illness}
-                          </label>
+                            {(doctorData.pastMedicalHistory.knowCaseV2 || []).length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeKnowCase(index)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         ))}
                       </div>
-
-                      {/* Conditional "Others" Text Field */}
-                      {doctorData.pastMedicalHistory.chronicIllnesses?.includes(
-                        "Others"
-                      ) && (
-                        <Textarea
-                          placeholder="Please specify other chronic illnesses..."
-                          value={
-                            doctorData.pastMedicalHistory.otherChronicIllness ||
-                            ""
-                          }
-                          onChange={(e) =>
-                            setDoctorData({
-                              ...doctorData,
-                              pastMedicalHistory: {
-                                ...doctorData.pastMedicalHistory,
-                                otherChronicIllness: e.target.value,
-                              },
-                            })
-                          }
-                          rows={2}
-                          className="mt-2"
-                        />
-                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addKnowCase}
+                        className="text-amber-700 border-amber-600 hover:bg-amber-50"
+                      >
+                        + Add Known Case
+                      </Button>
                     </div>
                     <div>
                       <label className="font-semibold text-gray-700 block mb-2">

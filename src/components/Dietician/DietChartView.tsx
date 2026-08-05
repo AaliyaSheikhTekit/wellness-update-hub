@@ -288,28 +288,35 @@ export default function DietChartView({ patient }: { patient: any }) {
                         const rows: {
                           timeSlot: string;
                           dietItems: any[];
+                          text: string;
                         }[] = [];
 
                         allTimeSlots.forEach((timeSlot) => {
                           const allDietItems: any[] = [];
+                          let cellText = "";
 
                           pdpsForDate.forEach((pdp: any) => {
                             const dietItem = pdp.dietPlanItem.find(
                               (item: any) => item.time === timeSlot
                             );
 
-                            if (
-                              dietItem &&
-                              dietItem.dietItem &&
-                              dietItem.dietItem.length > 0
-                            ) {
-                              allDietItems.push(...dietItem.dietItem);
+                            if (dietItem) {
+                              if (dietItem.text) {
+                                cellText = dietItem.text;
+                              }
+                              if (
+                                dietItem.dietItem &&
+                                dietItem.dietItem.length > 0
+                              ) {
+                                allDietItems.push(...dietItem.dietItem);
+                              }
                             }
                           });
 
                           rows.push({
                             timeSlot,
                             dietItems: allDietItems,
+                            text: cellText,
                           });
                         });
 
@@ -348,7 +355,11 @@ export default function DietChartView({ patient }: { patient: any }) {
                             </td>
 
                             <td className="border-2 border-gray-800 p-3 align-top">
-                              {row.dietItems.length > 0 ? (
+                              {row.text ? (
+                                <div className="whitespace-pre-wrap text-sm leading-6">
+                                  {row.text}
+                                </div>
+                              ) : row.dietItems.length > 0 ? (
                                 <div className="space-y-3">
                                   {(() => {
                                     const groups = row.dietItems.reduce((acc: any, item: any) => {

@@ -427,31 +427,34 @@ const removeDietItemFromMeal = (
           if (!dayPlan) return null;
 
           const dietPlanItems = Object.entries(dayPlan)
-            .filter(([_, meal]) => meal.itemIds && meal.itemIds.length > 0)
+            .filter(([_, meal]) => (meal.itemIds && meal.itemIds.length > 0) || (meal.text && meal.text.trim() !== ""))
             .map(([time, meal]) => {
               // Separate yoga items vs diet items
               const yogaItemIds: string[] = [];
               const dietItemIds: string[] = [];
 
-              meal.itemIds.forEach((id) => {
-                // ✅ Yoga items come from yogaCategories
-                const isYoga = yogaCategories.some((cat: any) =>
-                  cat.subCategories?.some((sub: any) =>
-                    sub.items?.some((item: any) => item.id === id)
-                  )
-                );
-                if (isYoga) yogaItemIds.push(id);
-                else dietItemIds.push(id);
-              });
+              if (meal.itemIds) {
+                meal.itemIds.forEach((id) => {
+                  // ✅ Yoga items come from yogaCategories
+                  const isYoga = yogaCategories.some((cat: any) =>
+                    cat.subCategories?.some((sub: any) =>
+                      sub.items?.some((item: any) => item.id === id)
+                    )
+                  );
+                  if (isYoga) yogaItemIds.push(id);
+                  else dietItemIds.push(id);
+                });
+              }
 
               return {
                 time,
+                text: meal.text || "",
                 dietItem: dietItemIds,
                 yogaItem: yogaItemIds,
               };
             })
             .filter(
-              (item) => item.dietItem.length > 0 || item.yogaItem.length > 0
+              (item) => item.dietItem.length > 0 || item.yogaItem.length > 0 || (item.text && item.text.trim() !== "")
             );
 
           if (dietPlanItems.length === 0) return null;
