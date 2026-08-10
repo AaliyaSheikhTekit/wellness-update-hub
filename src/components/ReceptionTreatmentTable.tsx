@@ -80,7 +80,7 @@ function AssignTherapistModal({
   therapists,
   setTherapists,
   masterTreatments,
-   treatments,
+  treatments,
 }: AssignModalProps) {
   const { toast } = useToast();
 
@@ -132,39 +132,39 @@ function AssignTherapistModal({
     if (!row) return;
     setSaving(true);
     try {
-     // Only consultation rows have consultation IDs
-if (row.source === "consultation") {
-  await updatePatientTreatmentTable(row.id, {
-    recommendation: {
-      inTime,
-      outTime,
-      therapist: therapistId,
-      timeSlot: `${inTime} - ${outTime}`,
-      remark,
-      duration: `${durationMin} min`,
-    },
-  });
-}
+      // Only consultation rows have consultation IDs
+      if (row.source === "consultation") {
+        await updatePatientTreatmentTable(row.id, {
+          recommendation: {
+            inTime,
+            outTime,
+            therapist: therapistId,
+            timeSlot: `${inTime} - ${outTime}`,
+            remark,
+            duration: `${durationMin} min`,
+          },
+        });
+      }
 
       // 2. find correct treatmentPlanId + treatmentAssignId then assign therapist
-   if (
-  therapistId &&
-  row.source === "treatmentPlan"
-) {
-  const patientRows = treatments.filter(
-    (x) =>
-      x.patientId === row.patientId &&
-      x.source === "treatmentPlan"
-  );
+      if (
+        therapistId &&
+        row.source === "treatmentPlan"
+      ) {
+        const patientRows = treatments.filter(
+          (x) =>
+            x.patientId === row.patientId &&
+            x.source === "treatmentPlan"
+        );
 
-  for (const item of patientRows) {
-    await assignTherapist(
-      therapistId,
-      item.treatmentPlanId,
-      item.treatmentIds[0]
-    );
-  }
-}
+        for (const item of patientRows) {
+          await assignTherapist(
+            therapistId,
+            item.treatmentPlanId,
+            item.treatmentIds[0]
+          );
+        }
+      }
 
       const th = therapists.find((t) => t.id === therapistId);
       toast({
@@ -284,7 +284,7 @@ if (row.source === "consultation") {
             <Input
               type="text"
               placeholder="Duration in minutes"
-              
+
               value={durationMin}
               onChange={(e) =>
                 setDurationMin(Math.max(5, Number(e.target.value)))
@@ -371,6 +371,21 @@ if (row.source === "consultation") {
   );
 }
 
+const formatDateSafe = (dateStr?: string) => {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 // ─────────────────────────────────────────────
 // Main Table Component
 // ─────────────────────────────────────────────
@@ -386,29 +401,29 @@ export default function ReceptionTreatmentTable() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [activeRow, setActiveRow] = useState<TreatmentRow | null>(null);
-const [expandedPatients, setExpandedPatients] = useState<string[]>([]);
+  const [expandedPatients, setExpandedPatients] = useState<string[]>([]);
 
-const togglePatient = (id: string) => {
-  setExpandedPatients((prev) =>
-    prev.includes(id)
-      ? prev.filter((x) => x !== id)
-      : [...prev, id]
-  );
-};
-useEffect(() => { 
-  const load = async () => {
-    await fetchMasterTreatments();
-    await fetchTherapists();
+  const togglePatient = (id: string) => {
+    setExpandedPatients((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id]
+    );
   };
+  useEffect(() => {
+    const load = async () => {
+      await fetchMasterTreatments();
+      await fetchTherapists();
+    };
 
-  load();
-}, []);
+    load();
+  }, []);
 
-useEffect(() => {
-  if (therapists.length > 0) {
-    fetchTreatments();
-  }
-}, [therapists, masterTreatments]);
+  useEffect(() => {
+    if (therapists.length > 0) {
+      fetchTreatments();
+    }
+  }, [therapists, masterTreatments]);
 
   const fetchMasterTreatments = async () => {
     try {
@@ -418,17 +433,17 @@ useEffect(() => {
       ]);
       const treatmentData = Array.isArray(treatmentRes?.data)
         ? treatmentRes.data.map((pkg: any) => ({
-            _id: pkg.id,
-            treatmentName: pkg.title || pkg.treatment,
-            duration: pkg.duration || "",
-          }))
+          _id: pkg.id,
+          treatmentName: pkg.title || pkg.treatment,
+          duration: pkg.duration || "",
+        }))
         : [];
       const therapyData = Array.isArray(therapyRes?.data)
         ? therapyRes.data.map((t: any) => ({
-            _id: t.id,
-            treatmentName: t.title || t.treatment,
-            duration: t.duration || "",
-          }))
+          _id: t.id,
+          treatmentName: t.title || t.treatment,
+          duration: t.duration || "",
+        }))
         : [];
       setMasterTreatments([...treatmentData, ...therapyData]);
     } catch (err) {
@@ -452,73 +467,75 @@ useEffect(() => {
     try {
       const res = await getTreatmentTable();
       const patients = res.data || [];
-console.log("Raw Treatment Data:", patients);
+      console.log("Raw Treatment Data:", patients);
       const formatted = patients.flatMap((patient: any) => {
-  const patientName = patient.fullName;
+        const patientName = patient.fullName;
 
-  // Consultation Recommendations
-  const consultationRows =
-    patient.appointment?.flatMap((appt: any) =>
-      (appt.consultation || []).map((c: any) => {
-        const recommendation = c.treatment?.recommendation || {};
+        // Consultation Recommendations
+        const consultationRows =
+          patient.appointment?.flatMap((appt: any) =>
+            (appt.consultation || []).map((c: any) => {
+              const recommendation = c.treatment?.recommendation || {};
 
-        const ids = Array.isArray(recommendation.title)
-          ? recommendation.title
-          : [recommendation.title].filter(Boolean);
+              const ids = Array.isArray(recommendation.title)
+                ? recommendation.title
+                : [recommendation.title].filter(Boolean);
 
-        return {
-          id: c.id,
-          patientId: patient.id,
-          patientName,
-          treatmentIds: ids,
-          treatmentName: getTreatmentDetails(ids),
-          source: "consultation",
-          therapistId: recommendation.therapist || "",
-          therapistName:
-            therapists.find(
-              (t) => t.id === recommendation.therapist
-            )?.name || "",
-          inTime: recommendation.inTime || "",
-          outTime: recommendation.outTime || "",
-          timeSlot: recommendation.timeSlot || "",
-          remark: recommendation.remark || "",
-          totalDuration: recommendation.duration || "",
-        };
-      })
-    ) || [];
+              return {
+                id: c.id,
+                patientId: patient.id,
+                patientName,
+                treatmentIds: ids,
+                treatmentName: getTreatmentDetails(ids),
+                source: "consultation",
+                therapistId: recommendation.therapist || "",
+                therapistName:
+                  therapists.find(
+                    (t) => t.id === recommendation.therapist
+                  )?.name || "",
+                inTime: recommendation.inTime || "",
+                outTime: recommendation.outTime || "",
+                timeSlot: recommendation.timeSlot || "",
+                remark: recommendation.remark || "",
+                totalDuration: recommendation.duration || "",
+                date: appt.date || appt.createdAt || "",
+              };
+            })
+          ) || [];
 
-  // Treatment Plan Rows
-  const treatmentPlanRows =
-    patient.treatmentPlan?.flatMap((plan: any) =>
-      (plan.treatmentAssign || []).map((assign: any) => {
-        const treatmentId = assign.treatment?.id;
+        // Treatment Plan Rows
+        const treatmentPlanRows =
+          patient.treatmentPlan?.flatMap((plan: any) =>
+            (plan.treatmentAssign || []).map((assign: any) => {
+              const treatmentId = assign.treatment?.id;
 
-       return {
-  id: assign.id,
-  patientId: patient.id,
-  patientName,
-  treatmentPlanId: plan.id,
-  treatmentAssignId: assign.id,
-  treatmentIds: [treatmentId],
-  treatmentName: assign.treatment?.title || "",
-  source: "treatmentPlan",
-  therapistId: assign.therapist?.id || "",
-  therapistName: assign.therapist?.name || "",
-  inTime: assign.inTime || "",
-  outTime: assign.outTime || "",
-  timeSlot: plan.timeSlot || "",
-  remark: assign.remark || "",
-  totalDuration:
-  assign.duration ||
-  assign.treatment?.duration ||
-  "",
-};
-      })
-    ) || [];
+              return {
+                id: assign.id,
+                patientId: patient.id,
+                patientName,
+                treatmentPlanId: plan.id,
+                treatmentAssignId: assign.id,
+                treatmentIds: [treatmentId],
+                treatmentName: assign.treatment?.title || "",
+                source: "treatmentPlan",
+                therapistId: assign.therapist?.id || "",
+                therapistName: assign.therapist?.name || "",
+                inTime: assign.inTime || "",
+                outTime: assign.outTime || "",
+                timeSlot: plan.timeSlot || "",
+                remark: assign.remark || "",
+                totalDuration:
+                  assign.duration ||
+                  assign.treatment?.duration ||
+                  "",
+                date: plan.date || plan.createdAt || "",
+              };
+            })
+          ) || [];
 
-  return [...consultationRows, ...treatmentPlanRows];
-});
-console.log("Formatted Rows:", formatted);
+        return [...consultationRows, ...treatmentPlanRows];
+      });
+      console.log("Formatted Rows:", formatted);
       setTreatments(formatted);
     } catch (err) {
       console.error(err);
@@ -572,18 +589,19 @@ console.log("Formatted Rows:", formatted);
         }),
     [treatments, filter, sortKey, sortAsc, masterTreatments]
   );
-const groupedPatients = useMemo(() => {
-  const map: Record<string, TreatmentRow[]> = {};
+  const groupedPatients = useMemo(() => {
+    const map: Record<string, TreatmentRow[]> = {};
 
-  filteredData.forEach((row) => {
-    if (!map[row.patientId]) map[row.patientId] = [];
-    map[row.patientId].push(row);
-  });
+    filteredData.forEach((row) => {
+      if (!map[row.patientId]) map[row.patientId] = [];
+      map[row.patientId].push(row);
+    });
 
-  return Object.entries(map);
-}, [filteredData]);
+    return Object.entries(map);
+  }, [filteredData]);
   const columns = [
     { key: "patientName", label: "Patient", icon: User },
+    { key: "date", label: "Date", icon: Calendar },
     { key: "treatmentName", label: "Treatment", icon: Stethoscope },
     { key: "therapistName", label: "Therapist", icon: User },
     { key: "timeSlot", label: "Time Slot", icon: Calendar },
@@ -656,127 +674,138 @@ const groupedPatients = useMemo(() => {
               </thead>
 
               <tbody className="divide-y divide-border/50">
-             {groupedPatients.map(([patientId, rows]) => {
-  const first = rows[0];
+                {groupedPatients.map(([patientId, rows]) => {
+                  const first = rows[0];
+                  console.log(first, "firstfirstfirst")
 
-  return (
-    <React.Fragment key={patientId}>
-    <tr className="bg-slate-100 hover:bg-slate-200 border-b">
-  {/* Patient */}
-  <td className="px-6 py-4 font-semibold">
-    <button
-      onClick={() => togglePatient(patientId)}
-      className="flex items-center gap-2"
-    >
-      <span className="text-xs">
-        {expandedPatients.includes(patientId) ? "▼" : "▶"}
-      </span>
+                  return (
+                    <React.Fragment key={patientId}>
+                      <tr className="bg-slate-100 hover:bg-slate-200 border-b">
+                        {/* Patient */}
+                        <td className="px-6 py-4 font-semibold">
+                          <button
+                            onClick={() => togglePatient(patientId)}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="text-xs">
+                              {expandedPatients.includes(patientId) ? "▼" : "▶"}
+                            </span>
 
-      <div className="flex flex-col items-start">
-        <span>{first.patientName}</span>
-        <span className="text-xs text-gray-500">
-          {rows.length} Treatment{rows.length > 1 ? "s" : ""}
-        </span>
-      </div>
-    </button>
-  </td>
+                            <div className="flex flex-col items-start">
+                              <span>{first.patientName}</span>
+                              <span className="text-xs text-gray-500">
+                                {rows.length} Treatment{rows.length > 1 ? "s" : ""}
+                              </span>
+                            </div>
+                          </button>
+                        </td>
 
-  {/* Treatment */}
-  <td className="text-gray-500 italic">
-    {expandedPatients.includes(patientId)
-      ? "Hide Treatments"
-      : "Show Treatments"}
-  </td>
+                        {/* Date (Parent Row) */}
+                        <td className="px-6 py-4 text-sm font-medium">
+                          {formatDateSafe(first.date)}
+                        </td>
 
-  {/* Therapist */}
-  <td>
-    <Badge variant="secondary">
-      {first.therapistName || "Not Assigned"}
-    </Badge>
-  </td>
+                        {/* Treatment */}
+                        <td className="text-gray-500 italic px-6 py-4">
+                          {expandedPatients.includes(patientId)
+                            ? "Hide Treatments"
+                            : "Show Treatments"}
+                        </td>
 
-  {/* Slot */}
-  <td>{first.timeSlot || "-"}</td>
+                        {/* Therapist */}
+                        <td className="px-6 py-4">
+                          <Badge variant="secondary">
+                            {first.therapistName || "Not Assigned"}
+                          </Badge>
+                        </td>
 
-  {/* In */}
-  <td>{first.inTime || "-"}</td>
+                        {/* Slot */}
+                        <td className="px-6 py-4">{first.timeSlot || "-"}</td>
 
-  {/* Out */}
-  <td>{first.outTime || "-"}</td>
+                        {/* In */}
+                        <td className="px-6 py-4">{first.inTime || "-"}</td>
 
-  {/* Duration */}
-  <td>{first.totalDuration || "-"}</td>
+                        {/* Out */}
+                        <td className="px-6 py-4">{first.outTime || "-"}</td>
 
-  {/* Notes */}
-  <td>{first.remark || "-"}</td>
+                        {/* Duration */}
+                        <td className="px-6 py-4">{first.totalDuration || "-"}</td>
 
-  {/* Action */}
-  <td>
-    <Button
-      size="sm"
-      className="bg-amber-500 hover:bg-amber-600"
-      onClick={() => {
-        setActiveRow(first);
-        setModalOpen(true);
-      }}
-    >
-      Assign All
-    </Button>
-  </td>
-</tr>
+                        {/* Notes */}
+                        <td className="px-6 py-4">{first.remark || "-"}</td>
 
-      {expandedPatients.includes(patientId) &&
-        rows.map((t) => (
-          <tr
-  key={t.id}
-  className="bg-white hover:bg-amber-50 transition-colors"
->
-            <td className="pl-14 text-gray-400">
-  └─
-</td>
+                        {/* Action */}
+                        <td className="px-6 py-4">
+                          <Button
+                            size="sm"
+                            className="bg-amber-500 hover:bg-amber-600"
+                            onClick={() => {
+                              setActiveRow(first);
+                              setModalOpen(true);
+                            }}
+                          >
+                            Assign All
+                          </Button>
+                        </td>
+                      </tr>
 
-            <td className="font-medium">
-  {t.treatmentName}
-</td>
+                      {expandedPatients.includes(patientId) &&
+                        rows.map((t) => (
+                          <tr
+                            key={t.id}
+                            className="bg-white hover:bg-amber-50 transition-colors"
+                          >
+                            <td className="pl-14 text-gray-400 px-6 py-4">
+                              └─
+                            </td>
 
-            <td>
-  <Badge variant="outline">
-    {t.therapistName || "Pending"}
-  </Badge>
-</td>
+                            {/* Date (Child Row) */}
+                            <td className="px-6 py-4 text-sm">
+                              {formatDateSafe(t.date)}
+                            </td>
 
-            <td>{t.timeSlot}</td>
+                            <td className="font-medium px-6 py-4">
+                              {t.treatmentName}
+                            </td>
 
-            <td>{t.inTime}</td>
+                            <td className="px-6 py-4">
+                              <Badge variant="outline">
+                                {t.therapistName || "Pending"}
+                              </Badge>
+                            </td>
 
-            <td>{t.outTime}</td>
+                            <td className="px-6 py-4">{t.timeSlot}</td>
 
-           <td>
-  {t.totalDuration ||
-    calculateDuration(t.inTime, t.outTime) ||
-    "-"}
-</td>
+                            <td className="px-6 py-4">{t.inTime}</td>
 
-            <td>{t.remark}</td>
+                            <td className="px-6 py-4">{t.outTime}</td>
 
-            <td>
-              <Button
-                size="sm"
-                variant="outline"
-                 className="bg-slate-700 hover:bg-slate-800 text-white"
-                onClick={() => {
-                  setActiveRow(t);
-                  setModalOpen(true);
-                }}
-              >
-                Edit
-              </Button>
-            </td>
-          </tr>
-        ))}
-    </React.Fragment>
-  );
-})}
+                            <td className="px-6 py-4">
+                              {t.totalDuration ||
+                                calculateDuration(t.inTime, t.outTime) ||
+                                "-"}
+                            </td>
+
+                            <td className="px-6 py-4">{t.remark}</td>
+
+                            <td className="px-6 py-4">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="bg-slate-700 hover:bg-slate-800 text-white"
+                                onClick={() => {
+                                  setActiveRow(t);
+                                  setModalOpen(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
 

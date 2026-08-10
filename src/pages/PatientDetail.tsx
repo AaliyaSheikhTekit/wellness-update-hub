@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate,useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -184,14 +184,14 @@ const PatientDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-const initialTab = searchParams.get("tab") || "appointments";
+  const initialTab = searchParams.get("tab") || "appointments";
   // --- Hooks must come first ---
   const [patient, setPatient] = useState<ServerPatient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string>("");
   const [openPrescription, setOpenPrescription] = useState(false);
-const userName = localStorage.getItem("userName") || "";
-console.log("User Name from localStorage:", userName);
+  const userName = localStorage.getItem("userName") || "";
+  console.log("User Name from localStorage:", userName);
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(
     null
@@ -200,13 +200,13 @@ console.log("User Name from localStorage:", userName);
   const [pdfReadyAppointmentId, setPdfReadyAppointmentId] = useState<
     string | null
   >(null);
-const [activeTab, setActiveTab] = useState(initialTab);
-useEffect(() => {
-  const tab = searchParams.get("tab");
-  if (tab) {
-    setActiveTab(tab);
-  }
-}, [searchParams]);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -290,23 +290,23 @@ useEffect(() => {
         : sortedAppointments[0]
     );
   }, [sortedAppointments]);
-const activeConsultation = useMemo(() => {
-  if (!activeAppointment?.consultation?.length) return null;
+  const activeConsultation = useMemo(() => {
+    if (!activeAppointment?.consultation?.length) return null;
 
-  return [...activeAppointment.consultation].sort(
-    (a, b) =>
-      new Date(b.createdAt || 0).getTime() -
-      new Date(a.createdAt || 0).getTime()
-  )[0];
-}, [activeAppointment]);
+    return [...activeAppointment.consultation].sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
+    )[0];
+  }, [activeAppointment]);
   // Optional tiny helper
   const fmtDate = (v?: string) =>
     v
       ? new Date(v).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
   // Consultations derived from the selected appointment
   const consultations = useMemo(
@@ -363,10 +363,21 @@ const activeConsultation = useMemo(() => {
 
   // Convenience values: prefer latestConsultation.* -> fallback to patient.*
   const vPrimaryHealthConcern =
-    latestConsultation?.primaryHealthConcern ?? patient?.primaryHealthConcern;
+    (latestConsultation?.cheifComplaintsV2 && latestConsultation.cheifComplaintsV2.length > 0)
+      ? latestConsultation.cheifComplaintsV2.filter(Boolean).join(", ")
+      : (latestConsultation?.cheifCompaints || patient?.primaryHealthConcern);
 
   const vChronicIllnesses =
-    latestConsultation?.chronicIllnesses ?? patient?.chronicIllnesses;
+    (latestConsultation?.knowCaseV2 && latestConsultation.knowCaseV2.length > 0)
+      ? latestConsultation.knowCaseV2.filter(Boolean).join(", ")
+      : (latestConsultation?.knowCase
+        ? (typeof latestConsultation.knowCase === "string"
+          ? latestConsultation.knowCase
+          : Object.entries(latestConsultation.knowCase)
+            .filter(([_, val]) => val)
+            .map(([key]) => key)
+            .join(", "))
+        : patient?.chronicIllnesses);
 
   const vSurgeriesOrInjuries =
     latestConsultation?.surgeriesOrInjuries ?? patient?.surgeriesOrInjuries;
@@ -384,19 +395,19 @@ const activeConsultation = useMemo(() => {
   const fmtDT = (v?: string) =>
     v
       ? new Date(v).toLocaleString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
       : "—";
 
   // An optional helper to show a tiny “source” hint
   const sourceHint = latestConsultation
     ? ` (latest consultation • ${fmtDT(
-        latestConsultation.createdAt || latestConsultation.date
-      )})`
+      latestConsultation.createdAt || latestConsultation.date
+    )})`
     : "";
 
   useEffect(() => {
@@ -585,9 +596,8 @@ const activeConsultation = useMemo(() => {
             </div>
 
             <div
-              className={`text-gray-700 leading-relaxed ${
-                !hasValue ? "italic text-gray-400" : ""
-              }`}
+              className={`text-gray-700 leading-relaxed ${!hasValue ? "italic text-gray-400" : ""
+                }`}
             >
               {hasValue ? (
                 <p className="text-base">{value}</p>
@@ -674,39 +684,39 @@ const activeConsultation = useMemo(() => {
       <div className="container mx-auto px-6 py-6">
         {/* Patient Header */}
         <Card className="mb-6">
-      <CardContent className="p-3 sm:p-4 md:p-6">
-  <div className="flex flex-col lg:flex-row items-start justify-between gap-4 lg:gap-6">
-    {/* Left Section - Avatar and Main Info */}
-    <div className="flex items-start space-x-3 sm:space-x-4 md:space-x-6 w-full lg:w-auto">
-      <Avatar className="h-16 w-16 sm:h-18 sm:w-18 md:h-20 md:w-20 flex-shrink-0">
-        <AvatarFallback className="bg-indigo-50 text-indigo-700 text-xl sm:text-2xl">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-4 lg:gap-6">
+              {/* Left Section - Avatar and Main Info */}
+              <div className="flex items-start space-x-3 sm:space-x-4 md:space-x-6 w-full lg:w-auto">
+                <Avatar className="h-16 w-16 sm:h-18 sm:w-18 md:h-20 md:w-20 flex-shrink-0">
+                  <AvatarFallback className="bg-indigo-50 text-indigo-700 text-xl sm:text-2xl">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
-          {patient.fullName}
-        </h2>
-        <div className="mt-2 space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2 sm:gap-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground">
-                Age: {patient.age ?? "—"} • {patient.sex ?? "—"} •
-                Blood: {patient.bloodType ?? "—"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-muted-foreground">
-                {patient.contactNumber || "—"}
-              </span>
-            </div>
-          </div>
-          
-          {/* Conditionally render button */}
-          {/* {["Naturopathy Doctor", "superAdmin"].includes(
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                    {patient.fullName}
+                  </h2>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-2 sm:gap-4">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          Age: {patient.age ?? "—"} • {patient.sex ?? "—"} •
+                          Blood: {patient.bloodType ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          {patient.contactNumber || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Conditionally render button */}
+                    {/* {["Naturopathy Doctor", "superAdmin"].includes(
             localStorage.getItem("userName") || ""
           ) && (
             <Button
@@ -720,77 +730,77 @@ const activeConsultation = useMemo(() => {
               Give Consultancy
             </Button>
           )} */}
-          
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">
-            {patient.address || "—"}
-          </p>
-        </div>
-      </div>
-    </div>
 
-    {/* Right Section - Additional Info */}
-    <div className="w-full lg:w-auto lg:text-right space-y-2 pt-2 lg:pt-0 border-t lg:border-t-0 lg:border-l lg:pl-6">
-      <Badge variant="outline" className="text-xs sm:text-sm">
-        {activeAppointment?.paymentMethod || "—"}
-      </Badge>
-      <div className="text-xs sm:text-sm space-y-1">
-        <p>DOB: {fmtDate(patient.dateOfBirth)}</p>
-        <p>
-          Registered: {fmtDate(patient.formDate || patient.createdAt)}
-        </p>
-        <p className="text-muted-foreground">
-          Father/Husband: {patient.fatherHusbandName || "—"}
-        </p>
-        <p className="text-muted-foreground">
-          Occupation: {patient.occupation || "—"}
-        </p>
-        <p className="text-muted-foreground">
-          Reference: {patient.reference || "—"}
-        </p>
-      </div>
-    </div>
-  </div>
-</CardContent>
+                    <p className="text-xs sm:text-sm text-muted-foreground break-words">
+                      {patient.address || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Section - Additional Info */}
+              <div className="w-full lg:w-auto lg:text-right space-y-2 pt-2 lg:pt-0 border-t lg:border-t-0 lg:border-l lg:pl-6">
+                <Badge variant="outline" className="text-xs sm:text-sm">
+                  {activeAppointment?.paymentMethod || "—"}
+                </Badge>
+                <div className="text-xs sm:text-sm space-y-1">
+                  <p>DOB: {fmtDate(patient.dateOfBirth)}</p>
+                  <p>
+                    Registered: {fmtDate(patient.formDate || patient.createdAt)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Father/Husband: {patient.fatherHusbandName || "—"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Occupation: {patient.occupation || "—"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Reference: {patient.reference || "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Tabs */}
         <Tabs
-  value={activeTab}
-  onValueChange={setActiveTab}
-  className="space-y-6"
->
-           <TabsList
-      ref={tabsRef}
-className="flex  overflow-x-auto w-full "
-    >
-      {[
-        { value: "appointments", label: "Appointments" },
-        userName === "Naturopathy Doctor" && { value: "prescription", label: "Prescription" },
-        { value: "history", label: "Personal and lifestyle history" },
-        { value: "vitals", label: "Vitals and anthropometric measurement" },
-        { value: "consent", label: "Consent & Signature" },
-        { value: "payments", label: "UPI / Payments" },
-        { value: "dietchart", label: "Diet Chart" },
-        { value: "treatmentplan", label: "Treatment Plan" },
-        { value: "consultations", label: "Consultations" },
-        { value: "invoices", label: "Invoices" },
-        { value: "feedback", label: "Feedback Form" },
-      ].map((tab) => (
-        <TabsTrigger
-          key={tab.value}
-          value={tab.value}
-          // onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
-          className="
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList
+            ref={tabsRef}
+            className="flex  overflow-x-auto w-full "
+          >
+            {[
+              { value: "appointments", label: "Appointments" },
+              userName === "Naturopathy Doctor" && { value: "prescription", label: "Prescription" },
+              { value: "history", label: "Personal and lifestyle history" },
+              { value: "vitals", label: "Vitals and anthropometric measurement" },
+              { value: "consent", label: "Consent & Signature" },
+              { value: "payments", label: "UPI / Payments" },
+              { value: "dietchart", label: "Diet Chart" },
+              { value: "treatmentplan", label: "Treatment Plan" },
+              { value: "consultations", label: "Consultations" },
+              { value: "invoices", label: "Invoices" },
+              { value: "feedback", label: "Feedback Form" },
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                // onClick={() => setActiveTab(tab.value)} // ✅ track clicked tab
+                className="
             text-sm sm:text-base font-medium px-3 py-1.5 rounded-md
             data-[state=active]:border-b-2 data-[state=active]:border-black-500
             data-[state=active]:text-white 
             hover:text-amber-600 transition-colors
           "
-        >
-          {tab.label}
-        </TabsTrigger>
-      ))}
-    </TabsList>
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
           {/* Medical History */}
           <TabsContent value="history">
@@ -844,7 +854,7 @@ className="flex  overflow-x-auto w-full "
                   <MedicalItem
                     icon={Heart}
                     label="Primary Health Concern"
-                    value={patient.primaryHealthConcern}
+                    value={vPrimaryHealthConcern}
                     color="red"
                     iconBg="red"
                   />
@@ -853,7 +863,7 @@ className="flex  overflow-x-auto w-full "
                   <MedicalItem
                     icon={AlertCircle}
                     label="Chronic Illnesses"
-                    value={patient.chronicIllnesses}
+                    value={vChronicIllnesses}
                     color="orange"
                     iconBg="orange"
                   />
@@ -869,9 +879,8 @@ className="flex  overflow-x-auto w-full "
 
                   {/* Allergies - Highlighted as critical */}
                   <div
-                    className={`relative ${
-                      hasCriticalInfo ? "ring-2 ring-red-300 ring-offset-2" : ""
-                    }`}
+                    className={`relative ${hasCriticalInfo ? "ring-2 ring-red-300 ring-offset-2" : ""
+                      }`}
                   >
                     <MedicalItem
                       icon={AlertTriangle}
@@ -996,57 +1005,57 @@ className="flex  overflow-x-auto w-full "
                         </DialogClose>
                         <Button
                           onClick={async () => {
-                        const updatedVitals = {
-  bloodPressure: (
-    document.getElementById("bloodPressure") as HTMLInputElement
-  ).value,
+                            const updatedVitals = {
+                              bloodPressure: (
+                                document.getElementById("bloodPressure") as HTMLInputElement
+                              ).value,
 
-  pulse: Number(
-    (document.getElementById("pulse") as HTMLInputElement).value || 0
-  ),
+                              pulse: Number(
+                                (document.getElementById("pulse") as HTMLInputElement).value || 0
+                              ),
 
-  temperatureF: Number(
-    (document.getElementById("temperatureF") as HTMLInputElement).value || 0
-  ),
+                              temperatureF: Number(
+                                (document.getElementById("temperatureF") as HTMLInputElement).value || 0
+                              ),
 
-  weightKg: Number(
-    (document.getElementById("weightKg") as HTMLInputElement).value || 0
-  ),
+                              weightKg: Number(
+                                (document.getElementById("weightKg") as HTMLInputElement).value || 0
+                              ),
 
-  heightCm: Number(
-    (document.getElementById("heightCm") as HTMLInputElement).value || 0
-  ),
+                              heightCm: Number(
+                                (document.getElementById("heightCm") as HTMLInputElement).value || 0
+                              ),
 
-  bmi: Number(
-    (document.getElementById("bmi") as HTMLInputElement).value || 0
-  ),
-};
+                              bmi: Number(
+                                (document.getElementById("bmi") as HTMLInputElement).value || 0
+                              ),
+                            };
 
-try {
-  await updatePatient(patient.id, updatedVitals);
+                            try {
+                              await updatePatient(patient.id, updatedVitals);
 
-  setPatient((prev) =>
-    prev
-      ? {
-          ...prev,
-          ...updatedVitals,
-        }
-      : prev
-  );
+                              setPatient((prev) =>
+                                prev
+                                  ? {
+                                    ...prev,
+                                    ...updatedVitals,
+                                  }
+                                  : prev
+                              );
 
-  toast({
-    title: "Success",
-    description: "Vitals updated successfully.",
-  });
-} catch (error) {
-  console.error(error);
+                              toast({
+                                title: "Success",
+                                description: "Vitals updated successfully.",
+                              });
+                            } catch (error) {
+                              console.error(error);
 
-  toast({
-    variant: "destructive",
-    title: "Failed",
-    description: "Unable to update vitals.",
-  });
-}
+                              toast({
+                                variant: "destructive",
+                                title: "Failed",
+                                description: "Unable to update vitals.",
+                              });
+                            }
                           }}
                         >
                           Save Changes
@@ -1378,7 +1387,7 @@ try {
                   )}
                 </CardContent>
               </Card>
-               <Card className="border rounded-lg shadow-sm">
+              <Card className="border rounded-lg shadow-sm">
                 <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -1403,266 +1412,265 @@ try {
           </TabsContent>
 
           {/* Payments */}
-       <TabsContent value="payments">
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center justify-between">
-        Payment Details
-        <Badge variant="outline" className="text-sm">
-          {invoices.length} Invoice{invoices.length === 1 ? "" : "s"}
-        </Badge>
-      </CardTitle>
-    </CardHeader>
-
-    <CardContent className="space-y-6 text-sm">
-        {/* UPI / QR summary */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">Default Payment Method</p>
-          <p className="text-muted-foreground capitalize">
-            {patient.appointment && patient.appointment.length > 0
-              ? activeAppointment?.paymentMethod || "—"
-              : "—"}
-          </p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI Status</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.status || "—"}</p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI ID</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.upiId || "—"}</p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="font-medium">UPI Ref</p>
-          <p className="text-muted-foreground">{patient.upiPayments?.id || "—"}</p>
-        </div>
-        <div className="border rounded-lg p-3 bg-muted/30 sm:col-span-2 lg:col-span-1">
-          <p className="font-medium">QR Payments</p>
-          <p className="text-muted-foreground truncate">
-            {patient.qrPayments ? JSON.stringify(patient.qrPayments) : "—"}
-          </p>
-        </div>
-      </div>
-      {/* Summary strip */}
-      <div className="grid sm:grid-cols-3 gap-3">
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Billed</p>
-          <p className="font-semibold text-base">
-            ₹{invoices.reduce((s, i: any) => s + Number(i.finalTotal || 0), 0).toLocaleString("en-IN")}
-          </p>
-        </div>
-        <div className="border rounded-lg p-3 bg-emerald-50">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Paid</p>
-          <p className="font-semibold text-base text-emerald-700">
-            ₹{invoices.reduce((s, i: any) => s + Number(i.amountPaid || 0), 0).toLocaleString("en-IN")}
-          </p>
-        </div>
-        <div className="border rounded-lg p-3 bg-rose-50">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Pending</p>
-          <p className="font-semibold text-base text-rose-700">
-            ₹{invoices
-              .reduce((s, i: any) => s + Math.max(0, Number(i.finalTotal || 0) - Number(i.amountPaid || 0)), 0)
-              .toLocaleString("en-IN")}
-          </p>
-        </div>
-      </div>
-
-      {/* Per-invoice breakdown */}
-      {invoices.length === 0 ? (
-        <p className="text-sm text-muted-foreground border rounded-lg p-4 text-center">
-          No invoice payments found.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {invoices.map((inv: any) => {
-            const total   = Number(inv.finalTotal || 0);
-            const paid    = Number(inv.amountPaid || 0);
-            const balance = Math.max(0, total - paid);
-            const pct     = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
-
-            const statusStyle =
-              inv.status === "paid"
-                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                : paid > 0
-                ? "bg-amber-100 text-amber-800 border-amber-300"
-                : "bg-rose-100 text-rose-800 border-rose-300";
-
-            return (
-              <div key={inv.id} className="border rounded-xl overflow-hidden shadow-sm">
-
-                {/* Invoice header */}
-                <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-3 bg-muted/30 border-b">
-                  <div>
-                    <p className="font-semibold">
-                      Invoice #{String(inv.id).slice(0, 6).toUpperCase()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Issued: {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      {" · "}
-                      Due: {new Date(inv.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className={`capitalize text-xs ${statusStyle}`}>
-                    {inv.status || "unpaid"}
+          <TabsContent value="payments">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Payment Details
+                  <Badge variant="outline" className="text-sm">
+                    {invoices.length} Invoice{invoices.length === 1 ? "" : "s"}
                   </Badge>
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-6 text-sm">
+                {/* UPI / QR summary */}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="font-medium">Default Payment Method</p>
+                    <p className="text-muted-foreground capitalize">
+                      {patient.appointment && patient.appointment.length > 0
+                        ? activeAppointment?.paymentMethod || "—"
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="font-medium">UPI Status</p>
+                    <p className="text-muted-foreground">{patient.upiPayments?.status || "—"}</p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="font-medium">UPI ID</p>
+                    <p className="text-muted-foreground">{patient.upiPayments?.upiId || "—"}</p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="font-medium">UPI Ref</p>
+                    <p className="text-muted-foreground">{patient.upiPayments?.id || "—"}</p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-muted/30 sm:col-span-2 lg:col-span-1">
+                    <p className="font-medium">QR Payments</p>
+                    <p className="text-muted-foreground truncate">
+                      {patient.qrPayments ? JSON.stringify(patient.qrPayments) : "—"}
+                    </p>
+                  </div>
+                </div>
+                {/* Summary strip */}
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Billed</p>
+                    <p className="font-semibold text-base">
+                      ₹{invoices.reduce((s, i: any) => s + Number(i.finalTotal || 0), 0).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-emerald-50">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Paid</p>
+                    <p className="font-semibold text-base text-emerald-700">
+                      ₹{invoices.reduce((s, i: any) => s + Number(i.amountPaid || 0), 0).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-rose-50">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Total Pending</p>
+                    <p className="font-semibold text-base text-rose-700">
+                      ₹{invoices
+                        .reduce((s, i: any) => s + Math.max(0, Number(i.finalTotal || 0) - Number(i.amountPaid || 0)), 0)
+                        .toLocaleString("en-IN")}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="px-4 py-3 space-y-4">
-                  {/* Amount grid */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="border rounded-lg p-2.5 bg-muted/30 text-center">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
-                      <p className="font-semibold mt-0.5">₹{total.toLocaleString("en-IN")}</p>
-                    </div>
-                    <div className="border rounded-lg p-2.5 bg-emerald-50 text-center">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Paid</p>
-                      <p className="font-semibold text-emerald-700 mt-0.5">₹{paid.toLocaleString("en-IN")}</p>
-                    </div>
-                    <div className="border rounded-lg p-2.5 bg-rose-50 text-center">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pending</p>
-                      <p className="font-semibold text-rose-700 mt-0.5">₹{balance.toLocaleString("en-IN")}</p>
-                    </div>
+                {/* Per-invoice breakdown */}
+                {invoices.length === 0 ? (
+                  <p className="text-sm text-muted-foreground border rounded-lg p-4 text-center">
+                    No invoice payments found.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {invoices.map((inv: any) => {
+                      const total = Number(inv.finalTotal || 0);
+                      const paid = Number(inv.amountPaid || 0);
+                      const balance = Math.max(0, total - paid);
+                      const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+
+                      const statusStyle =
+                        inv.status === "paid"
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          : paid > 0
+                            ? "bg-amber-100 text-amber-800 border-amber-300"
+                            : "bg-rose-100 text-rose-800 border-rose-300";
+
+                      return (
+                        <div key={inv.id} className="border rounded-xl overflow-hidden shadow-sm">
+
+                          {/* Invoice header */}
+                          <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-3 bg-muted/30 border-b">
+                            <div>
+                              <p className="font-semibold">
+                                Invoice #{String(inv.id).slice(0, 6).toUpperCase()}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Issued: {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                {" · "}
+                                Due: {new Date(inv.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className={`capitalize text-xs ${statusStyle}`}>
+                              {inv.status || "unpaid"}
+                            </Badge>
+                          </div>
+
+                          <div className="px-4 py-3 space-y-4">
+                            {/* Amount grid */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="border rounded-lg p-2.5 bg-muted/30 text-center">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
+                                <p className="font-semibold mt-0.5">₹{total.toLocaleString("en-IN")}</p>
+                              </div>
+                              <div className="border rounded-lg p-2.5 bg-emerald-50 text-center">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Paid</p>
+                                <p className="font-semibold text-emerald-700 mt-0.5">₹{paid.toLocaleString("en-IN")}</p>
+                              </div>
+                              <div className="border rounded-lg p-2.5 bg-rose-50 text-center">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pending</p>
+                                <p className="font-semibold text-rose-700 mt-0.5">₹{balance.toLocaleString("en-IN")}</p>
+                              </div>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div>
+                              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${pct === 100 ? "bg-emerald-500" : pct > 0 ? "bg-amber-500" : "bg-rose-400"
+                                    }`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">{pct.toFixed(0)}% paid</p>
+                            </div>
+
+                            {/* ✅ Payment timeline */}
+                            <div className="border rounded-lg overflow-hidden">
+                              <div className="px-3 py-2 bg-muted/40 border-b">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Payment Timeline
+                                </p>
+                              </div>
+                              <div className="divide-y">
+
+                                {/* Invoice creation row */}
+                                <div className="flex items-center gap-3 px-3 py-2.5">
+                                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-foreground">Invoice created</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {new Date(inv.invoiceDate).toLocaleDateString("en-IN", {
+                                        day: "2-digit", month: "short", year: "numeric",
+                                      })}
+                                    </p>
+                                  </div>
+                                  <p className="text-xs font-semibold text-foreground flex-shrink-0">
+                                    ₹{total.toLocaleString("en-IN")}
+                                  </p>
+                                </div>
+
+                                {/* Payment received row — only if something was paid */}
+                                {paid > 0 && (
+                                  <div className="flex items-center gap-3 px-3 py-2.5 bg-emerald-50/50">
+                                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-emerald-800">Payment received</p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {new Date(inv.updatedAt || inv.invoiceDate).toLocaleDateString("en-IN", {
+                                          day: "2-digit", month: "short", year: "numeric",
+                                        })}
+                                        {inv.paymentMethod ? ` · ${inv.paymentMethod}` : ""}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs font-semibold text-emerald-700 flex-shrink-0">
+                                      +₹{paid.toLocaleString("en-IN")}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Pending row — only if balance remains */}
+                                {balance > 0 && (
+                                  <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/50">
+                                    <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                                      <div className="w-2 h-2 rounded-full bg-rose-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-rose-800">Pending payment</p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        Due by{" "}
+                                        {new Date(inv.dueDate).toLocaleDateString("en-IN", {
+                                          day: "2-digit", month: "short", year: "numeric",
+                                        })}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs font-semibold text-rose-600 flex-shrink-0">
+                                      ₹{balance.toLocaleString("en-IN")} due
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Fully paid row */}
+                                {balance === 0 && paid > 0 && (
+                                  <div className="flex items-center gap-3 px-3 py-2 bg-emerald-50/30">
+                                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-emerald-600 text-xs font-bold">✓</span>
+                                    </div>
+                                    <p className="text-xs font-medium text-emerald-700">Fully settled</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Items breakdown */}
+                            {inv.items?.length > 0 && (
+                              <div className="border rounded-lg overflow-hidden">
+                                <div className="px-3 py-2 bg-muted/40 border-b">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Items</p>
+                                </div>
+                                <div className="divide-y">
+                                  {inv.items.map((item: any) => (
+                                    <div key={item.id} className="flex justify-between items-center px-3 py-2 text-xs">
+                                      <span className="text-foreground">{item.name}</span>
+                                      <span className="text-muted-foreground">
+                                        ₹{Number(item.rate).toLocaleString("en-IN")} × {item.qty}
+                                        {" = "}
+                                        <span className="font-semibold text-foreground">
+                                          ₹{Number(item.amount).toLocaleString("en-IN")}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {Number(inv.discount) > 0 && (
+                                    <div className="flex justify-between items-center px-3 py-2 text-xs text-emerald-700 bg-emerald-50/50">
+                                      <span>Discount ({inv.discountType === "percentage" ? `${inv.discount}%` : "fixed"})</span>
+                                      <span className="font-semibold">
+                                        - ₹{
+                                          inv.discountType === "percentage"
+                                            ? ((Number(inv.subTotal) * Number(inv.discount)) / 100).toLocaleString("en-IN")
+                                            : Number(inv.discount).toLocaleString("en-IN")
+                                        }
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  {/* Progress bar */}
-                  <div>
-                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          pct === 100 ? "bg-emerald-500" : pct > 0 ? "bg-amber-500" : "bg-rose-400"
-                        }`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">{pct.toFixed(0)}% paid</p>
-                  </div>
-
-                  {/* ✅ Payment timeline */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-muted/40 border-b">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Payment Timeline
-                      </p>
-                    </div>
-                    <div className="divide-y">
-
-                      {/* Invoice creation row */}
-                      <div className="flex items-center gap-3 px-3 py-2.5">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground">Invoice created</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {new Date(inv.invoiceDate).toLocaleDateString("en-IN", {
-                              day: "2-digit", month: "short", year: "numeric",
-                            })}
-                          </p>
-                        </div>
-                        <p className="text-xs font-semibold text-foreground flex-shrink-0">
-                          ₹{total.toLocaleString("en-IN")}
-                        </p>
-                      </div>
-
-                      {/* Payment received row — only if something was paid */}
-                      {paid > 0 && (
-                        <div className="flex items-center gap-3 px-3 py-2.5 bg-emerald-50/50">
-                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-emerald-800">Payment received</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {new Date(inv.updatedAt || inv.invoiceDate).toLocaleDateString("en-IN", {
-                                day: "2-digit", month: "short", year: "numeric",
-                              })}
-                              {inv.paymentMethod ? ` · ${inv.paymentMethod}` : ""}
-                            </p>
-                          </div>
-                          <p className="text-xs font-semibold text-emerald-700 flex-shrink-0">
-                            +₹{paid.toLocaleString("en-IN")}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Pending row — only if balance remains */}
-                      {balance > 0 && (
-                        <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/50">
-                          <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
-                            <div className="w-2 h-2 rounded-full bg-rose-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-rose-800">Pending payment</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              Due by{" "}
-                              {new Date(inv.dueDate).toLocaleDateString("en-IN", {
-                                day: "2-digit", month: "short", year: "numeric",
-                              })}
-                            </p>
-                          </div>
-                          <p className="text-xs font-semibold text-rose-600 flex-shrink-0">
-                            ₹{balance.toLocaleString("en-IN")} due
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Fully paid row */}
-                      {balance === 0 && paid > 0 && (
-                        <div className="flex items-center gap-3 px-3 py-2 bg-emerald-50/30">
-                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-emerald-600 text-xs font-bold">✓</span>
-                          </div>
-                          <p className="text-xs font-medium text-emerald-700">Fully settled</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Items breakdown */}
-                  {inv.items?.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="px-3 py-2 bg-muted/40 border-b">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Items</p>
-                      </div>
-                      <div className="divide-y">
-                        {inv.items.map((item: any) => (
-                          <div key={item.id} className="flex justify-between items-center px-3 py-2 text-xs">
-                            <span className="text-foreground">{item.name}</span>
-                            <span className="text-muted-foreground">
-                              ₹{Number(item.rate).toLocaleString("en-IN")} × {item.qty}
-                              {" = "}
-                              <span className="font-semibold text-foreground">
-                                ₹{Number(item.amount).toLocaleString("en-IN")}
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                        {Number(inv.discount) > 0 && (
-                          <div className="flex justify-between items-center px-3 py-2 text-xs text-emerald-700 bg-emerald-50/50">
-                            <span>Discount ({inv.discountType === "percentage" ? `${inv.discount}%` : "fixed"})</span>
-                            <span className="font-semibold">
-                              - ₹{
-                                inv.discountType === "percentage"
-                                  ? ((Number(inv.subTotal) * Number(inv.discount)) / 100).toLocaleString("en-IN")
-                                  : Number(inv.discount).toLocaleString("en-IN")
-                              }
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </CardContent>
-  </Card>
-</TabsContent>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
 
           <TabsContent value="appointments">
@@ -1688,11 +1696,10 @@ try {
                       <div
                         key={a.id || idx}
                         onClick={() => setActiveAppointment(a)}
-                        className={`p-4 border rounded cursor-pointer transition-all ${
-                          activeAppointment?.id === a.id
-                            ? "bg-blue-50 border-blue-400 shadow-sm"
-                            : "hover:bg-muted/40"
-                        }`}
+                        className={`p-4 border rounded cursor-pointer transition-all ${activeAppointment?.id === a.id
+                          ? "bg-blue-50 border-blue-400 shadow-sm"
+                          : "hover:bg-muted/40"
+                          }`}
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -1714,10 +1721,10 @@ try {
                               a.status === "pending"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : a.status === "confirmed"
-                                ? "bg-green-100 text-green-800"
-                                : a.status === "completed"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
+                                  ? "bg-green-100 text-green-800"
+                                  : a.status === "completed"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-800"
                             }
                             variant="outline"
                           >
@@ -1991,107 +1998,107 @@ try {
             </div>
           </TabsContent>
           <TabsContent value="consultations">
-  
+
             <ConsultationHistory
               consultations={activeAppointment?.consultation || []}
-  appointment={activeAppointment}
+              appointment={activeAppointment}
               dateFormatter={fmtDT}
               showHeader={true}
               embedded={true}
             />
           </TabsContent>
           <TabsContent value="invoices">
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center justify-between">
-        Invoices
-        <Badge variant="outline" className="text-sm">
-          {invoices.length} Total
-        </Badge>
-      </CardTitle>
-    </CardHeader>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Invoices
+                  <Badge variant="outline" className="text-sm">
+                    {invoices.length} Total
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
 
-    <CardContent className="space-y-3">
-      {invoices.length > 0 ? (
-        invoices.map((invoice) => (
-          <div
-            key={invoice.id}
-            className="p-4 border rounded-lg hover:bg-gray-50 transition-all"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-semibold text-lg">Invoice #{invoice.id.slice(0, 6)}</p>
-                <p className="text-sm text-gray-600">
-                  Date: {new Date(invoice.invoiceDate).toLocaleDateString()} <br />
-                  Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Status: <Badge>{invoice.status}</Badge>
-                </p>
-              </div>
+              <CardContent className="space-y-3">
+                {invoices.length > 0 ? (
+                  invoices.map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="p-4 border rounded-lg hover:bg-gray-50 transition-all"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-lg">Invoice #{invoice.id.slice(0, 6)}</p>
+                          <p className="text-sm text-gray-600">
+                            Date: {new Date(invoice.invoiceDate).toLocaleDateString()} <br />
+                            Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Status: <Badge>{invoice.status}</Badge>
+                          </p>
+                        </div>
 
-              <div className="text-right">
-                <p className="font-bold text-xl">
-                  ₹{Number(invoice.finalTotal).toLocaleString()}
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const blob = await generatetInvoicePDF(invoice.id);
-                      const url = window.URL.createObjectURL(blob);
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = `invoice_${invoice.id}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      toast({ title: "Invoice PDF downloaded!" });
-                    } catch (err) {
-                      console.error("Invoice PDF error:", err);
-                      toast({ title: "Error generating PDF", description: String(err) });
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-2" /> PDF
-                </Button>
-              </div>
-            </div>
+                        <div className="text-right">
+                          <p className="font-bold text-xl">
+                            ₹{Number(invoice.finalTotal).toLocaleString()}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const blob = await generatetInvoicePDF(invoice.id);
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.download = `invoice_${invoice.id}.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                toast({ title: "Invoice PDF downloaded!" });
+                              } catch (err) {
+                                console.error("Invoice PDF error:", err);
+                                toast({ title: "Error generating PDF", description: String(err) });
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-2" /> PDF
+                          </Button>
+                        </div>
+                      </div>
 
-            {/* Invoice items */}
-            <div className="mt-3 border-t pt-3 space-y-1 text-sm text-gray-700">
-              {invoice.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between border-b border-gray-100 py-1"
-                >
-                  <span>{item.name}</span>
-                  <span>
-                    ₹{item.rate} × {item.qty} = ₹{item.amount}
-                  </span>
-                </div>
-              ))}
-            </div>
+                      {/* Invoice items */}
+                      <div className="mt-3 border-t pt-3 space-y-1 text-sm text-gray-700">
+                        {invoice.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex justify-between border-b border-gray-100 py-1"
+                          >
+                            <span>{item.name}</span>
+                            <span>
+                              ₹{item.rate} × {item.qty} = ₹{item.amount}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-            <div className="text-right mt-2 text-sm">
-              <span className="text-gray-600">Subtotal: ₹{invoice.subTotal}</span>
-              <br />
-              <span className="text-gray-600">
-                Tax: ₹{invoice.tax} | Discount: {invoice.discount}%
-              </span>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-sm text-gray-500">No invoices found for this patient.</p>
-      )}
-    </CardContent>
-  </Card>
-</TabsContent>
-<TabsContent value="feedback">
-  <FeedbackForm patient={patient} />
-</TabsContent>
+                      <div className="text-right mt-2 text-sm">
+                        <span className="text-gray-600">Subtotal: ₹{invoice.subTotal}</span>
+                        <br />
+                        <span className="text-gray-600">
+                          Tax: ₹{invoice.tax} | Discount: {invoice.discount}%
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No invoices found for this patient.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="feedback">
+            <FeedbackForm patient={patient} />
+          </TabsContent>
 
         </Tabs>
       </div>
