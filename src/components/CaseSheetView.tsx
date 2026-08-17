@@ -50,7 +50,7 @@ interface Patient {
 
 export default function CaseSheetView({ open, onOpenChange, patient }) {
 
-console.log("CaseSheetDialog patient:", patient);
+  console.log("CaseSheetDialog patient:", patient);
   useEffect(() => {
     if (!patient?.id) return;
     const fetchPatient = async () => {
@@ -66,14 +66,78 @@ console.log("CaseSheetDialog patient:", patient);
 
     fetchPatient();
   }, [patient?.id]);
-  // Get the latest appointment with consultation data
-  const latestAppointment = patient.appointment?.[0];
-  const latestConsultation = latestAppointment?.consultation?.find((c: any) => c.systemic && c.investigationsOrDiagnosis);
-const isLoading = !patient?.age && !patient?.primaryHealthConcern;
+  // Get all appointments sorted by date
+  const sortedAppointments = Array.isArray(patient?.appointment)
+    ? [...patient.appointment].sort(
+      (a: any, b: any) =>
+        new Date(b.date || b.createdAt || 0).getTime() -
+        new Date(a.date || a.createdAt || 0).getTime()
+    )
+    : [];
+  const latestAppointment = sortedAppointments[0] || patient?.appointment?.[0];
+
+  // Get all consultations sorted by creation date
+  const sortedConsultations = (patient?.appointment || [])
+    .flatMap((app: any) => app.consultation || [])
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.createdAt || b.date || 0).getTime() -
+        new Date(a.createdAt || a.date || 0).getTime()
+    );
+
+  const latestConsultation = sortedConsultations[0];
+  const systemicConsultation = sortedConsultations.find((c: any) => c.systemic) || latestConsultation;
+  const investigationConsultation = sortedConsultations.find((c: any) => c.investigationsOrDiagnosis) || latestConsultation;
+
+  const isLoading = !patient?.age && !patient?.primaryHealthConcern;
+
+  // Helper to extract Primary Health Concern / Chief Complaints (cheifComplaintsV2)
+  const getPrimaryHealthConcern = () => {
+    for (const c of sortedConsultations) {
+      if (Array.isArray(c?.cheifComplaintsV2)) {
+        const valid = c.cheifComplaintsV2
+          .map((item: any) => (typeof item === "string" ? item.trim() : String(item || "")))
+          .filter(Boolean);
+        if (valid.length > 0) return valid.join(", ");
+      }
+      if (c?.cheifCompaints && typeof c.cheifCompaints === "string" && c.cheifCompaints.trim().length > 0) {
+        return c.cheifCompaints.trim();
+      }
+    }
+    return "Not specified";
+  };
+
+  // Helper to extract Known Cases / Chronic Illnesses (knowCaseV2 / knowCase)
+  const getKnowCaseText = () => {
+    for (const c of sortedConsultations) {
+      if (Array.isArray(c?.knowCaseV2)) {
+        const valid = c.knowCaseV2
+          .map((item: any) => (typeof item === "string" ? item.trim() : String(item || "")))
+          .filter(Boolean);
+        if (valid.length > 0) return valid.join(", ");
+      }
+      if (c?.knowCase) {
+        if (typeof c.knowCase === "string" && c.knowCase.trim().length > 0) {
+          return c.knowCase.trim();
+        }
+        if (typeof c.knowCase === "object") {
+          const activeCases = Object.entries(c.knowCase)
+            .filter(([key, value]) => value === true && key !== "otherDescription")
+            .map(([key]) => key.toUpperCase());
+          if (c.knowCase.others && c.knowCase.otherDescription) {
+            activeCases.push(c.knowCase.otherDescription);
+          }
+          if (activeCases.length > 0) return activeCases.join(", ");
+        }
+      }
+    }
+    return patient?.chronicIllnesses || "None";
+  };
+
   // Format physical examination data
   const formatPhysicalExam = () => {
     if (!patient.physical) return "NAD";
-    
+
     const items = [];
     if (patient.physical.pallor?.present) items.push("Pallor: Present");
     if (patient.physical.icterus?.present) items.push("Icterus: Present");
@@ -81,23 +145,23 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
     if (patient.physical.clubbing?.present) items.push("Clubbing: Present");
     if (patient.physical.oedema?.present) items.push("Oedema: Present");
     if (patient.physical.lymphadinopathy?.present) items.push("Lymphadinopathy: Present");
-    
+
     return items.length > 0 ? items.join(", ") : "NAD";
   };
 
   // Format systemic examination
   const formatSystemicExam = () => {
-    if (!latestConsultation?.systemic) return "NAD";
-    
-    const systemic = latestConsultation.systemic;
+    const systemic = systemicConsultation?.systemic;
+    if (!systemic) return "NAD";
+
     const items = [];
-    
+
     if (systemic.respiratorySystem?.ad) items.push(`Respiratory: ${systemic.respiratorySystem.adDescription || "Normal"}`);
     if (systemic.cardioVascularSystem?.ad) items.push(`CVS: ${systemic.cardioVascularSystem.adDescription || "Normal"}`);
     if (systemic.gastroIntestinalSystem?.ad) items.push(`GIT: ${systemic.gastroIntestinalSystem.adDescription || "Normal"}`);
     if (systemic.nrvousSystem?.ad) items.push(`Nervous: ${systemic.nrvousSystem.adDescription || "Normal"}`);
     if (systemic.musculoskeletalSystem?.ad) items.push(`Musculoskeletal: ${systemic.musculoskeletalSystem.adDescription || "Normal"}`);
-    
+
     return items.length > 0 ? items.join("; ") : "NAD";
   };
 
@@ -106,42 +170,42 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto bg-white text-black p-0">
-      
-            <DialogTitle>Patient Case Sheet - {patient.fullName}</DialogTitle>
-     {isLoading && (
-  <div className="space-y-3 animate-pulse">
-    <div className="h-6 bg-gray-200 rounded w-1/2" />
-    <div className="h-4 bg-gray-200 rounded w-3/4" />
-    <div className="h-4 bg-gray-200 rounded w-2/3" />
-    <div className="h-32 bg-gray-200 rounded" />
-    <div className="h-32 bg-gray-200 rounded" />
-  </div>
-)}
+
+          <DialogTitle>Patient Case Sheet - {patient.fullName}</DialogTitle>
+          {isLoading && (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/2" />
+              <div className="h-4 bg-gray-200 rounded w-3/4" />
+              <div className="h-4 bg-gray-200 rounded w-2/3" />
+              <div className="h-32 bg-gray-200 rounded" />
+              <div className="h-32 bg-gray-200 rounded" />
+            </div>
+          )}
           <div className="p-8 space-y-6">
             {/* HEADER */}
-         {/* HEADER */}
-<div className="border-b-2 border-[#7b5e57] pb-4 mb-6">
-  <div className="flex flex-col items-center text-center">
-    <img
-      src="https://www.ikshanaturopathy.com/assets/iksha_logo-DegYGxOY.png"
-      alt="Iksha"
-      className="w-[100px] h-auto mb-2"
-    />
+            {/* HEADER */}
+            <div className="border-b-2 border-[#7b5e57] pb-4 mb-6">
+              <div className="flex flex-col items-center text-center">
+                <img
+                  src="https://www.ikshanaturopathy.com/assets/iksha_logo-DegYGxOY.png"
+                  alt="Iksha"
+                  className="w-[100px] h-auto mb-2"
+                />
 
-    <h2 className="text-[20px] font-semibold text-[#7b5e57]">
-      Ikshā Naturopathy
-    </h2>
+                <h2 className="text-[20px] font-semibold text-[#7b5e57]">
+                  Ikshā Naturopathy
+                </h2>
 
-    <p className="text-[12px] text-[#5a4945] max-w-[85%] leading-[1.4] mt-1">
-      Empire Market Place, in front of bypass, next to Empire Estate,
-      opp. Sahara city Homes, Indore, Deoguradia, Madhya Pradesh - 452016
-    </p>
+                <p className="text-[12px] text-[#5a4945] max-w-[85%] leading-[1.4] mt-1">
+                  Empire Market Place, in front of bypass, next to Empire Estate,
+                  opp. Sahara city Homes, Indore, Deoguradia, Madhya Pradesh - 452016
+                </p>
 
-    <p className="text-[12px] text-[#5a4945]">
-      Phone: +91 7879168791 | +91 9343922950
-    </p>
-  </div>
-</div>
+                <p className="text-[12px] text-[#5a4945]">
+                  Phone: +91 7879168791 | +91 9343922950
+                </p>
+              </div>
+            </div>
 
             {/* 1. PATIENT INFORMATION */}
             <div className="border-2 border-black">
@@ -171,7 +235,7 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
                 <h2 className="font-bold text-lg">2. Primary Health Concern</h2>
               </div>
               <div className="p-4 text-sm">
-                <p className="whitespace-pre-wrap">{patient.primaryHealthConcern || "Not specified"}</p>
+                <p className="whitespace-pre-wrap">{getPrimaryHealthConcern()}</p>
               </div>
             </div>
 
@@ -270,24 +334,16 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
               </div>
               <div className="p-4 text-sm space-y-2">
                 <p><strong>Chronic Illnesses (Diabetes / BP / CAD / Asthma / Others):</strong></p>
-                <p className="pl-4">{patient.chronicIllnesses || "None"}</p>
-                {latestConsultation?.knowCase && (
-                  <p className="pl-4 text-xs">
-                    Known cases: {Object.entries(latestConsultation.knowCase)
-                      .filter(([key, value]) => value === true && key !== 'otherDescription')
-                      .map(([key]) => key.toUpperCase())
-                      .join(", ") || "None"}
-                  </p>
-                )}
-                
+                <p className="pl-4">{getKnowCaseText()}</p>
+
                 <p><strong>Surgeries / Injuries:</strong></p>
-                <p className="pl-4">{patient.surgeriesOrInjuries || latestConsultation?.surgeriesOrInjuries || "None"}</p>
-                
+                <p className="pl-4">{sortedConsultations.find((c: any) => c.surgeriesOrInjuries)?.surgeriesOrInjuries || patient.surgeriesOrInjuries || "None"}</p>
+
                 <p><strong>Allergies (if any):</strong></p>
-                <p className="pl-4">{patient.allergies || latestConsultation?.allergies || "None"}</p>
-                
+                <p className="pl-4">{sortedConsultations.find((c: any) => c.allergies)?.allergies || patient.allergies || "None"}</p>
+
                 <p><strong>Family history (If any):</strong></p>
-                <p className="pl-4">{patient.familyHistory || latestConsultation?.familyHistory || "None"}</p>
+                <p className="pl-4">{sortedConsultations.find((c: any) => c.familyHistory)?.familyHistory || patient.familyHistory || "None"}</p>
               </div>
             </div>
 
@@ -351,41 +407,41 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
             </div>
 
             {/* 8. SYSTEMIC EXAMINATION */}
-            {latestConsultation?.systemic && (
+            {systemicConsultation?.systemic && (
               <div className="border-2 border-black">
                 <div className="bg-gray-100 border-b-2 border-black px-4 py-2">
                   <h2 className="font-bold text-lg">8. Systemic Examination</h2>
                 </div>
                 <div className="p-4 text-sm space-y-1">
-                  <p><strong>Respiratory System:</strong> {latestConsultation.systemic.respiratorySystem?.ad ? latestConsultation.systemic.respiratorySystem.adDescription : "NAD"}</p>
-                  <p><strong>Cardio Vascular System:</strong> {latestConsultation.systemic.cardioVascularSystem?.ad ? latestConsultation.systemic.cardioVascularSystem.adDescription : "NAD"}</p>
-                  <p><strong>Gastro Intestinal System:</strong> {latestConsultation.systemic.gastroIntestinalSystem?.ad ? latestConsultation.systemic.gastroIntestinalSystem.adDescription : "NAD"}</p>
-                  <p><strong>Nervous System:</strong> {latestConsultation.systemic.nrvousSystem?.ad ? latestConsultation.systemic.nrvousSystem.adDescription : "NAD"}</p>
-                  <p><strong>Musculoskeletal System:</strong> {latestConsultation.systemic.musculoskeletalSystem?.ad ? latestConsultation.systemic.musculoskeletalSystem.adDescription : "NAD"}</p>
+                  <p><strong>Respiratory System:</strong> {systemicConsultation.systemic.respiratorySystem?.ad ? systemicConsultation.systemic.respiratorySystem.adDescription : "NAD"}</p>
+                  <p><strong>Cardio Vascular System:</strong> {systemicConsultation.systemic.cardioVascularSystem?.ad ? systemicConsultation.systemic.cardioVascularSystem.adDescription : "NAD"}</p>
+                  <p><strong>Gastro Intestinal System:</strong> {systemicConsultation.systemic.gastroIntestinalSystem?.ad ? systemicConsultation.systemic.gastroIntestinalSystem.adDescription : "NAD"}</p>
+                  <p><strong>Nervous System:</strong> {systemicConsultation.systemic.nrvousSystem?.ad ? systemicConsultation.systemic.nrvousSystem.adDescription : "NAD"}</p>
+                  <p><strong>Musculoskeletal System:</strong> {systemicConsultation.systemic.musculoskeletalSystem?.ad ? systemicConsultation.systemic.musculoskeletalSystem.adDescription : "NAD"}</p>
                 </div>
               </div>
             )}
 
             {/* 9. INVESTIGATIONS / REPORTS */}
-            {latestConsultation?.investigationsOrDiagnosis && (
+            {investigationConsultation?.investigationsOrDiagnosis && (
               <div className="border-2 border-black">
                 <div className="bg-gray-100 border-b-2 border-black px-4 py-2">
                   <h2 className="font-bold text-lg">9. Investigations / Reports (if any)</h2>
                 </div>
                 <div className="p-4 text-sm">
-                  <p>{latestConsultation.investigationsOrDiagnosis.investigations || "None"}</p>
+                  <p>{investigationConsultation.investigationsOrDiagnosis.investigations || "None"}</p>
                 </div>
               </div>
             )}
 
             {/* 10. PROVISIONAL DIAGNOSIS */}
-            {latestConsultation?.investigationsOrDiagnosis?.provisionalDiagnosis && (
+            {investigationConsultation?.investigationsOrDiagnosis?.provisionalDiagnosis && (
               <div className="border-2 border-black">
                 <div className="bg-gray-100 border-b-2 border-black px-4 py-2">
                   <h2 className="font-bold text-lg">10. Provisional Diagnosis</h2>
                 </div>
                 <div className="p-4 text-sm">
-                  <p>{latestConsultation.investigationsOrDiagnosis.provisionalDiagnosis}</p>
+                  <p>{investigationConsultation.investigationsOrDiagnosis.provisionalDiagnosis}</p>
                 </div>
               </div>
             )}
@@ -427,19 +483,19 @@ const isLoading = !patient?.age && !patient?.primaryHealthConcern;
               <div className="p-4 text-xs leading-relaxed">
                 <p className="mb-3"><strong>Treatment Details:</strong></p>
                 <p className="mb-2">The procedure may include Naturopathy treatments such as dietary changes, fasting therapy, hydrotherapy, mud therapy, yoga, pranayama, massage, colon hydrotherapy, acupuncture, physiotherapy, chromotherapy, magneto therapy, reflexology, and cupping therapy. It may also involve Panchakarma procedures such as Shirodhara, Nasya (Nasal Therapy), External Basti, Akshitarpan, Raktamokshana (bloodletting, if needed), Abhyanga (oil massage), and Swedana (steam therapy). These therapies will be prescribed specifically based on your condition and requirements.</p>
-                
+
                 <p className="mb-2"><strong>Expected Benefits:</strong> These therapies aim to detoxify and cleanse the body, rejuvenate the body and mind, improve digestion and metabolism, increase energy and vitality, relieve stress, enhance mental clarity, reduce pain and stiffness, strengthen the immune system, and promote overall well-being.</p>
-                
+
                 <p className="mb-2"><strong>Risks and Limitations:</strong> I understand that possible risks include mild nausea, dizziness, fatigue, headache, skin irritation, temporary digestive changes, and emotional fluctuations. Unforeseen complications may occur, which can include serious conditions. The management reserves the right to transfer me to an appropriate medical facility if required and will not be held liable for any adverse reactions.</p>
-                
+
                 <p className="mb-3">I also understand that results may vary depending on adherence to protocol and advice given by the doctor and no guarantee of success is provided.</p>
-                
+
                 <p className="mb-2"><strong>Conditions & Policies:</strong> I have been informed that there will be no refund for the treatment under any circumstances. The management reserves the right to discontinue the treatment at any time if necessary. I agree to follow all instructions given by the doctor and their team to ensure the success of the treatment.</p>
-                
+
                 <p className="mb-3"><strong>Medical Information:</strong> I have shared my complete medical history, including allergies, medications, and any pre-existing conditions. I confirm that I do not have pregnancy, severe heart disease, active infections, or unstable psychiatric issues. I will inform the practitioner immediately if any such condition exists or develops. I affirm that I have read the basic rules and answered all the questions in absolute honesty. I hereby declare that the above information is complete and an accurate record of my current and past health condition to the best of my knowledge, as on the undersigned date. I am aware of the nature of treatments, therapies, facilities, activities and services and that they are undertaken at my own risk and complete responsibility.</p>
-                
+
                 <p className="mb-4"><strong>Final Declaration:</strong> I have been given sufficient time to ask questions, consider alternative options, and make an informed decision. I understand that I can withdraw my consent at any time. I am giving this consent voluntarily, without any pressure or influence, after understanding all details of the proposed treatments in a language which I understand, to undergo Panchakarma and Naturopathy treatments as a holistic wellness approach.</p>
-                
+
                 <div className="grid grid-cols-2 gap-8 mt-6 pt-4 border-t-2 border-black">
                   <div className="space-y-2">
                     <p><strong>Patient Signature:</strong> {latestConsultation?.patientSignature ? "✓ Signed" : "___________________"}</p>
